@@ -40,6 +40,14 @@ export type NigerianState = typeof nigerianStates[number];
 
 export type ListingType = 'For Sale' | 'For Rent' | 'For Lease';
 
+export interface PromotionTierConfig {
+  id: string;
+  name: string;
+  fee: number; // Store as number
+  duration: number; // Store as number (days)
+  description: string;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -63,7 +71,13 @@ export interface Property {
     lat: number;
     lng: number;
   };
-  isPromoted?: boolean; // Added for promotion feature
+  isPromoted?: boolean;
+  promotionDetails?: {
+    tierId: string;
+    tierName: string;
+    promotedAt: string; // ISO date string
+    // We might add expiresAt later based on duration
+  };
 }
 
 export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
@@ -179,4 +193,17 @@ export interface FooterContent {
   columns: FooterLinkColumn[];
   copyrightText: string;
   builtWithText: string;
+}
+
+export interface PlatformSettings {
+  promotionsEnabled: boolean;
+  promotionTiers: PromotionTierConfig[];
+  // Add other settings like siteName, defaultCurrency if needed by agents
+  // For now, keeping it focused on promotions
+  siteName: string;
+  defaultCurrency: string;
+  maintenanceMode: boolean;
+  notificationEmail: string;
+  predefinedAmenities: string; // Comma-separated
+  // propertyTypes: string[]; // Let's assume this is managed elsewhere or hardcoded for now
 }

@@ -1,5 +1,5 @@
 
-import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry, Message, NigerianState } from './types';
+import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry, Message, NigerianState, PlatformSettings, PromotionTierConfig } from './types';
 
 export const mockAgents: Agent[] = [
   {
@@ -29,7 +29,7 @@ export const mockGeneralUsers: GeneralUser[] = [
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
-    savedPropertyIds: ['HLCS-R243B8D', 'HLCS-R249Z1Y'], // Updated IDs
+    savedPropertyIds: ['HLCS-R243B8D', 'HLCS-R249Z1Y'],
   },
   {
     id: 'user2',
@@ -51,10 +51,26 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
   },
 ];
 
+const defaultPromotionTiers: PromotionTierConfig[] = [
+  { id: 'basic', name: 'Basic Boost', fee: 5000, duration: 7, description: 'Standard visibility boost for 7 days.' },
+  { id: 'premium', name: 'Premium Spotlight', fee: 12000, duration: 14, description: 'Enhanced visibility and higher placement for 14 days.' },
+  { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
+];
+
+export let mockPlatformSettings: PlatformSettings = {
+  promotionsEnabled: true,
+  promotionTiers: defaultPromotionTiers,
+  siteName: 'Homeland Capital',
+  defaultCurrency: 'NGN',
+  maintenanceMode: false,
+  notificationEmail: 'admin@homelandcapital.com',
+  predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
+};
+
 
 export let mockProperties: Property[] = [
   {
-    id: 'HLCS-R243B8D', // Updated ID
+    id: 'HLCS-R243B8D',
     title: 'Spacious Family Home in Ikeja GRA',
     description:
       'A beautiful and spacious family home located in a quiet suburban neighborhood. Features a large backyard, modern kitchen, and open floor plan. Perfect for families looking for comfort and style.',
@@ -80,7 +96,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.6059, lng: 3.3490 },
   },
   {
-    id: 'HLCS-R241A7C', // Updated ID
+    id: 'HLCS-R241A7C',
     title: 'Modern Victoria Island Apartment with City Views',
     description:
       'Chic and modern apartment in the heart of Victoria Island. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
@@ -99,13 +115,18 @@ export let mockProperties: Property[] = [
     ],
     agent: mockAgents[1],
     status: 'approved',
-    isPromoted: true, // Example of a promoted property
+    isPromoted: true,
+    promotionDetails: {
+      tierId: 'premium',
+      tierName: 'Premium Spotlight',
+      promotedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // Promoted 5 days ago
+    },
     amenities: ['Gym', 'Pool', 'Concierge', 'Balcony', 'City Views', 'Standby Generator'],
     yearBuilt: 2018,
     coordinates: { lat: 6.4281, lng: 3.4218 },
   },
   {
-    id: 'HLCS-R249Z1Y', // Updated ID
+    id: 'HLCS-R249Z1Y',
     title: 'Cozy Lekki Phase 1 Condo',
     description:
       'Charming 2-bedroom condo in Lekki Phase 1. Features an updated kitchen, private balcony, and community amenities. Perfect for modern living or as an investment.',
@@ -130,7 +151,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4344, lng: 3.4824 },
   },
   {
-    id: 'HLCS-R245G0H', // Updated ID
+    id: 'HLCS-R245G0H',
     title: 'Luxury Banana Island Villa with Panoramic Views',
     description: 'An exquisite luxury villa in Banana Island offering breathtaking views. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
     price: 250000000,
@@ -140,7 +161,7 @@ export let mockProperties: Property[] = [
     address: '7 Banana Road, Banana Island, Lagos',
     type: 'House',
     bedrooms: 5,
-    bathrooms: 5, // Assuming float is fine, else needs adjustment
+    bathrooms: 5,
     areaSqFt: 6000,
     images: [
       'https://placehold.co/600x400.png?width=600&height=407',
@@ -156,7 +177,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4512, lng: 3.4450 },
   },
   {
-    id: 'HLCS-R241E5N', // Updated ID
+    id: 'HLCS-R241E5N',
     title: 'New Build in Eko Atlantic - Pending Approval',
     description: 'A brand new architectural marvel in Eko Atlantic city. Awaiting final approval for listing. Features stunning ocean views and ultra-modern design.',
     price: 180000000,
@@ -181,7 +202,7 @@ export let mockProperties: Property[] = [
 export let mockInquiries: Inquiry[] = [
   {
     id: 'inq1',
-    propertyId: 'HLCS-R243B8D', // Updated ID
+    propertyId: 'HLCS-R243B8D',
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Eve Prospect',
     inquirerEmail: 'eve@example.com',
@@ -192,7 +213,7 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq2',
-    propertyId: 'HLCS-R241A7C', // Updated ID
+    propertyId: 'HLCS-R241A7C',
     propertyName: 'Modern Victoria Island Apartment with City Views',
     inquirerName: 'Frank Buyer',
     inquirerEmail: 'frank@example.com',
@@ -213,7 +234,7 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq3',
-    propertyId: 'HLCS-R243B8D', // Updated ID
+    propertyId: 'HLCS-R243B8D',
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Charlie User',
     inquirerEmail: 'charlie@example.com',

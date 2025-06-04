@@ -18,17 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
+import type { PromotionTierConfig } from '@/lib/types'; // Import PromotionTierConfig
 
-interface PromotionTier {
+interface AdminPromotionTier { // Local interface for form state (strings for fee/duration)
   id: string;
   name: string;
   icon: React.ReactNode;
-  fee: string;
-  duration: string;
+  fee: string; // Kept as string for input field compatibility
+  duration: string; // Kept as string for input field compatibility
   description: string;
 }
 
-const initialPromotionTiers: PromotionTier[] = [
+const initialAdminPromotionTiers: AdminPromotionTier[] = [
   { id: 'basic', name: 'Basic Boost', icon: <Star className="h-5 w-5 text-yellow-500" />, fee: '5000', duration: '7', description: 'Standard visibility boost for 7 days.' },
   { id: 'premium', name: 'Premium Spotlight', icon: <TrendingUp className="h-5 w-5 text-orange-500" />, fee: '12000', duration: '14', description: 'Enhanced visibility and higher placement for 14 days.' },
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
@@ -45,10 +46,10 @@ export default function PlatformSettingsPage() {
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post");
 
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
-  const [promotionTiers, setPromotionTiers] = useState<PromotionTier[]>(initialPromotionTiers);
+  const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiers);
 
-  const handleTierChange = (tierId: string, field: keyof Omit<PromotionTier, 'id' | 'name' | 'icon'>, value: string) => {
-    setPromotionTiers(currentTiers =>
+  const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'name' | 'icon'>, value: string) => {
+    setAdminPromotionTiers(currentTiers =>
       currentTiers.map(tier =>
         tier.id === tierId ? { ...tier, [field]: value } : tier
       )
@@ -57,6 +58,14 @@ export default function PlatformSettingsPage() {
 
   const handleSaveChanges = () => {
     // Simulate saving changes
+    const savedPromotionTiers: PromotionTierConfig[] = adminPromotionTiers.map(tier => ({
+      id: tier.id,
+      name: tier.name,
+      fee: parseFloat(tier.fee) || 0, // Convert to number, default to 0 if invalid
+      duration: parseInt(tier.duration, 10) || 0, // Convert to number, default to 0 if invalid
+      description: tier.description,
+    }));
+
     console.log('Saving settings:', { 
       siteName, 
       maintenanceMode, 
@@ -64,11 +73,7 @@ export default function PlatformSettingsPage() {
       notificationEmail, 
       predefinedAmenities,
       promotionsEnabled,
-      promotionTiers: promotionTiers.map(tier => ({
-        ...tier,
-        fee: parseFloat(tier.fee),
-        duration: parseInt(tier.duration, 10)
-      })),
+      promotionTiers: savedPromotionTiers, // Log the converted tiers
     });
     toast({
       title: 'Settings Saved',
@@ -156,7 +161,7 @@ export default function PlatformSettingsPage() {
           </div>
 
           <div className="space-y-8">
-            {promotionTiers.map((tier) => (
+            {adminPromotionTiers.map((tier) => (
               <Card key={tier.id} className={!promotionsEnabled ? 'opacity-50 pointer-events-none' : ''}>
                 <CardHeader>
                   <CardTitle className="font-headline text-lg flex items-center">

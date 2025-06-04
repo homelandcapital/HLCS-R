@@ -43,8 +43,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         <div className="absolute bottom-2 left-2 flex flex-col gap-1 items-start">
             <Badge variant="secondary" className="text-xs">{property.listingType}</Badge>
             {property.isPromoted && (
-                <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs">
-                    <Star className="h-3 w-3 mr-1"/> Promoted
+                <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs flex items-center">
+                    <Star className="h-3 w-3 mr-1"/> 
+                    {property.promotionDetails ? property.promotionDetails.tierName : 'Promoted'}
                 </Badge>
             )}
         </div>
