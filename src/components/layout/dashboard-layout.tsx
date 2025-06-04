@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Home, PlusCircle, ListChecks, LogOut, LayoutDashboard } from 'lucide-react';
+import { Home, PlusCircle, ListChecks, LogOut, LayoutDashboard, UserCircle } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { Agent } from '@/lib/types';
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/agents/dashboard', label: 'Overview', icon: <LayoutDashboard className="h-5 w-5" /> },
   { href: '/agents/dashboard/my-listings', label: 'My Listings', icon: <ListChecks className="h-5 w-5" /> },
   { href: '/agents/dashboard/add-property', label: 'Add Property', icon: <PlusCircle className="h-5 w-5" /> },
+  { href: '/agents/dashboard/profile', label: 'My Profile', icon: <UserCircle className="h-5 w-5" /> },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -68,7 +69,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {navItems.map((item) => (
             <Button
               key={item.href}
-              variant={pathname === item.href ? 'default' : 'ghost'}
+              variant={pathname.startsWith(item.href) && (item.href !== '/agents/dashboard' || pathname === item.href) ? 'default' : 'ghost'}
               className="w-full justify-start"
               asChild
             >
