@@ -84,7 +84,7 @@ export default function UserDashboardPage() {
             <Link href="/users/dashboard/my-inquiries"><ListChecks className="mr-2 h-4 w-4" /> View My Inquiries</Link>
           </Button>
            <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/"><UserCircle className="mr-2 h-4 w-4" /> Explore Properties</Link>
+            <Link href="/properties"><UserCircle className="mr-2 h-4 w-4" /> Explore Properties</Link>
           </Button>
         </CardContent>
       </Card>

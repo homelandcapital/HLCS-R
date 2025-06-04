@@ -91,7 +91,7 @@ export default function MyInquiriesPage() {
               <p className="text-lg font-medium">No Inquiries Yet</p>
               <p className="text-muted-foreground mb-4">You haven&apos;t submitted any inquiries. Explore properties and reach out!</p>
               <Button asChild>
-                <Link href="/">Explore Properties</Link>
+                <Link href="/properties">Explore Properties</Link>
               </Button>
             </div>
           ) : (

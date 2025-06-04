@@ -87,7 +87,7 @@ export default function SavedPropertiesPage() {
           </CardHeader>
           <CardContent>
             <Button asChild size="lg">
-              <Link href="/">Find Properties</Link>
+              <Link href="/properties">Find Properties</Link>
             </Button>
           </CardContent>
         </Card>

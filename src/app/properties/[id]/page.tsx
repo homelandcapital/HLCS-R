@@ -49,7 +49,7 @@ export default function PropertyDetailsPage() {
         <h1 className="text-4xl font-headline mb-4">Property Not Found</h1>
         <p className="text-muted-foreground mb-6">The property you are looking for does not exist or may have been removed.</p>
         <Button asChild>
-          <Link href="/">Back to Listings</Link>
+          <Link href="/properties">Back to Listings</Link>
         </Button>
       </div>
     );

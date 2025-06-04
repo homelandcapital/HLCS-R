@@ -1,154 +1,134 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import PropertyCard from '@/components/property/property-card';
-import PropertyListItem from '@/components/property/property-list-item';
-import PropertySearchFilter from '@/components/property/property-search-filter';
-import { mockProperties } from '@/lib/mock-data';
-import type { Property } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Award, Search, Handshake, BarChartHorizontalBig, Lightbulb, Users, ArrowRight } from 'lucide-react';
 
-export default function HomePage() {
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+export default function InformationalHomePage() {
+  const services = [
+    {
+      icon: <Search className="w-10 h-10 text-primary mb-4" />,
+      title: "Property Sales & Purchases",
+      description: "Navigate the market with ease, whether buying your dream home or selling your current property.",
+      link: "/services"
+    },
+    {
+      icon: <BarChartHorizontalBig className="w-10 h-10 text-primary mb-4" />,
+      title: "Expert Property Listings",
+      description: "Showcase your properties to a wide audience with our advanced listing platform and tools.",
+      link: "/services"
+    },
+    {
+      icon: <Handshake className="w-10 h-10 text-primary mb-4" />,
+      title: "Market Insights",
+      description: "Make informed decisions with our comprehensive market analysis and expert guidance.",
+      link: "/services"
+    }
+  ];
 
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setProperties(mockProperties);
-      setFilteredProperties(mockProperties);
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  const handleSearch = (filters: {
-    location: string;
-    propertyType: string;
-    minPrice: string;
-    maxPrice: string;
-  }) => {
-    setLoading(true);
-    let tempProperties = [...properties];
-
-    if (filters.location) {
-      tempProperties = tempProperties.filter(p =>
-        p.location.toLowerCase().includes(filters.location.toLowerCase()) ||
-        p.address.toLowerCase().includes(filters.location.toLowerCase())
-      );
+  const whyChooseUs = [
+    {
+      icon: <Lightbulb className="w-8 h-8 text-accent" />,
+      title: "Technology Driven",
+      description: "Leveraging cutting-edge tech for a seamless real estate experience."
+    },
+    {
+      icon: <Users className="w-8 h-8 text-accent" />,
+      title: "Client-Focused Approach",
+      description: "Your needs are our priority. We're dedicated to your success."
+    },
+    {
+      icon: <Award className="w-8 h-8 text-accent" />,
+      title: "Trusted Expertise",
+      description: "Years of experience and deep market knowledge at your service."
     }
-    if (filters.propertyType) {
-      tempProperties = tempProperties.filter(p => p.type === filters.propertyType);
-    }
-    if (filters.minPrice) {
-      tempProperties = tempProperties.filter(p => p.price >= parseInt(filters.minPrice, 10));
-    }
-    if (filters.maxPrice) {
-      tempProperties = tempProperties.filter(p => p.price <= parseInt(filters.maxPrice, 10));
-    }
-    
-    setTimeout(() => { // Simulate search delay
-      setFilteredProperties(tempProperties);
-      setLoading(false);
-    }, 500);
-  };
+  ];
 
   return (
-    <div className="space-y-8">
-      <PropertySearchFilter onSearch={handleSearch} />
-
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-headline">
-          {loading ? 'Loading Properties...' : `Showing ${filteredProperties.length} Properties`}
-        </h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-            title="Grid view"
-          >
-            <LayoutGrid className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-            title="List view"
-          >
-            <List className="h-5 w-5" />
+    <div className="space-y-16">
+      {/* Hero Section */}
+      <section className="relative py-20 md:py-32 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/10 via-background to-background">
+        <div className="absolute inset-0">
+          <Image
+            src="https://placehold.co/1200x600.png"
+            alt="Modern cityscape or beautiful homes"
+            layout="fill"
+            objectFit="cover"
+            className="opacity-20"
+            data-ai-hint="modern architecture cityscape"
+            priority
+          />
+           <div className="absolute inset-0 bg-background/50"></div>
+        </div>
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <h1 className="text-4xl md:text-6xl font-headline font-bold text-primary mb-6">
+            Welcome to Homeland Capital
+          </h1>
+          <p className="text-lg md:text-xl text-foreground max-w-2xl mx-auto mb-8">
+            Discover your next property or list your own with a partner dedicated to innovation, transparency, and your success in the real estate market.
+          </p>
+          <Button size="lg" asChild className="text-lg px-8 py-6 shadow-lg">
+            <Link href="/properties">
+              View Our Listings <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
           </Button>
         </div>
-      </div>
+      </section>
 
-      {loading ? (
-        <div className={cn(
-          viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'
-        )}>
-          {[...Array(viewMode === 'grid' ? 6 : 3)].map((_, index) => (
-            viewMode === 'grid' 
-            ? <CardSkeleton key={index} /> 
-            : <ListItemSkeleton key={index} />
+      {/* Our Services Section */}
+      <section className="container mx-auto px-4">
+        <h2 className="text-3xl font-headline text-center text-foreground mb-12">Our Core Services</h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          {services.map((service, index) => (
+            <Card key={index} className="text-center shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <div className="mx-auto flex items-center justify-center">
+                  {service.icon}
+                </div>
+                <CardTitle className="font-headline text-xl">{service.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">{service.description}</p>
+                <Button variant="outline" asChild>
+                  <Link href={service.link}>Learn More</Link>
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      ) : filteredProperties.length > 0 ? (
-        <div className={cn(
-          viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4'
-        )}>
-          {filteredProperties.map(property =>
-            viewMode === 'grid' ? (
-              <PropertyCard key={property.id} property={property} />
-            ) : (
-              <PropertyListItem key={property.id} property={property} />
-            )
-          )}
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className="bg-muted py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-headline text-center text-foreground mb-12">Why Choose Homeland Capital?</h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {whyChooseUs.map((item, index) => (
+              <div key={index} className="flex flex-col items-center text-center p-6 bg-card rounded-lg shadow-md">
+                {item.icon}
+                <h3 className="text-xl font-semibold text-primary mt-3 mb-2">{item.title}</h3>
+                <p className="text-muted-foreground">{item.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-headline mb-2">No Properties Found</h2>
-          <p className="text-muted-foreground">Try adjusting your search filters.</p>
-        </div>
-      )}
+      </section>
+
+      {/* Call to Action Section */}
+      <section className="container mx-auto px-4 text-center py-12">
+        <h2 className="text-3xl font-headline text-foreground mb-6">Ready to Find Your Perfect Property?</h2>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
+          Start your journey with us today. Browse listings, connect with experts, and make your real estate goals a reality.
+        </p>
+        <Button size="lg" asChild className="text-lg px-8 py-6 shadow-lg">
+          <Link href="/properties">
+            Explore Properties Now <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </Button>
+      </section>
     </div>
   );
 }
-
-const CardSkeleton = () => (
-  <div className="border bg-card text-card-foreground shadow-sm rounded-lg p-4 space-y-3">
-    <Skeleton className="h-48 w-full rounded-md" />
-    <Skeleton className="h-6 w-3/4 rounded-md" />
-    <Skeleton className="h-4 w-1/2 rounded-md" />
-    <Skeleton className="h-4 w-full rounded-md" />
-    <Skeleton className="h-4 w-2/3 rounded-md" />
-    <div className="flex justify-between">
-      <Skeleton className="h-8 w-1/3 rounded-md" />
-      <Skeleton className="h-8 w-1/3 rounded-md" />
-    </div>
-    <Skeleton className="h-10 w-full rounded-md" />
-  </div>
-);
-
-const ListItemSkeleton = () => (
-  <div className="border bg-card text-card-foreground shadow-sm rounded-lg p-4 flex flex-col sm:flex-row gap-4">
-    <Skeleton className="w-full sm:w-1/3 h-48 sm:h-36 rounded-md shrink-0" />
-    <div className="flex flex-col flex-grow space-y-2">
-      <Skeleton className="h-6 w-3/4 rounded-md" />
-      <Skeleton className="h-4 w-1/2 rounded-md" />
-      <Skeleton className="h-4 w-full rounded-md" />
-      <Skeleton className="h-4 w-2/3 rounded-md" />
-      <div className="flex gap-4 mt-2">
-        <Skeleton className="h-5 w-16 rounded-md" />
-        <Skeleton className="h-5 w-16 rounded-md" />
-        <Skeleton className="h-5 w-16 rounded-md" />
-      </div>
-      <Skeleton className="h-10 w-full sm:w-32 rounded-md mt-auto" />
-    </div>
-  </div>
-);

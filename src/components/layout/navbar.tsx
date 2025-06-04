@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, PlusCircle, ShieldCheck, Bookmark, Home as HomeIcon, Briefcase, Info, Mail as MailIcon } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, PlusCircle, ShieldCheck, Bookmark, Home as HomeIcon, Briefcase, Info, Mail as MailIcon, Building } from "lucide-react";
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
@@ -18,6 +18,7 @@ const Navbar = () => {
 
   const staticNavLinks = [
     { href: '/', label: 'Home', icon: <HomeIcon className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
+    { href: '/properties', label: 'Properties', icon: <Building className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
     { href: '/services', label: 'Services', icon: <Briefcase className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
     { href: '/about', label: 'About', icon: <Info className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
     { href: '/contact', label: 'Contact', icon: <MailIcon className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
