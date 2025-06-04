@@ -29,7 +29,7 @@ export const mockGeneralUsers: GeneralUser[] = [
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
-    savedPropertyIds: ['prop1', 'prop3'],
+    savedPropertyIds: ['HLCS-R3B5D7F', 'HLCS-R9Z8Y7X'], // Updated IDs
   },
   {
     id: 'user2',
@@ -54,7 +54,7 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
 
 export let mockProperties: Property[] = [
   {
-    id: 'prop1',
+    id: 'HLCS-R3B5D7F', // Updated ID
     title: 'Spacious Family Home in Ikeja GRA',
     description:
       'A beautiful and spacious family home located in a quiet suburban neighborhood. Features a large backyard, modern kitchen, and open floor plan. Perfect for families looking for comfort and style.',
@@ -76,7 +76,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.6059, lng: 3.3490 }, // Ikeja, Lagos
   },
   {
-    id: 'prop2',
+    id: 'HLCS-R1A2C3E', // Updated ID
     title: 'Modern Victoria Island Apartment with City Views',
     description:
       'Chic and modern apartment in the heart of Victoria Island. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
@@ -97,7 +97,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4281, lng: 3.4218 }, // Victoria Island, Lagos
   },
   {
-    id: 'prop3',
+    id: 'HLCS-R9Z8Y7X', // Updated ID
     title: 'Cozy Lekki Phase 1 Condo',
     description:
       'Charming 2-bedroom condo in Lekki Phase 1. Features an updated kitchen, private balcony, and community amenities. Perfect for modern living or as an investment.',
@@ -118,7 +118,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4344, lng: 3.4824 }, // Lekki Phase 1, Lagos
   },
   {
-    id: 'prop4',
+    id: 'HLCS-R5G6H7J', // Updated ID
     title: 'Luxury Banana Island Villa with Panoramic Views',
     description: 'An exquisite luxury villa in Banana Island offering breathtaking views. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
     price: 250000000, // Adjusted price
@@ -144,7 +144,7 @@ export let mockProperties: Property[] = [
 export let mockInquiries: Inquiry[] = [
   {
     id: 'inq1',
-    propertyId: 'prop1',
+    propertyId: 'HLCS-R3B5D7F', // Updated ID
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Eve Prospect',
     inquirerEmail: 'eve@example.com',
@@ -155,7 +155,7 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq2',
-    propertyId: 'prop2',
+    propertyId: 'HLCS-R1A2C3E', // Updated ID
     propertyName: 'Modern Victoria Island Apartment with City Views',
     inquirerName: 'Frank Buyer',
     inquirerEmail: 'frank@example.com',
@@ -176,7 +176,7 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq3',
-    propertyId: 'prop1',
+    propertyId: 'HLCS-R3B5D7F', // Updated ID
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Charlie User', // Inquiry from charlie
     inquirerEmail: 'charlie@example.com',
