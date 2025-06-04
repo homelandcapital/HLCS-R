@@ -106,7 +106,9 @@ export default function InquiryManagementPage() {
     };
 
     const updatedConversation = [...(selectedInquiry.conversation || []), newMessage];
-    const updatedInquiry = { ...selectedInquiry, conversation: updatedConversation, status: 'contacted' as InquiryStatus };
+    // Also mark as contacted if it was new
+    const newStatus = selectedInquiry.status === 'new' ? 'contacted' : selectedInquiry.status;
+    const updatedInquiry = { ...selectedInquiry, conversation: updatedConversation, status: newStatus };
     
     const inquiryIndexInMock = mockInquiries.findIndex(inq => inq.id === selectedInquiry.id);
     if (inquiryIndexInMock !== -1) {
@@ -214,7 +216,7 @@ export default function InquiryManagementPage() {
                 <div className="space-y-4 pt-4 border-t">
                     <h4 className="font-semibold text-lg">Conversation</h4>
                     {(selectedInquiry.conversation && selectedInquiry.conversation.length > 0) ? (
-                        <div className="space-y-3 max-h-60 overflow-y-auto p-2 rounded-md bg-muted/50">
+                        <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
                             {selectedInquiry.conversation.map(msg => (
                                 <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.senderRole === 'platform_admin' ? 'bg-primary/10 text-primary-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-secondary-foreground mr-auto w-4/5 text-left')}>
                                     <p className="font-semibold">{msg.senderName} <span className="text-xs text-muted-foreground/80">({msg.senderRole.replace('_', ' ')})</span></p>
