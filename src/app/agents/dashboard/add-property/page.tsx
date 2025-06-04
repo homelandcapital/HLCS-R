@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition } from 'react';
-import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react'; // Removed DollarSign
+import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { mockProperties } from '@/lib/mock-data';
@@ -36,6 +36,26 @@ const propertyFormSchema = z.object({
 });
 
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
+
+// Helper functions for new ID format
+function generateRandomDigit(): string {
+  return Math.floor(Math.random() * 10).toString();
+}
+
+function generateRandomLetter(): string {
+  return String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
+}
+
+function generatePropertyId(): string {
+  const prefix = "{HLCS-R}";
+  const part1 = generateRandomDigit();
+  const part2 = generateRandomLetter();
+  const part3 = generateRandomDigit();
+  const part4 = generateRandomLetter();
+  const part5 = generateRandomDigit();
+  const part6 = generateRandomLetter();
+  return `${prefix}${part1}${part2}${part3}${part4}${part5}${part6}`;
+}
 
 export default function AddPropertyPage() {
   const { toast } = useToast();
@@ -76,7 +96,7 @@ export default function AddPropertyPage() {
       const currentAgent = user as Agent;
 
       const newProperty: Property = {
-        id: `prop-${Date.now()}`,
+        id: generatePropertyId(), // Use new ID generation function
         title: values.title,
         description: values.description,
         price: values.price,
@@ -103,7 +123,7 @@ export default function AddPropertyPage() {
       
       toast({
         title: 'Property Listed!',
-        description: `${values.title} has been successfully added to your listings.`,
+        description: `${values.title} has been successfully added to your listings with ID: ${newProperty.id}.`,
       });
       form.reset();
       router.push('/agents/dashboard/my-listings');
