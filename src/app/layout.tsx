@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
@@ -7,8 +8,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/auth-context';
 
 export const metadata: Metadata = {
-  title: 'EstateList - Your Dream Property Awaits',
-  description: 'Find and list properties with EstateList. AI-powered descriptions, map integration, and more.',
+  title: 'Homeland Capital - Your Dream Property Awaits',
+  description: 'Find and list properties with Homeland Capital. AI-powered descriptions, map integration, and more.',
 };
 
 export default function RootLayout({
@@ -37,3 +38,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -51,7 +52,7 @@ export default function AdminDashboardPage() {
             <h1 className="text-3xl font-headline flex items-center">
                 <ShieldCheck className="mr-3 h-8 w-8 text-primary" /> Platform Admin Dashboard
             </h1>
-            <p className="text-muted-foreground">Welcome, {currentAdmin.name}. Oversee and manage EstateList.</p>
+            <p className="text-muted-foreground">Welcome, {currentAdmin.name}. Oversee and manage Homeland Capital.</p>
         </div>
       </div>
 
@@ -133,3 +134,4 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
+

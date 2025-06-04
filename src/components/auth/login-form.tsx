@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -95,7 +96,7 @@ const LoginForm = () => {
         <CardHeader className="text-center">
           <LogIn className="mx-auto h-12 w-12 text-primary mb-2" />
           <CardTitle className="text-3xl font-headline">Login</CardTitle>
-          <CardDescription>Select your role and access your EstateList account.</CardDescription>
+          <CardDescription>Select your role and access your Homeland Capital account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={activeRoleTab} onValueChange={(value) => setActiveRoleTab(value as UserRole)} className="w-full mb-6">
@@ -161,7 +162,7 @@ const LoginForm = () => {
           )}
            {activeRoleTab === 'user' && (
              <p className="mt-6 text-center text-sm text-muted-foreground">
-              New to EstateList?{' '}
+              New to Homeland Capital?{' '}
               <Link href="/agents/register" className="font-medium text-primary hover:underline">
                 Create a User Account
               </Link>
@@ -179,3 +180,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+

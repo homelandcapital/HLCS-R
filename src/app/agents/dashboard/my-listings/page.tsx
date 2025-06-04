@@ -1,4 +1,5 @@
 
+
 // src/app/agents/dashboard/my-listings/page.tsx
 'use client';
 
@@ -88,7 +89,7 @@ export default function MyListingsPage() {
           <h1 className="text-3xl font-headline flex items-center">
             <ListChecks className="mr-3 h-8 w-8 text-primary" /> My Listings
           </h1>
-          <p className="text-muted-foreground">Manage your properties listed on EstateList.</p>
+          <p className="text-muted-foreground">Manage your properties listed on Homeland Capital.</p>
         </div>
         <Button asChild>
           <Link href="/agents/dashboard/add-property">
@@ -152,3 +153,4 @@ export default function MyListingsPage() {
     </div>
   );
 }
+

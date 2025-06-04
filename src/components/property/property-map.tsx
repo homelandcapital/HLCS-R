@@ -1,3 +1,4 @@
+
 'use client';
 
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
@@ -44,7 +45,7 @@ const PropertyMap = ({ coordinates, title }: PropertyMapProps) => {
             <Map
               defaultCenter={coordinates}
               defaultZoom={15}
-              mapId="estatelist-map"
+              mapId="homelandcapital-map" // Changed mapId
               gestureHandling={'greedy'}
               disableDefaultUI={true}
             >
@@ -58,3 +59,4 @@ const PropertyMap = ({ coordinates, title }: PropertyMapProps) => {
 };
 
 export default PropertyMap;
+
