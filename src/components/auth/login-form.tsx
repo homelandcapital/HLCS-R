@@ -74,8 +74,7 @@ const LoginForm = () => {
       if (foundUser.role === 'agent') {
         router.push('/agents/dashboard');
       } else if (foundUser.role === 'platform_admin') {
-        toast({ title: "Admin Logged In", description: "Admin dashboard not yet implemented. Redirecting to home."});
-        router.push('/');
+        router.push('/admin/dashboard');
       } else { // General user
         router.push('/');
       }
@@ -160,9 +159,17 @@ const LoginForm = () => {
               </Link>
             </p>
           )}
-          { (activeRoleTab === 'user' || activeRoleTab === 'platform_admin') && (
+           {activeRoleTab === 'user' && (
+             <p className="mt-6 text-center text-sm text-muted-foreground">
+              New to EstateList?{' '}
+              <Link href="/agents/register" className="font-medium text-primary hover:underline">
+                Create a User Account
+              </Link>
+            </p>
+          )}
+          { activeRoleTab === 'platform_admin' && (
              <p className="mt-4 text-center text-xs text-muted-foreground">
-              (General user or admin accounts cannot be created through public registration)
+              (Admin accounts are typically provisioned, not publicly registered)
             </p>
           )}
         </CardContent>

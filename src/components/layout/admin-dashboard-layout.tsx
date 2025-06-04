@@ -1,0 +1,94 @@
+
+// src/components/layout/admin-dashboard-layout.tsx
+"use client";
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { useEffect, type ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut } from 'lucide-react'; // Added BarChart3
+import Logo from '@/components/common/logo';
+import { useToast } from '@/hooks/use-toast';
+import type { PlatformAdmin } from '@/lib/types';
+
+interface AdminDashboardLayoutProps {
+  children: ReactNode;
+}
+
+const adminNavItems = [
+  { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
+  { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
+  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <ShieldCheck className="h-5 w-5" /> },
+  { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
+  { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+];
+
+export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
+  const { isAuthenticated, user, loading, logout } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated) {
+        router.push('/agents/login'); // Or a generic login page if you create one
+      } else if (user && user.role !== 'platform_admin') {
+        toast({
+          title: "Access Denied",
+          description: "This dashboard is for platform administrators only.",
+          variant: "destructive"
+        });
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, user, loading, router, toast]);
+
+  if (loading || !isAuthenticated || (user && user.role !== 'platform_admin')) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-lg text-muted-foreground">Loading admin dashboard...</p>
+      </div>
+    );
+  }
+  
+  const currentAdmin = user as PlatformAdmin;
+
+  return (
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
+      <aside className="w-full md:w-72 bg-card text-card-foreground p-4 md:border-r border-border space-y-6 md:sticky md:top-[calc(var(--header-height,68px)+1rem)] md:self-start md:max-h-[calc(100vh-var(--header-height,68px)-2rem)] md:overflow-y-auto">
+        <div className="md:hidden">
+           <Logo />
+        </div>
+        <div className="text-center border-b pb-4 mb-4">
+            <ShieldCheck className="mx-auto h-10 w-10 text-primary mb-2" />
+            <h2 className="text-xl font-headline font-semibold">{currentAdmin?.name}</h2>
+            <p className="text-sm text-muted-foreground">Platform Administrator</p>
+        </div>
+        <nav className="flex flex-col space-y-2">
+          {adminNavItems.map((item) => (
+            <Button
+              key={item.href}
+              variant={pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard') ? 'default' : 'ghost'}
+              className="w-full justify-start"
+              asChild
+            >
+              <Link href={item.href}>
+                {item.icon}
+                <span className="ml-2">{item.label}</span>
+              </Link>
+            </Button>
+          ))}
+        </nav>
+        <Button variant="outline" className="w-full mt-auto justify-start" onClick={logout}>
+          <LogOut className="h-5 w-5" />
+          <span className="ml-2">Logout</span>
+        </Button>
+      </aside>
+      <main className="flex-1 p-4 md:p-8">
+        {children}
+      </main>
+    </div>
+  );
+}

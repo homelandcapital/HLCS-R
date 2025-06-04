@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle } from "lucide-react";
+import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle, ShieldCheck } from "lucide-react";
 import { useState } from 'react';
 
 const Navbar = () => {
@@ -22,8 +22,9 @@ const Navbar = () => {
           { href: '/agents/dashboard/add-property', label: 'Add Property' },
         ]
       : []),
-    // Could add links for other roles here if dashboards existed
-    // e.g., ...(isAuthenticated && user?.role === 'platform_admin' ? [{ href: '/admin/dashboard', label: 'Admin Panel' }] : [])
+    ...(isAuthenticated && user?.role === 'platform_admin'
+      ? [{ href: '/admin/dashboard', label: 'Admin Dashboard' }] 
+      : [])
   ];
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -57,7 +58,9 @@ const Navbar = () => {
         <Logo />
         <nav className="hidden md:flex items-center space-x-4">
           {navLinks.map(link => (
-            <Link key={link.href} href={link.href} className="text-foreground hover:text-primary transition-colors font-medium">
+            <Link key={link.href} href={link.href} className="text-foreground hover:text-primary transition-colors font-medium flex items-center">
+                {link.label === 'Admin Dashboard' && <ShieldCheck className="mr-1.5 h-4 w-4 text-primary" />}
+                {link.label === 'Dashboard' && user?.role === 'agent' && <LayoutDashboard className="mr-1.5 h-4 w-4 text-primary" />}
                 {link.label}
             </Link>
           ))}
@@ -77,7 +80,9 @@ const Navbar = () => {
                 <Logo />
                 <nav className="flex flex-col space-y-3">
                  {navLinks.map(link => (
-                    <Link key={link.href} href={link.href} onClick={closeMobileMenu} className="text-lg text-foreground hover:text-primary transition-colors py-2">
+                    <Link key={link.href} href={link.href} onClick={closeMobileMenu} className="text-lg text-foreground hover:text-primary transition-colors py-2 flex items-center">
+                       {link.label === 'Admin Dashboard' && <ShieldCheck className="mr-2 h-5 w-5 text-primary" />}
+                       {link.label === 'Dashboard' && user?.role === 'agent' && <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />}
                         {link.label}
                     </Link>
                   ))}
