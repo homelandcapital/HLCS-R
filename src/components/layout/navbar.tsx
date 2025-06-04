@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle, ShieldCheck, Heart, Bookmark } from "lucide-react"; // Added Bookmark for User Dashboard
 import { useState } from 'react';
+import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout, loading } = useAuth();
@@ -70,9 +71,11 @@ const Navbar = () => {
           ))}
         </nav>
         <div className="hidden md:flex items-center space-x-2">
+          <ThemeToggleButton />
           {!loading && <AuthButtons />}
         </div>
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggleButton />
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
