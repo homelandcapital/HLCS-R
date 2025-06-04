@@ -42,17 +42,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .single<UserProfile>();
 
     if (profileError) {
-      console.error('Error fetching user profile:', profileError);
-      toast({ title: 'Profile Error', description: 'Could not load your profile data.', variant: 'destructive'});
+      console.error('Error fetching user profile. Message:', profileError.message);
+      console.error('Error fetching user profile. Details:', profileError.details);
+      console.error('Error fetching user profile. Hint:', profileError.hint);
+      console.error('Error fetching user profile. Code:', profileError.code);
+      console.error('Full profileError object:', profileError);
+      toast({ title: 'Profile Error', description: `Could not load your profile data. ${profileError.message || 'Please check console for details.'}`, variant: 'destructive'});
       return null;
     }
 
     if (!baseProfile) {
+        console.warn('User profile not found in public.users for id:', supabaseUser.id);
         toast({ title: 'Profile Error', description: 'User profile not found.', variant: 'destructive'});
         return null;
     }
 
-    // Construct the AuthenticatedUser based on role
     let authenticatedUser: AuthenticatedUser;
 
     if (baseProfile.role === 'user') {
@@ -62,31 +66,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', baseProfile.id);
 
       if (savedPropsError) {
-        console.error('Error fetching saved properties:', savedPropsError);
-        // Non-critical, proceed with empty saved properties
+        console.error('Error fetching saved properties:', savedPropsError.message);
       }
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
       
       authenticatedUser = {
         ...baseProfile,
-        role: 'user', // Explicitly set role to satisfy TypeScript
+        role: 'user',
         savedPropertyIds,
       } as GeneralUser;
 
     } else if (baseProfile.role === 'agent') {
       authenticatedUser = {
         ...baseProfile,
-        role: 'agent', // Explicitly set role
-        phone: baseProfile.phone || '', // Ensure phone is string, not null
+        role: 'agent',
+        phone: baseProfile.phone || '',
       } as Agent;
     } else if (baseProfile.role === 'platform_admin') {
       authenticatedUser = {
         ...baseProfile,
-        role: 'platform_admin', // Explicitly set role
+        role: 'platform_admin',
       } as PlatformAdmin;
     } else {
-        console.error('Unknown user role:', baseProfile.role);
-        toast({ title: 'Profile Error', description: 'Unknown user role.', variant: 'destructive'});
+        console.error('Unknown user role in profile:', baseProfile.role);
+        toast({ title: 'Profile Error', description: `Unknown user role: ${baseProfile.role}.`, variant: 'destructive'});
         return null;
     }
     
@@ -111,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         setSession(session);
-        setLoading(true); // Set loading true while fetching profile
+        setLoading(true); 
         if (event === 'SIGNED_IN' && session?.user) {
           const profile = await fetchUserProfileAndRelatedData(session.user);
           setUser(profile);
@@ -140,12 +143,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithPassword = async (email: string, password: string) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    // setLoading(false); // onAuthStateChange will handle loading state
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
-      setLoading(false); // Ensure loading is false on error
+      setLoading(false); 
     } else {
-      toast({ title: 'Login Successful', description: 'Welcome back!' });
+      // Success is handled by onAuthStateChange which will also set loading to false
+      // toast({ title: 'Login Successful', description: 'Welcome back!' }); // Toast can be moved to onAuthStateChange success if preferred
     }
     return { error };
   };
@@ -171,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('users')
         .insert({
           id: signUpData.user.id,
-          email: signUpData.user.email!, // email will exist on successful signUp
+          email: signUpData.user.email!, 
           role: userRole,
           name: profileSpecificData.name,
           phone: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).phone : null,
@@ -179,22 +182,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
       if (profileError) {
-        console.error("Error creating profile:", profileError);
+        console.error("Error creating profile during signup. Message:", profileError.message);
+        console.error("Full profileError object:", profileError);
         toast({ title: 'Profile Creation Failed', description: profileError.message, variant: 'destructive' });
+        
+        // Attempt to clean up the auth user if profile creation fails
+        const { error: deleteUserError } = await supabase.auth.admin.deleteUser(signUpData.user.id);
+        if (deleteUserError) {
+            console.error("Failed to delete orphaned auth user:", deleteUserError.message);
+        } else {
+            console.log("Orphaned auth user deleted successfully after profile creation failure.");
+        }
         await supabase.auth.signOut(); // Sign out the partially created user
         return { error: profileError, data: null };
       }
-      // onAuthStateChange will fetch the full profile after SIGNED_IN event
-      toast({ title: 'Registration Successful!', description: `Welcome, ${profileSpecificData.name}! Please check your email to verify your account.` });
+      // onAuthStateChange will fetch the full profile after SIGNED_IN event triggered by email confirmation
+      toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.` });
     }
     return { error: null, data: signUpData };
   };
 
   const signUpUser = async (name: string, email: string, password: string) => {
     setLoading(true);
-    // `commonSignUp` will set user and trigger onAuthStateChange which sets loading to false
     const result = await commonSignUp(email, password, 'user', { name });
-    if(result.error) setLoading(false); // Ensure loading is false if signup itself fails
+    if(result.error) setLoading(false);
+    // setLoading(false) will be handled by onAuthStateChange or if an error occurs earlier
     return result;
   };
 
@@ -207,11 +219,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
-    // setUser(null); // onAuthStateChange will handle this
-    // setLoading(false); // onAuthStateChange will handle this
-    // router.push('/'); // onAuthStateChange will handle this
-    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
+        setLoading(false);
+    } else {
+        // setUser(null) and router.push('/') are handled by onAuthStateChange
+        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+    }
   };
 
   const getSupabaseSession = () => {
@@ -241,7 +256,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let updatedSavedIds: string[];
     let toastMessage = "";
 
-    setLoading(true); // Indicate activity
+    setLoading(true); 
 
     if (currentlySaved) {
       const { error } = await supabase
@@ -250,7 +265,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .match({ user_id: generalUser.id, property_id: propertyId });
 
       if (error) {
-        toast({ title: 'Error', description: 'Could not unsave property.', variant: 'destructive' });
+        console.error('Error unsaving property:', error.message);
+        toast({ title: 'Error', description: 'Could not unsave property. ' + error.message, variant: 'destructive' });
         setLoading(false);
         return;
       }
@@ -262,7 +278,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .insert({ user_id: generalUser.id, property_id: propertyId });
       
       if (error) {
-        toast({ title: 'Error', description: 'Could not save property.', variant: 'destructive' });
+        console.error('Error saving property:', error.message);
+        toast({ title: 'Error', description: 'Could not save property. ' + error.message, variant: 'destructive' });
         setLoading(false);
         return;
       }
@@ -270,7 +287,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toastMessage = "Property saved!";
     }
     
-    // Update local user state
     const updatedUser: GeneralUser = { ...generalUser, savedPropertyIds: updatedSavedIds };
     setUser(updatedUser);
     setLoading(false);
