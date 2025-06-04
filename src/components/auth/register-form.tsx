@@ -9,14 +9,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { Agent, GeneralUser, UserRole } from '@/lib/types';
 import { mockAgents, mockGeneralUsers } from '@/lib/mock-data';
-import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon, Building, Shield } from 'lucide-react';
+import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon, Building } from 'lucide-react';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -36,18 +36,8 @@ const RegisterForm = () => {
   const { login } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
-  const searchParams = useSearchParams();
   
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
-
-  useEffect(() => {
-    const roleFromQuery = searchParams.get('role');
-    if (roleFromQuery === 'agent') {
-      setActiveRoleTab('agent');
-    } else {
-      setActiveRoleTab('user');
-    }
-  }, [searchParams]);
+  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user'); // Default to 'user'
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(formSchema),
@@ -63,7 +53,7 @@ const RegisterForm = () => {
 
   function onSubmit(values: RegisterFormValues) {
     if (activeRoleTab === 'agent') {
-      if (!values.phone || values.phone.trim().length < 10) { // Also check if empty or just whitespace
+      if (!values.phone || values.phone.trim().length < 10) { 
         form.setError("phone", { type: "manual", message: "Phone number must be at least 10 digits for agents." });
         return;
       }
