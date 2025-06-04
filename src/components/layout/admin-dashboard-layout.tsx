@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion } from 'lucide-react';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -21,6 +21,7 @@ const adminNavItems = [
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
   { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <Eye className="h-5 w-5" /> },
   { href: '/admin/dashboard/inquiries', label: 'Inquiry Management', icon: <MailQuestion className="h-5 w-5" /> },
+  { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];

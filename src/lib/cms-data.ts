@@ -1,7 +1,8 @@
 
 import type { HomePageContent, ServicesPageContent, AboutPageContent, ContactPageContent, FooterContent } from './types';
 
-export const homePageContentData: HomePageContent = {
+// Changed from const to let to allow modification at runtime for CMS demo
+export let homePageContentData: HomePageContent = {
   hero: {
     title: "Welcome to Homeland Capital",
     subtitle: "Discover your next property or list your own with a partner dedicated to innovation, transparency, and your success in the real estate market.",
@@ -14,21 +15,21 @@ export const homePageContentData: HomePageContent = {
     title: "Our Core Services",
     items: [
       {
-        iconName: "Search", // We'll map this to Lucide <Search />
+        iconName: "Search",
         title: "Property Sales & Purchases",
         description: "Navigate the market with ease, whether buying your dream home or selling your current property.",
         link: "/services",
         ctaText: "Learn More"
       },
       {
-        iconName: "BarChartHorizontalBig", // Map to Lucide
+        iconName: "BarChartHorizontalBig",
         title: "Expert Property Listings",
         description: "Showcase your properties to a wide audience with our advanced listing platform and tools.",
         link: "/services",
         ctaText: "Learn More"
       },
       {
-        iconName: "Handshake", // Map to Lucide
+        iconName: "Handshake",
         title: "Market Insights",
         description: "Make informed decisions with our comprehensive market analysis and expert guidance.",
         link: "/services",
@@ -40,17 +41,17 @@ export const homePageContentData: HomePageContent = {
     title: "Why Choose Homeland Capital?",
     items: [
       {
-        iconName: "Lightbulb", // Map to Lucide
+        iconName: "Lightbulb",
         title: "Technology Driven",
         description: "Leveraging cutting-edge tech for a seamless real estate experience."
       },
       {
-        iconName: "Users", // Map to Lucide
+        iconName: "Users",
         title: "Client-Focused Approach",
         description: "Your needs are our priority. We're dedicated to your success."
       },
       {
-        iconName: "Award", // Map to Lucide
+        iconName: "Award",
         title: "Trusted Expertise",
         description: "Years of experience and deep market knowledge at your service."
       }
@@ -63,7 +64,7 @@ export const homePageContentData: HomePageContent = {
   }
 };
 
-export const servicesPageContentData: ServicesPageContent = {
+export let servicesPageContentData: ServicesPageContent = {
   pageTitle: "Our Services - Homeland Capital",
   headerTitle: "Our Services",
   introParagraph: "At Homeland Capital, we offer a comprehensive suite of services to meet all your real estate needs.",
@@ -88,7 +89,7 @@ export const servicesPageContentData: ServicesPageContent = {
   conclusionParagraph: "More details about our specific service packages and offerings will be available here soon."
 };
 
-export const aboutPageContentData: AboutPageContent = {
+export let aboutPageContentData: AboutPageContent = {
   pageTitle: "About Homeland Capital",
   headerTitle: "About Homeland Capital",
   introParagraph: "Homeland Capital is dedicated to simplifying the real estate experience through technology and exceptional service.",
@@ -112,7 +113,7 @@ export const aboutPageContentData: AboutPageContent = {
   conclusionParagraph: "More detailed information about our company history, team, and values will be added soon."
 };
 
-export const contactPageContentData: ContactPageContent = {
+export let contactPageContentData: ContactPageContent = {
   pageTitle: "Contact Us - Homeland Capital",
   headerTitle: "Get In Touch",
   headerDescription: "We'd love to hear from you! Whether you have a question about our services, need assistance, or just want to chat, please reach out.",
@@ -128,7 +129,7 @@ export const contactPageContentData: ContactPageContent = {
   }
 };
 
-export const footerContentData: FooterContent = {
+export let footerContentData: FooterContent = {
   tagline: "Your partner in finding the perfect property.",
   columns: [
     {
