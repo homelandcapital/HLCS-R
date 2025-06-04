@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -24,13 +24,27 @@ export default function PlatformSettingsPage() {
   // Mock states for settings - in a real app, these would be fetched and updated via API
   const [siteName, setSiteName] = useState('Homeland Capital');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [defaultCurrency, setDefaultCurrency] = useState('NGN'); // Changed to NGN
+  const [defaultCurrency, setDefaultCurrency] = useState('NGN');
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post");
 
+  // New state for promotion settings
+  const [promotionsEnabled, setPromotionsEnabled] = useState(true);
+  const [promotionFee, setPromotionFee] = useState('5000'); // Store as string for easier input handling
+  const [promotionDuration, setPromotionDuration] = useState('7'); // Duration in days
+
   const handleSaveChanges = () => {
     // Simulate saving changes
-    console.log('Saving settings:', { siteName, maintenanceMode, defaultCurrency, notificationEmail, predefinedAmenities });
+    console.log('Saving settings:', { 
+      siteName, 
+      maintenanceMode, 
+      defaultCurrency, 
+      notificationEmail, 
+      predefinedAmenities,
+      promotionsEnabled,
+      promotionFee: parseFloat(promotionFee), // Convert to number on save
+      promotionDuration: parseInt(promotionDuration, 10) // Convert to number on save
+    });
     toast({
       title: 'Settings Saved',
       description: 'Platform settings have been successfully updated (simulated).',
@@ -92,6 +106,54 @@ export default function PlatformSettingsPage() {
               checked={maintenanceMode}
               onCheckedChange={setMaintenanceMode}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Star className="mr-2 h-5 w-5 text-muted-foreground" /> Promotion Settings
+          </CardTitle>
+          <CardDescription>Configure property promotion features.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+            <div>
+                <Label htmlFor="promotionsEnabled" className="text-base">Enable Property Promotions</Label>
+                <p className="text-sm text-muted-foreground">Allow agents to promote their listings for better visibility.</p>
+            </div>
+            <Switch
+              id="promotionsEnabled"
+              checked={promotionsEnabled}
+              onCheckedChange={setPromotionsEnabled}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promotionFee">Promotion Fee (NGN)</Label>
+            <Input
+              id="promotionFee"
+              type="number"
+              value={promotionFee}
+              onChange={(e) => setPromotionFee(e.target.value)}
+              placeholder="e.g., 5000"
+              min="0"
+              disabled={!promotionsEnabled}
+            />
+            <p className="text-xs text-muted-foreground">Cost for an agent to promote a single listing.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promotionDuration">Promotion Duration (Days)</Label>
+            <Input
+              id="promotionDuration"
+              type="number"
+              value={promotionDuration}
+              onChange={(e) => setPromotionDuration(e.target.value)}
+              placeholder="e.g., 7"
+              min="1"
+              disabled={!promotionsEnabled}
+            />
+            <p className="text-xs text-muted-foreground">How long a promotion will last, in days.</p>
           </div>
         </CardContent>
       </Card>
