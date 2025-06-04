@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { mockProperties } from '@/lib/mock-data';
-import type { Property } from '@/lib/types';
+import type { Property, Agent } from '@/lib/types';
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,11 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function PropertyDetailsPage() {
   const params = useParams();
@@ -26,6 +28,8 @@ export default function PropertyDetailsPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isInquiryDialogOpen, setIsInquiryDialogOpen] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -69,6 +73,16 @@ export default function PropertyDetailsPage() {
     );
   };
 
+  let contactFormInitialData: { name?: string; email?: string; phone?: string } = {};
+  if (user) {
+    contactFormInitialData.name = user.name;
+    contactFormInitialData.email = user.email;
+    if (user.role === 'agent') { // Agents have phone numbers
+      contactFormInitialData.phone = (user as Agent).phone;
+    }
+  }
+
+
   return (
     <div className="space-y-8">
       {/* Hero Section with Title and Price */}
@@ -82,8 +96,33 @@ export default function PropertyDetailsPage() {
                 {property.address}
               </div>
             </div>
-            <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg">
-              ₦{property.price.toLocaleString()}
+            <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
+              <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right">
+                ₦{property.price.toLocaleString()}
+              </div>
+              <Dialog open={isInquiryDialogOpen} onOpenChange={setIsInquiryDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="default" size="default" className="w-full md:w-auto">
+                    <MailQuestion className="mr-2 h-5 w-5" /> Inquire Now
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="font-headline">Inquire about: {property.title}</DialogTitle>
+                    <DialogDescription>
+                      Fill out the form below. Your details (if logged in) have been pre-filled. The platform admin will get in touch.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ContactForm
+                    propertyTitle={property.title}
+                    propertyId={property.id}
+                    initialName={contactFormInitialData.name}
+                    initialEmail={contactFormInitialData.email}
+                    initialPhone={contactFormInitialData.phone}
+                    onFormSubmit={() => setIsInquiryDialogOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardContent>
@@ -203,7 +242,7 @@ export default function PropertyDetailsPage() {
           <PropertyMap coordinates={property.coordinates} title={property.title} />
         </div>
 
-        {/* Sidebar: Agent Info & Contact Form */}
+        {/* Sidebar: Agent Info */}
         <div className="space-y-8">
           {/* Agent Info Card (Listing Agent) */}
           <Card className="shadow-lg">
@@ -217,7 +256,6 @@ export default function PropertyDetailsPage() {
               </Avatar>
               <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
               {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
-              {/* Contact details for the listing agent can be shown here if desired */}
               {agent.phone && 
                 <div className="flex items-center text-sm text-foreground">
                   <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone}
@@ -230,12 +268,7 @@ export default function PropertyDetailsPage() {
               }
             </CardContent>
           </Card>
-
-          {/* Contact Form (for platform admin) */}
-          <ContactForm
-            propertyTitle={property.title}
-            propertyId={property.id}
-          />
+          {/* The ContactForm instance previously here has been removed */}
         </div>
       </div>
     </div>
@@ -304,19 +337,11 @@ const PropertyDetailsSkeleton = () => (
             <Skeleton className="w-24 h-24 rounded-full" />
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
-            {/* Skeletons for email/phone removed */}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
-          <CardContent className="space-y-6">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </CardContent>
-        </Card>
+        {/* Skeleton for removed ContactForm is not needed here anymore */}
       </div>
     </div>
   </div>
 );
+

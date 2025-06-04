@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Phone } from 'lucide-react';
 import { mockInquiries } from '@/lib/mock-data';
 import type { Inquiry } from '@/lib/types';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -26,19 +27,42 @@ type ContactFormValues = z.infer<typeof formSchema>;
 interface ContactFormProps {
   propertyTitle: string;
   propertyId: string;
+  initialName?: string;
+  initialEmail?: string;
+  initialPhone?: string;
+  onFormSubmit?: () => void;
 }
 
-const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
+const ContactForm = ({ 
+  propertyTitle, 
+  propertyId, 
+  initialName, 
+  initialEmail, 
+  initialPhone,
+  onFormSubmit 
+}: ContactFormProps) => {
   const { toast } = useToast();
+  
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
+      name: initialName || '',
+      email: initialEmail || '',
+      phone: initialPhone || '',
       message: `I'm interested in ${propertyTitle}.`,
     },
   });
+
+  // Effect to reset form if initial values or property context changes
+  useEffect(() => {
+    form.reset({
+      name: initialName || '',
+      email: initialEmail || '',
+      phone: initialPhone || '',
+      message: `I'm interested in ${propertyTitle}.`,
+    });
+  }, [initialName, initialEmail, initialPhone, propertyTitle, form]);
+
 
   function onSubmit(values: ContactFormValues) {
     const newInquiry: Inquiry = {
@@ -63,24 +87,25 @@ const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
       description: `Your message about ${propertyTitle} has been sent successfully. The platform admin will contact you shortly.`,
       variant: 'default',
     });
-    form.reset({
-        name: '',
-        email: '',
-        phone: '',
+    form.reset({ // Reset to initial default message after submission
+        name: initialName || '', // Persist prefilled if available
+        email: initialEmail || '',
+        phone: initialPhone || '',
         message: `I'm interested in ${propertyTitle}.`,
     });
+    onFormSubmit?.(); // Call callback to close dialog if provided
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center">
-          <Mail className="w-5 h-5 mr-2 text-primary" /> Contact Platform
+    <Card className="shadow-none border-none"> {/* Remove Card styling if used in Dialog */}
+      <CardHeader className="px-0 pt-0 pb-4"> {/* Adjust padding if needed */}
+        <CardTitle className="font-headline flex items-center text-lg sr-only"> {/* Sr-only if DialogTitle is present */}
+          <Mail className="w-5 h-5 mr-2 text-primary" /> Contact Platform Admin
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0"> {/* Adjust padding if needed */}
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -136,7 +161,7 @@ const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
                 <FormItem>
                   <FormLabel>Message</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Your message..." {...field} rows={5} />
+                    <Textarea placeholder="Your message..." {...field} rows={4} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,3 +178,4 @@ const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
 };
 
 export default ContactForm;
+
