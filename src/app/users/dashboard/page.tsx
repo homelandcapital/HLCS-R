@@ -7,9 +7,23 @@ import Link from 'next/link';
 import { Bookmark, ListChecks, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import type { GeneralUser } from '@/lib/types';
+import { mockInquiries } from '@/lib/mock-data'; // Import mockInquiries
+import { useState, useEffect } from 'react'; // Import useState and useEffect
 
 export default function UserDashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const [inquiriesCount, setInquiriesCount] = useState(0); // State for inquiries count
+
+  useEffect(() => {
+    if (!authLoading && user && user.role === 'user') {
+      const currentUser = user as GeneralUser;
+      // Calculate inquiries count
+      const userSpecificInquiries = mockInquiries.filter(
+        inq => inq.inquirerEmail.toLowerCase() === currentUser.email.toLowerCase()
+      );
+      setInquiriesCount(userSpecificInquiries.length);
+    }
+  }, [user, authLoading]);
 
   if (authLoading) {
     return <div className="text-center py-10">Loading dashboard...</div>;
@@ -29,8 +43,6 @@ export default function UserDashboardPage() {
   
   const currentUser = user as GeneralUser;
   const savedPropertiesCount = currentUser.savedPropertyIds?.length || 0;
-  // Placeholder for inquiries count, actual count would require filtering mockInquiries
-  const inquiriesCount = 0; 
 
   return (
     <div className="space-y-8">
@@ -54,7 +66,7 @@ export default function UserDashboardPage() {
         />
         <StatCard 
             title="My Inquiries" 
-            value={inquiriesCount.toString()} // This will be 0 until logic is added
+            value={inquiriesCount.toString()} 
             icon={<ListChecks />} 
             description="Inquiries you've submitted."
             link="/users/dashboard/my-inquiries"
@@ -84,7 +96,7 @@ export default function UserDashboardPage() {
             <Link href="/users/dashboard/my-inquiries"><ListChecks className="mr-2 h-4 w-4" /> View My Inquiries</Link>
           </Button>
            <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/properties"><UserCircle className="mr-2 h-4 w-4" /> Explore Properties</Link>
+            <Link href="/properties"><UserCircle className="mr-2 h-4 w-4" /> Explore Properties</Link> {/* Changed Icon from UserCircle to Search or Home */}
           </Button>
         </CardContent>
       </Card>
