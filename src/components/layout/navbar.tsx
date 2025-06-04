@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, PlusCircle, ShieldCheck, Bookmark, Home as HomeIcon, Briefcase, Info, Mail as MailIcon, Building } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, ShieldCheck, Bookmark, Home as HomeIcon, Briefcase, Info, Mail as MailIcon, Building } from "lucide-react";
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
@@ -31,7 +31,7 @@ const Navbar = () => {
     ...(isAuthenticated && user?.role === 'agent'
       ? [
           { href: '/agents/dashboard', label: 'Agent Dashboard', icon: <LayoutDashboard className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
-          { href: '/agents/dashboard/add-property', label: 'Add Property', icon: <PlusCircle className="mr-1.5 h-4 w-4 text-primary md:mr-0" /> },
+          // Removed "Add Property" from here as it's in the agent dashboard sidebar
         ]
       : []),
     ...(isAuthenticated && user?.role === 'platform_admin'
