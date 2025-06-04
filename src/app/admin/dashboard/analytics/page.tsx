@@ -3,13 +3,14 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star } from 'lucide-react';
+import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star, Link as LinkIcon } from 'lucide-react'; // Added LinkIcon
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart as RechartsBarChart } from 'recharts';
 import { mockProperties, mockPlatformSettings } from '@/lib/mock-data';
-import type { PromotionTierConfig } from '@/lib/types';
+import type { Property } from '@/lib/types'; // Changed PromotionTierConfig to Property
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Link from 'next/link'; // Added NextLink for property links
 
 // Mock data for charts (remains the same)
 const mockUserSignupsData = [
@@ -30,50 +31,31 @@ const mockPropertyListingsData = [
   { name: 'Jun', listings: 22 },
 ];
 
-interface TierAnalytics extends PromotionTierConfig {
-  promotedCount: number;
-  revenue: number;
-}
-
 export default function PlatformAnalyticsPage() {
   // In a real app, this data would be fetched from a backend
   const totalUsers = 1250;
-  const totalProperties = mockProperties.length; // Use actual mockProperties length
+  const totalProperties = mockProperties.length;
   const totalSalesVolume = 150000000;
   const siteEngagementRate = 65.5;
 
   const [promotedListingsCount, setPromotedListingsCount] = useState(0);
   const [totalPromotionRevenue, setTotalPromotionRevenue] = useState(0);
-  const [promotionsByTier, setPromotionsByTier] = useState<TierAnalytics[]>([]);
+  const [promotedPropertiesList, setPromotedPropertiesList] = useState<Property[]>([]); // New state for the list
 
   useEffect(() => {
     const promotedProps = mockProperties.filter(p => p.isPromoted && p.promotionDetails);
+    setPromotedPropertiesList(promotedProps); // Set the list of promoted properties
     setPromotedListingsCount(promotedProps.length);
 
     let revenue = 0;
-    const tierCounts: Record<string, { count: number; revenue: number }> = {};
-
-    mockPlatformSettings.promotionTiers.forEach(tier => {
-      tierCounts[tier.id] = { count: 0, revenue: 0 };
-    });
-
     promotedProps.forEach(p => {
       const tierId = p.promotionDetails!.tierId;
       const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === tierId);
       if (tierConfig) {
         revenue += tierConfig.fee;
-        tierCounts[tierId].count += 1;
-        tierCounts[tierId].revenue += tierConfig.fee;
       }
     });
     setTotalPromotionRevenue(revenue);
-
-    const tierAnalyticsData = mockPlatformSettings.promotionTiers.map(tier => ({
-      ...tier,
-      promotedCount: tierCounts[tier.id]?.count || 0,
-      revenue: tierCounts[tier.id]?.revenue || 0,
-    }));
-    setPromotionsByTier(tierAnalyticsData);
 
   }, []);
 
@@ -141,46 +123,50 @@ export default function PlatformAnalyticsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline flex items-center">
-            <Star className="mr-2 h-5 w-5 text-yellow-500" /> Promotion Tier Analytics
+            <Star className="mr-2 h-5 w-5 text-yellow-500" /> Promoted Listings Details
           </CardTitle>
-          <CardDescription>Performance breakdown for each property promotion package.</CardDescription>
+          <CardDescription>Details of individual properties currently being promoted.</CardDescription>
         </CardHeader>
         <CardContent>
-          {promotionsByTier.length > 0 ? (
+          {promotedPropertiesList.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tier Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Fee (₦)</TableHead>
-                    <TableHead className="text-right">Duration (Days)</TableHead>
-                    <TableHead className="text-right">Active Listings</TableHead>
-                    <TableHead className="text-right">Revenue (₦)</TableHead>
+                    <TableHead>Property ID</TableHead>
+                    <TableHead>Property Title</TableHead>
+                    <TableHead>Promotion Tier</TableHead>
+                    <TableHead className="text-right">View</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {promotionsByTier.map(tier => (
-                    <TableRow key={tier.id}>
-                      <TableCell className="font-medium text-primary">{tier.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground w-1/3">{tier.description}</TableCell>
-                      <TableCell className="text-right">{tier.fee.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">{tier.duration}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">{tier.promotedCount}</Badge>
+                  {promotedPropertiesList.map(property => (
+                    <TableRow key={property.id}>
+                      <TableCell className="font-mono text-xs">{property.id}</TableCell>
+                      <TableCell className="font-medium">{property.title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                           {property.promotionDetails?.tierName || 'N/A'}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">{tier.revenue.toLocaleString()}</TableCell>
+                       <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" asChild title={`View ${property.title}`}>
+                          <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
+                            <LinkIcon className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-4">No listings are currently being promoted or no promotion tiers are configured.</p>
+            <p className="text-muted-foreground text-center py-4">No listings are currently being promoted.</p>
           )}
            {!mockPlatformSettings.promotionsEnabled && (
             <p className="mt-4 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-3 rounded-md">
-              Note: Property promotions are currently disabled in platform settings. These analytics reflect the state when promotions were last active or based on historical data.
+              Note: Property promotions are currently disabled in platform settings.
             </p>
           )}
         </CardContent>
