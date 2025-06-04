@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -16,7 +16,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea';
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
@@ -25,10 +26,11 @@ export default function PlatformSettingsPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
+  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors");
 
   const handleSaveChanges = () => {
     // Simulate saving changes
-    console.log('Saving settings:', { siteName, maintenanceMode, defaultCurrency, notificationEmail });
+    console.log('Saving settings:', { siteName, maintenanceMode, defaultCurrency, notificationEmail, predefinedAmenities });
     toast({
       title: 'Settings Saved',
       description: 'Platform settings have been successfully updated (simulated).',
@@ -78,6 +80,51 @@ export default function PlatformSettingsPage() {
         </CardContent>
       </Card>
       
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Home className="mr-2 h-5 w-5 text-muted-foreground" /> Property Listing Settings
+          </CardTitle>
+          <CardDescription>Configure options related to property listings.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="predefinedAmenities">Manage Predefined Amenities</Label>
+            <Textarea
+              id="predefinedAmenities"
+              value={predefinedAmenities}
+              onChange={(e) => setPredefinedAmenities(e.target.value)}
+              placeholder="Enter comma-separated amenities, e.g., Pool, Garage, Gym"
+              rows={3}
+              disabled // For now, keep it simple. Full implementation would be complex.
+            />
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Define a list of standard amenities. In a full implementation, these could become selectable options for agents. Currently, this field is for display only.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="propertyTypes">Manage Property Types</Label>
+            <Input
+              id="propertyTypes"
+              placeholder="e.g., House, Apartment, Condo, Commercial, Land"
+              disabled
+            />
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Manage available property types. Current types are: House, Apartment, Condo, Townhouse, Land. This setting is a placeholder for a more complex feature.
+            </p>
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="customFields">Manage Custom Fields for Properties</Label>
+             <Button variant="outline" disabled className="w-full justify-start">
+              <ListPlus className="mr-2 h-4 w-4" /> Define Custom Fields (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Allow defining additional custom fields for property listings (e.g., Pet Policy: Yes/No). This setting is a placeholder for a more complex feature.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
@@ -161,3 +208,4 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
+
