@@ -11,85 +11,85 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { Agent, GeneralUser, UserRole } from '@/lib/types';
-import { mockAgents, mockGeneralUsers } from '@/lib/mock-data';
+import type { UserRole } from '@/lib/types'; // Agent, GeneralUser not directly needed for form values
+// mockAgents, mockGeneralUsers are no longer needed
 import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon, Building } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from 'react';
 
-const formSchema = z.object({
+const baseFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
-  phone: z.string().optional(), 
-  agency: z.string().optional(),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
+});
+
+const agentFormSchema = baseFormSchema.extend({
+  phone: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
+  agency: z.string().optional(),
+});
+
+const userFormSchema = baseFormSchema; // No additional fields for basic user
+
+// Main schema that refines based on role and password confirmation
+const registerFormSchema = z.discriminatedUnion("role", [
+  agentFormSchema.extend({ role: z.literal("agent") }),
+  userFormSchema.extend({ role: z.literal("user") }),
+]).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
-type RegisterFormValues = z.infer<typeof formSchema>;
+type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 const RegisterForm = () => {
-  const { login } = useAuth(); 
-  const router = useRouter();
+  const { signUpUser, signUpAgent, loading: authLoading } = useAuth();
+  const router = useRouter(); // Still used for redirection after successful registration
   const { toast } = useToast();
   
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user'); // Default to 'user'
+  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
 
   const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(registerFormSchema),
     defaultValues: {
+      role: 'user', // Default role
       name: '',
       email: '',
-      phone: '',
-      agency: '',
       password: '',
       confirmPassword: '',
+      // Agent specific fields are undefined initially
     },
+    context: { role: activeRoleTab } // Provide role context for conditional validation
   });
+  
+  // Watch activeRoleTab to update the form's context for Zod's discriminatedUnion
+  React.useEffect(() => {
+    form.setValue('role', activeRoleTab, { shouldValidate: true });
+  }, [activeRoleTab, form]);
 
-  function onSubmit(values: RegisterFormValues) {
-    if (activeRoleTab === 'agent') {
-      if (!values.phone || values.phone.trim().length < 10) { 
-        form.setError("phone", { type: "manual", message: "Phone number must be at least 10 digits for agents." });
-        return;
-      }
-      const newAgentUser: Agent = { 
-        id: `agent-${Date.now()}`, 
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        agency: values.agency,
-        role: 'agent',
-        avatarUrl: 'https://placehold.co/100x100.png'
-      };
-      mockAgents.push(newAgentUser);
-      login(newAgentUser);
-      toast({
-        title: 'Agent Registration Successful!',
-        description: `Welcome, ${newAgentUser.name}! Your agent account has been created.`,
-      });
-      router.push('/agents/dashboard');
-    } else if (activeRoleTab === 'user') {
-      const newUser: GeneralUser = {
-        id: `user-${Date.now()}`,
-        name: values.name,
-        email: values.email,
-        role: 'user',
-        avatarUrl: 'https://placehold.co/100x100.png'
-      };
-      mockGeneralUsers.push(newUser);
-      login(newUser);
-      toast({
-        title: 'User Registration Successful!',
-        description: `Welcome, ${newUser.name}! Your account has been created.`,
-      });
-      router.push('/');
+
+  async function onSubmit(values: RegisterFormValues) {
+    let result;
+    if (values.role === 'agent') {
+        // Type assertion because Zod already validated this structure
+        const agentValues = values as Extract<RegisterFormValues, { role: 'agent' }>;
+      result = await signUpAgent(agentValues.name, agentValues.email, agentValues.password, agentValues.phone, agentValues.agency);
+    } else if (values.role === 'user') {
+        const userValues = values as Extract<RegisterFormValues, { role: 'user' }>;
+      result = await signUpUser(userValues.name, userValues.email, userValues.password);
     } else {
       toast({ title: "Registration Error", description: "Invalid role selected.", variant: "destructive"});
+      return;
+    }
+
+    if (result && !result.error && result.data?.user) {
+      // Redirection will be handled by onAuthStateChange in AuthContext
+      // For agent, it might go to /agents/dashboard, for user to /users/dashboard or /
+      // toast message is handled in signUpUser/signUpAgent
+    } else if (result && result.error) {
+      // Toast message already handled by signUpUser/signUpAgent
+      form.setError("email", { type: "manual", message: result.error.message });
     }
   }
 
@@ -105,7 +105,9 @@ const RegisterForm = () => {
         </CardHeader>
         <CardContent>
           <Tabs value={activeRoleTab} onValueChange={(value) => {
-            setActiveRoleTab(value as UserRole);
+            const newRole = value as UserRole;
+            setActiveRoleTab(newRole);
+            form.setValue('role', newRole, { shouldValidate: true }); // Update Zod's context
             form.clearErrors("phone"); 
           }} className="w-full mb-6">
             <TabsList className="grid w-full grid-cols-2">
@@ -157,7 +159,7 @@ const RegisterForm = () => {
                 <>
                   <FormField
                     control={form.control}
-                    name="phone"
+                    name="phone" // Zod will expect this path for agent role
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
@@ -173,14 +175,14 @@ const RegisterForm = () => {
                   />
                   <FormField
                     control={form.control}
-                    name="agency"
+                    name="agency" // Zod will expect this path for agent role
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Agency (Optional)</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input placeholder="Your Real Estate Agency (e.g., Lagos Homes Ltd)" {...field} className="pl-10"/>
+                            <Input placeholder="Your Real Estate Agency" {...field} className="pl-10"/>
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -222,8 +224,8 @@ const RegisterForm = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Registering...' : `Register as ${activeRoleTab === 'user' ? 'User' : 'Agent'}`}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
+                {(form.formState.isSubmitting || authLoading) ? 'Registering...' : `Register as ${activeRoleTab === 'user' ? 'User' : 'Agent'}`}
               </Button>
             </form>
           </Form>
