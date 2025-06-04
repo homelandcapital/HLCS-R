@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, ListChecks, PlusCircle, TrendingUp, MessageSquare } from 'lucide-react';
+import { Home, ListChecks, PlusCircle, TrendingUp } from 'lucide-react'; // Removed MessageSquare
 import { useAuth } from '@/contexts/auth-context';
 import { mockProperties } from '@/lib/mock-data'; 
 import type { Agent } from '@/lib/types'; // For casting and property.agent
@@ -15,7 +15,7 @@ export default function AgentDashboardPage() {
   const [agentPropertiesCount, setAgentPropertiesCount] = useState(0);
   const [activeListingsCount, setActiveListingsCount] = useState(0);
   const [totalViewsCount, setTotalViewsCount] = useState(0);
-  const [totalInquiriesCount, setTotalInquiriesCount] = useState(0);
+  // Removed totalInquiriesCount state
   const [recentProperties, setRecentProperties] = useState<typeof mockProperties>([]);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function AgentDashboardPage() {
       setAgentPropertiesCount(properties.length);
       setActiveListingsCount(properties.filter(p => p.price > 0).length); // Example criteria
       setTotalViewsCount(properties.reduce((sum, p) => sum + (p.price / 1000), 0)); // Dummy calculation
-      setTotalInquiriesCount(Math.floor(properties.length * 1.5)); // Dummy calculation
+      // Removed totalInquiriesCount calculation
       setRecentProperties(properties.slice(0,3));
     }
   }, [user, authLoading]);
@@ -57,11 +57,11 @@ export default function AgentDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 columns */}
         <StatCard title="Total Listings" value={agentPropertiesCount.toString()} icon={<Home />} description="All properties you manage." />
         <StatCard title="Active Listings" value={activeListingsCount.toString()} icon={<ListChecks />} description="Currently active on the market." />
         <StatCard title="Total Views" value={Math.floor(totalViewsCount).toLocaleString()} icon={<TrendingUp />} description="Across all your listings." />
-        <StatCard title="Inquiries Received" value={totalInquiriesCount.toString()} icon={<MessageSquare />} description="Potential buyer contacts." />
+        {/* Removed Inquiries Received StatCard */}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
