@@ -49,6 +49,15 @@ export interface Property {
 
 export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
 
+export interface Message {
+  id: string;
+  senderId: string;
+  senderRole: UserRole;
+  senderName: string;
+  content: string;
+  timestamp: string;
+}
+
 export interface Inquiry {
   id: string;
   propertyId: string;
@@ -56,9 +65,10 @@ export interface Inquiry {
   inquirerName: string;
   inquirerEmail: string;
   inquirerPhone?: string;
-  message: string;
+  message: string; // This is the initial message
   dateReceived: string;
   status: InquiryStatus;
+  conversation?: Message[];
 }
 
 // CMS Content Types

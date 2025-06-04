@@ -1,5 +1,5 @@
 
-import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry } from './types';
+import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry, Message } from './types';
 
 export const mockAgents: Agent[] = [
   {
@@ -151,6 +151,7 @@ export let mockInquiries: Inquiry[] = [
     message: 'I am very interested in the family home in Ikeja GRA. Could I schedule a viewing?',
     dateReceived: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
     status: 'new',
+    conversation: [],
   },
   {
     id: 'inq2',
@@ -162,6 +163,16 @@ export let mockInquiries: Inquiry[] = [
     message: 'What are the service charges for the Victoria Island apartment? Also interested in financing options.',
     dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     status: 'contacted',
+    conversation: [
+      {
+        id: 'msg1-inq2',
+        senderId: 'admin1',
+        senderRole: 'platform_admin',
+        senderName: 'Diana Admin',
+        content: 'Hello Frank, the service charge is NGN 1.5M per annum. We can discuss financing options when you call.',
+        timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), // 20 hours ago
+      }
+    ],
   },
   {
     id: 'inq3',
@@ -172,5 +183,6 @@ export let mockInquiries: Inquiry[] = [
     message: 'Interested in the Ikeja GRA property, can I get more photos?',
     dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     status: 'new',
+    conversation: [],
   },
 ];
