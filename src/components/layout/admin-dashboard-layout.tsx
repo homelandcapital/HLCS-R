@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye } from 'lucide-react'; // Added Eye
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -19,7 +19,8 @@ interface AdminDashboardLayoutProps {
 const adminNavItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
-  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <Eye className="h-5 w-5" /> }, // Using Eye as per page.tsx
+  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <Eye className="h-5 w-5" /> },
+  { href: '/admin/dashboard/inquiries', label: 'Inquiry Management', icon: <MailQuestion className="h-5 w-5" /> },
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
@@ -69,6 +70,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
         <nav className="flex flex-col space-y-2">
           {adminNavItems.map((item) => {
             let isActive = false;
+            // Check for exact match for overview, otherwise check if path starts with href
             if (item.href === '/admin/dashboard') {
               isActive = pathname === item.href;
             } else {

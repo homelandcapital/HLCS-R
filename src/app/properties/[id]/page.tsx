@@ -224,7 +224,12 @@ export default function PropertyDetailsPage() {
           </Card>
 
           {/* Contact Form */}
-          <ContactForm propertyTitle={property.title} />
+          <ContactForm
+            propertyTitle={property.title}
+            propertyId={property.id}
+            agentId={agent.id}
+            agentName={agent.name}
+          />
         </div>
       </div>
     </div>

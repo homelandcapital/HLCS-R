@@ -47,3 +47,19 @@ export interface Property {
     lng: number;
   };
 }
+
+export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
+
+export interface Inquiry {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  agentId: string;
+  agentName: string;
+  inquirerName: string;
+  inquirerEmail: string;
+  inquirerPhone?: string;
+  message: string;
+  dateReceived: string; // Using string for simplicity with mock data, can be Date
+  status: InquiryStatus;
+}

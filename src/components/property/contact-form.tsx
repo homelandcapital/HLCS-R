@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Phone } from 'lucide-react';
+import { mockInquiries } from '@/lib/mock-data';
+import type { Inquiry } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -22,9 +25,12 @@ type ContactFormValues = z.infer<typeof formSchema>;
 
 interface ContactFormProps {
   propertyTitle: string;
+  propertyId: string;
+  agentId: string;
+  agentName: string;
 }
 
-const ContactForm = ({ propertyTitle }: ContactFormProps) => {
+const ContactForm = ({ propertyTitle, propertyId, agentId, agentName }: ContactFormProps) => {
   const { toast } = useToast();
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(formSchema),
@@ -37,14 +43,36 @@ const ContactForm = ({ propertyTitle }: ContactFormProps) => {
   });
 
   function onSubmit(values: ContactFormValues) {
-    // Simulate form submission
-    console.log('Contact form submitted:', values);
+    const newInquiry: Inquiry = {
+      id: `inq-${Date.now()}`,
+      propertyId,
+      propertyName: propertyTitle,
+      agentId,
+      agentName,
+      inquirerName: values.name,
+      inquirerEmail: values.email,
+      inquirerPhone: values.phone,
+      message: values.message,
+      dateReceived: new Date().toISOString(),
+      status: 'new',
+    };
+
+    mockInquiries.push(newInquiry);
+    console.log('New inquiry added:', newInquiry);
+    console.log('All inquiries:', mockInquiries);
+
+
     toast({
       title: 'Inquiry Sent!',
       description: `Your message about ${propertyTitle} has been sent successfully. The agent will contact you shortly.`,
       variant: 'default',
     });
-    form.reset();
+    form.reset({
+        name: '',
+        email: '',
+        phone: '',
+        message: `I'm interested in ${propertyTitle}.`,
+    });
   }
 
   return (

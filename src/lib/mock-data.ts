@@ -1,11 +1,11 @@
 
-import type { Property, Agent, GeneralUser, PlatformAdmin } from './types';
+import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry } from './types';
 
 export const mockAgents: Agent[] = [
   {
     id: 'agent1',
     name: 'Alice Wonderland',
-    email: 'alice@estatelist.com',
+    email: 'alice@homelandcapital.com',
     phone: '555-1234',
     agency: 'Wonderland Realty',
     avatarUrl: 'https://placehold.co/100x100.png',
@@ -14,7 +14,7 @@ export const mockAgents: Agent[] = [
   {
     id: 'agent2',
     name: 'Bob The Builder',
-    email: 'bob@estatelist.com',
+    email: 'bob@homelandcapital.com',
     phone: '555-5678',
     agency: 'BuildIt Estates',
     avatarUrl: 'https://placehold.co/100x100.png',
@@ -36,7 +36,7 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
   {
     id: 'admin1',
     name: 'Diana Admin',
-    email: 'diana@estatelist.com',
+    email: 'diana@homelandcapital.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'platform_admin',
   },
@@ -129,5 +129,33 @@ export let mockProperties: Property[] = [
     amenities: ['Infinity Pool', 'Home Cinema', 'Smart Home System', 'Panoramic Views', 'Wine Cellar', 'Guest House'],
     yearBuilt: 2020,
     coordinates: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+  },
+];
+
+export let mockInquiries: Inquiry[] = [
+  {
+    id: 'inq1',
+    propertyId: 'prop1',
+    propertyName: 'Spacious Family Home in Suburbia',
+    agentId: mockAgents[0].id,
+    agentName: mockAgents[0].name,
+    inquirerName: 'Eve Prospect',
+    inquirerEmail: 'eve@example.com',
+    message: 'I am very interested in the family home in Willow Creek. Could I schedule a viewing?',
+    dateReceived: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    status: 'new',
+  },
+  {
+    id: 'inq2',
+    propertyId: 'prop2',
+    propertyName: 'Modern Downtown Apartment with City Views',
+    agentId: mockAgents[1].id,
+    agentName: mockAgents[1].name,
+    inquirerName: 'Frank Buyer',
+    inquirerEmail: 'frank@example.com',
+    inquirerPhone: '555-9876',
+    message: 'What are the HOA fees for the downtown apartment? Also interested in financing options.',
+    dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    status: 'contacted',
   },
 ];
