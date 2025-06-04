@@ -48,13 +48,15 @@ function generateRandomLetter(): string {
 
 function generatePropertyId(): string {
   const prefix = "HLCS-R";
+  const currentYear = new Date().getFullYear();
+  const yearSuffix = String(currentYear).slice(-2); // Get last two digits of the year
+
   const part1 = generateRandomDigit();
   const part2 = generateRandomLetter();
   const part3 = generateRandomDigit();
   const part4 = generateRandomLetter();
-  const part5 = generateRandomDigit();
-  const part6 = generateRandomLetter();
-  return `${prefix}${part1}${part2}${part3}${part4}${part5}${part6}`;
+  
+  return `${prefix}${yearSuffix}${part1}${part2}${part3}${part4}`;
 }
 
 export default function AddPropertyPage() {

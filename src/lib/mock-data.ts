@@ -29,7 +29,7 @@ export const mockGeneralUsers: GeneralUser[] = [
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
-    savedPropertyIds: ['HLCS-R3B5D7F', 'HLCS-R9Z8Y7X'],
+    savedPropertyIds: ['HLCS-R243B5D', 'HLCS-R249Z8Y'], // Updated IDs
   },
   {
     id: 'user2',
@@ -54,7 +54,7 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
 
 export let mockProperties: Property[] = [
   {
-    id: 'HLCS-R3B5D7F',
+    id: 'HLCS-R243B5D', // YY1A1A (YY=24, Digit, Letter, Digit, Letter)
     title: 'Spacious Family Home in Ikeja GRA',
     description:
       'A beautiful and spacious family home located in a quiet suburban neighborhood. Features a large backyard, modern kitchen, and open floor plan. Perfect for families looking for comfort and style.',
@@ -71,13 +71,13 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=402',
     ],
     agent: mockAgents[0],
-    status: 'approved', // Existing properties are approved
+    status: 'approved', 
     amenities: ['Garden', 'Garage', 'Fireplace', 'Hardwood Floors', 'Borehole'],
     yearBuilt: 2005,
     coordinates: { lat: 6.6059, lng: 3.3490 },
   },
   {
-    id: 'HLCS-R1A2C3E',
+    id: 'HLCS-R241A2C', // YY1A1A
     title: 'Modern Victoria Island Apartment with City Views',
     description:
       'Chic and modern apartment in the heart of Victoria Island. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
@@ -99,7 +99,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4281, lng: 3.4218 },
   },
   {
-    id: 'HLCS-R9Z8Y7X',
+    id: 'HLCS-R249Z8Y', // YY1A1A
     title: 'Cozy Lekki Phase 1 Condo',
     description:
       'Charming 2-bedroom condo in Lekki Phase 1. Features an updated kitchen, private balcony, and community amenities. Perfect for modern living or as an investment.',
@@ -121,7 +121,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4344, lng: 3.4824 },
   },
   {
-    id: 'HLCS-R5G6H7J',
+    id: 'HLCS-R245G6H', // YY1A1A
     title: 'Luxury Banana Island Villa with Panoramic Views',
     description: 'An exquisite luxury villa in Banana Island offering breathtaking views. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
     price: 250000000,
@@ -144,7 +144,7 @@ export let mockProperties: Property[] = [
     coordinates: { lat: 6.4512, lng: 3.4450 },
   },
   {
-    id: 'HLCS-P1E2N3D', // Example pending property
+    id: 'HLCS-R241E2N', // YY1A1A
     title: 'New Build in Eko Atlantic - Pending Approval',
     description: 'A brand new architectural marvel in Eko Atlantic city. Awaiting final approval for listing. Features stunning ocean views and ultra-modern design.',
     price: 180000000,
@@ -158,32 +158,32 @@ export let mockProperties: Property[] = [
     agent: mockAgents[0],
     status: 'pending',
     amenities: ['Ocean View', 'Smart Home', 'Gym', 'Pool'],
-    yearBuilt: new Date().getFullYear(),
-    coordinates: { lat: 6.4000, lng: 3.4000 }, // Approximate Eko Atlantic
+    yearBuilt: new Date().getFullYear(), // Assuming 2024
+    coordinates: { lat: 6.4000, lng: 3.4000 },
   },
 ];
 
 export let mockInquiries: Inquiry[] = [
   {
     id: 'inq1',
-    propertyId: 'HLCS-R3B5D7F',
+    propertyId: 'HLCS-R243B5D', // Updated ID
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Eve Prospect',
     inquirerEmail: 'eve@example.com',
     message: 'I am very interested in the family home in Ikeja GRA. Could I schedule a viewing?',
-    dateReceived: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    dateReceived: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), 
     status: 'new',
     conversation: [],
   },
   {
     id: 'inq2',
-    propertyId: 'HLCS-R1A2C3E',
+    propertyId: 'HLCS-R241A2C', // Updated ID
     propertyName: 'Modern Victoria Island Apartment with City Views',
     inquirerName: 'Frank Buyer',
     inquirerEmail: 'frank@example.com',
     inquirerPhone: '0803 987 6543',
     message: 'What are the service charges for the Victoria Island apartment? Also interested in financing options.',
-    dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), 
     status: 'contacted',
     conversation: [
       {
@@ -192,18 +192,18 @@ export let mockInquiries: Inquiry[] = [
         senderRole: 'platform_admin',
         senderName: 'Diana Admin',
         content: 'Hello Frank, the service charge is NGN 1.5M per annum. We can discuss financing options when you call.',
-        timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), // 20 hours ago
+        timestamp: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(), 
       }
     ],
   },
   {
     id: 'inq3',
-    propertyId: 'HLCS-R3B5D7F',
+    propertyId: 'HLCS-R243B5D', // Updated ID
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Charlie User',
     inquirerEmail: 'charlie@example.com',
     message: 'Interested in the Ikeja GRA property, can I get more photos?',
-    dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+    dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), 
     status: 'new',
     conversation: [],
   },
