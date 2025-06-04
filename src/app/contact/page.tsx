@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { contactPageContentData as content } from '@/lib/cms-data';
+// Metadata would typically be in a server component or layout if this page were purely server-side
+// For client components, if needed, you'd manage title via useEffect or a library like react-helmet if not using App Router metadata API
 
 export default function ContactPage() {
   // Basic handler, in a real app this would submit the form data
@@ -22,9 +25,9 @@ export default function ContactPage() {
       <Card className="max-w-4xl mx-auto shadow-lg">
         <CardHeader className="text-center">
           <Mail className="mx-auto h-16 w-16 text-primary mb-4" />
-          <CardTitle className="text-3xl font-headline">Get In Touch</CardTitle>
+          <CardTitle className="text-3xl font-headline">{content.headerTitle}</CardTitle>
           <CardDescription className="text-lg text-muted-foreground">
-            We&apos;d love to hear from you! Whether you have a question about our services, need assistance, or just want to chat, please reach out.
+            {content.headerDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-8 pt-6">
@@ -33,22 +36,22 @@ export default function ContactPage() {
             <div className="space-y-4 text-foreground">
               <div className="flex items-center">
                 <Mail className="w-5 h-5 mr-3 text-accent" />
-                <span>info@homelandcapital.com</span>
+                <span>{content.contactInfo.email}</span>
               </div>
               <div className="flex items-center">
                 <Phone className="w-5 h-5 mr-3 text-accent" />
-                <span>0801 234 5670</span>
+                <span>{content.contactInfo.phone}</span>
               </div>
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 mr-3 text-accent mt-1" />
-                <span>Plot 25, Admiralty Way,<br />Lekki Phase 1, Lagos, Nigeria</span>
+                <span className="whitespace-pre-line">{content.contactInfo.address}</span>
               </div>
             </div>
             <div className="mt-6 border-t pt-6">
                  <h3 className="text-xl font-semibold text-primary mb-2">Office Hours</h3>
-                 <p className="text-muted-foreground">Monday - Friday: 9:00 AM - 6:00 PM</p>
-                 <p className="text-muted-foreground">Saturday: 10:00 AM - 4:00 PM</p>
-                 <p className="text-muted-foreground">Sunday: Closed</p>
+                 <p className="text-muted-foreground">{content.contactInfo.officeHours.weekdays}</p>
+                 <p className="text-muted-foreground">{content.contactInfo.officeHours.saturday}</p>
+                 <p className="text-muted-foreground">{content.contactInfo.officeHours.sunday}</p>
             </div>
           </div>
           <div>

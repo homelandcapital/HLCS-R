@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
-import Logo from '@/components/common/logo'; // Assuming you might want to use your logo here too
+import Logo from '@/components/common/logo';
+import { footerContentData as content } from '@/lib/cms-data';
 
 const Footer = () => {
   return (
@@ -10,42 +11,30 @@ const Footer = () => {
           <div>
             <Logo />
             <p className="text-muted-foreground text-sm mt-2">
-              Your partner in finding the perfect property.
+              {content.tagline}
             </p>
           </div>
-          <div>
-            <h5 className="font-semibold text-foreground mb-3">Company</h5>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">About Us</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Careers</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Blog</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Contact Us</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-semibold text-foreground mb-3">Resources</h5>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Guides</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">FAQ</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Support Center</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Site Map</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="font-semibold text-foreground mb-3">Legal</h5>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
-              <li><Link href="#" className="text-muted-foreground hover:text-primary">Cookie Policy</Link></li>
-            </ul>
-          </div>
+          {content.columns.map((column, index) => (
+            <div key={index}>
+              <h5 className="font-semibold text-foreground mb-3">{column.title}</h5>
+              <ul className="space-y-2 text-sm">
+                {column.links.map((link, linkIndex) => (
+                  <li key={linkIndex}>
+                    <Link href={link.href} className="text-muted-foreground hover:text-primary">
+                      {link.text}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
         <div className="border-t border-border pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} Homeland Capital. All rights reserved.
+            {content.copyrightText}
           </p>
           <p className="text-xs text-muted-foreground/80 mt-1">
-            Built with Next.js, Tailwind CSS, and ShadCN UI.
+            {content.builtWithText}
           </p>
         </div>
       </div>

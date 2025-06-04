@@ -60,3 +60,94 @@ export interface Inquiry {
   dateReceived: string;
   status: InquiryStatus;
 }
+
+// CMS Content Types
+export interface CmsLink {
+  text: string;
+  href: string;
+}
+
+export interface CmsFeatureItem {
+  iconName?: string; // To be mapped to a Lucide icon component
+  title: string;
+  description: string;
+  link?: string;
+  ctaText?: string;
+}
+
+export interface HomePageContent {
+  hero: {
+    title: string;
+    subtitle: string;
+    cta: CmsLink;
+    imageUrl: string;
+    imageAlt: string;
+    imageAiHint: string;
+  };
+  servicesSection: {
+    title: string;
+    items: CmsFeatureItem[];
+  };
+  whyChooseUsSection: {
+    title: string;
+    items: CmsFeatureItem[];
+  };
+  ctaSection: {
+    title: string;
+    subtitle: string;
+    cta: CmsLink;
+  };
+}
+
+export interface ServicesPageContent {
+  pageTitle: string;
+  headerTitle: string;
+  introParagraph: string;
+  services: Array<{
+    title: string;
+    description: string;
+  }>;
+  conclusionParagraph: string;
+}
+
+export interface AboutPageContent {
+  pageTitle: string;
+  headerTitle: string;
+  introParagraph: string;
+  sections: Array<{
+    title: string;
+    description: string;
+    iconName?: string; // e.g., 'Info', 'Users', 'Building'
+  }>;
+  conclusionParagraph: string;
+}
+
+export interface ContactInfo {
+  email: string;
+  phone: string;
+  address: string; // Can be multi-line, use \n for breaks
+  officeHours: {
+    weekdays: string;
+    saturday: string;
+    sunday: string;
+  };
+}
+export interface ContactPageContent {
+  pageTitle: string;
+  headerTitle: string;
+  headerDescription: string;
+  contactInfo: ContactInfo;
+}
+
+export interface FooterLinkColumn {
+  title: string;
+  links: CmsLink[];
+}
+
+export interface FooterContent {
+  logoText?: string; // Optional, if we want to make logo text configurable
+  tagline: string;
+  columns: FooterLinkColumn[];
+  copyrightText: string;
+  builtWithText: string;
+}

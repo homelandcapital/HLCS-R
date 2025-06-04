@@ -1,6 +1,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase } from 'lucide-react';
+import { servicesPageContentData as content } from '@/lib/cms-data';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: content.pageTitle,
+};
 
 export default function ServicesPage() {
   return (
@@ -8,32 +14,24 @@ export default function ServicesPage() {
       <Card className="max-w-3xl mx-auto shadow-lg">
         <CardHeader className="text-center">
           <Briefcase className="mx-auto h-16 w-16 text-primary mb-4" />
-          <CardTitle className="text-3xl font-headline">Our Services</CardTitle>
+          <CardTitle className="text-3xl font-headline">{content.headerTitle}</CardTitle>
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-lg text-muted-foreground">
-            At Homeland Capital, we offer a comprehensive suite of services to meet all your real estate needs.
+            {content.introParagraph}
           </p>
           <div className="text-left space-y-3 pt-4">
-            <h3 className="font-semibold text-xl text-primary">Property Sales & Purchases</h3>
-            <p className="text-foreground">
-              Whether you're buying your dream home or selling your current property, our expert agents are here to guide you through every step of the process, ensuring a smooth and successful transaction.
-            </p>
-            <h3 className="font-semibold text-xl text-primary">Property Listings</h3>
-            <p className="text-foreground">
-              We provide a robust platform for agents to list properties, reaching a wide audience of potential buyers. Our tools help showcase your listings in the best possible light.
-            </p>
-            <h3 className="font-semibold text-xl text-primary">Market Analysis</h3>
-            <p className="text-foreground">
-              Stay informed with our up-to-date market analysis and insights, helping you make educated decisions whether you're buying, selling, or investing.
-            </p>
-             <h3 className="font-semibold text-xl text-primary">Personalized Dashboards</h3>
-            <p className="text-foreground">
-              Tailored dashboards for users, agents, and administrators to manage properties, inquiries, and platform settings efficiently.
-            </p>
+            {content.services.map((service, index) => (
+              <div key={index}>
+                <h3 className="font-semibold text-xl text-primary">{service.title}</h3>
+                <p className="text-foreground">
+                  {service.description}
+                </p>
+              </div>
+            ))}
           </div>
           <p className="text-muted-foreground pt-4">
-            More details about our specific service packages and offerings will be available here soon.
+            {content.conclusionParagraph}
           </p>
         </CardContent>
       </Card>

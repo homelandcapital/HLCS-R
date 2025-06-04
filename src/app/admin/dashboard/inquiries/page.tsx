@@ -8,7 +8,7 @@ import type { Inquiry, InquiryStatus } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MailQuestion, Search, Filter, User, CalendarDays, Info, MessageText, Phone, BuildingIcon } from 'lucide-react';
+import { MailQuestion, Search, Filter, User, CalendarDays, Info, MessageSquareText, Phone, BuildingIcon, Mail } from 'lucide-react'; // Changed MessageText to MessageSquareText and added Mail
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import React from 'react'; // Added React import for React.cloneElement
 
 export default function InquiryManagementPage() {
   const [allInquiries, setAllInquiries] = useState<Inquiry[]>([]);
@@ -220,7 +221,7 @@ export default function InquiryManagementPage() {
                 
                 <div>
                     <Label className="text-sm font-medium text-muted-foreground flex items-center mb-1">
-                        <MessageText className="w-4 h-4 mr-1.5"/> Full Message
+                        <MessageSquareText className="w-4 h-4 mr-1.5"/> Full Message
                     </Label>
                     <p className="text-sm p-3 bg-muted rounded-md whitespace-pre-wrap">{selectedInquiry.message}</p>
                 </div>
@@ -274,3 +275,4 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
         <p className="text-sm ml-6">{value || 'N/A'}</p>
     </div>
 );
+
