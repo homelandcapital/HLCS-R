@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { mockProperties } from '@/lib/mock-data';
 import type { Property, Agent } from '@/lib/types';
@@ -19,8 +19,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PropertyDetailsPage() {
   const params = useParams();
@@ -29,7 +30,9 @@ export default function PropertyDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isInquiryDialogOpen, setIsInquiryDialogOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (id) {
@@ -42,6 +45,21 @@ export default function PropertyDetailsPage() {
       }, 500);
     }
   }, [id]);
+
+  const handleInquireClick = () => {
+    if (authLoading) return; // Don't do anything if auth state is still loading
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to make an inquiry.",
+        variant: "default",
+      });
+      router.push('/agents/login');
+    } else {
+      setIsInquiryDialogOpen(true);
+    }
+  };
 
   if (loading) {
     return <PropertyDetailsSkeleton />;
@@ -77,7 +95,7 @@ export default function PropertyDetailsPage() {
   if (user) {
     contactFormInitialData.name = user.name;
     contactFormInitialData.email = user.email;
-    if (user.role === 'agent') { // Agents have phone numbers
+    if (user.role === 'agent') { 
       contactFormInitialData.phone = (user as Agent).phone;
     }
   }
@@ -100,33 +118,32 @@ export default function PropertyDetailsPage() {
               <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right">
                 ₦{property.price.toLocaleString()}
               </div>
-              <Dialog open={isInquiryDialogOpen} onOpenChange={setIsInquiryDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" size="default" className="w-full md:w-auto">
-                    <MailQuestion className="mr-2 h-5 w-5" /> Inquire Now
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle className="font-headline">Inquire about: {property.title}</DialogTitle>
-                    <DialogDescription>
-                      Fill out the form below. Your details (if logged in) have been pre-filled. The platform admin will get in touch.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <ContactForm
-                    propertyTitle={property.title}
-                    propertyId={property.id}
-                    initialName={contactFormInitialData.name}
-                    initialEmail={contactFormInitialData.email}
-                    initialPhone={contactFormInitialData.phone}
-                    onFormSubmit={() => setIsInquiryDialogOpen(false)}
-                  />
-                </DialogContent>
-              </Dialog>
+              <Button variant="default" size="default" className="w-full md:w-auto" onClick={handleInquireClick} disabled={authLoading}>
+                <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : 'Inquire Now'}
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isInquiryDialogOpen} onOpenChange={setIsInquiryDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-headline">Inquire about: {property.title}</DialogTitle>
+            <DialogDescription>
+              Fill out the form below. Your details (if logged in) have been pre-filled. The platform admin will get in touch.
+            </DialogDescription>
+          </DialogHeader>
+          <ContactForm
+            propertyTitle={property.title}
+            propertyId={property.id}
+            initialName={contactFormInitialData.name}
+            initialEmail={contactFormInitialData.email}
+            initialPhone={contactFormInitialData.phone}
+            onFormSubmit={() => setIsInquiryDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Image Gallery Slider */}
       <Card className="shadow-lg">
@@ -268,7 +285,6 @@ export default function PropertyDetailsPage() {
               }
             </CardContent>
           </Card>
-          {/* The ContactForm instance previously here has been removed */}
         </div>
       </div>
     </div>
@@ -339,9 +355,10 @@ const PropertyDetailsSkeleton = () => (
             <Skeleton className="h-4 w-1/2" />
           </CardContent>
         </Card>
-        {/* Skeleton for removed ContactForm is not needed here anymore */}
       </div>
     </div>
   </div>
 );
 
+
+    
