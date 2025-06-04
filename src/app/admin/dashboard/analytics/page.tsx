@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { mockProperties, mockPlatformSettings } from '@/lib/mock-data';
 import type { PromotionTierConfig } from '@/lib/types';
 import { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge'; // Added import
 
 // Mock data for charts (remains the same)
 const mockUserSignupsData = [
@@ -217,5 +218,7 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
+
+    
 
     
