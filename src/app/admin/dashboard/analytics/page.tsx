@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link'; // Added NextLink for property links
+import { Button } from '@/components/ui/button'; // Added Button import
 
 // Mock data for charts (remains the same)
 const mockUserSignupsData = [
@@ -214,3 +215,4 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
+
