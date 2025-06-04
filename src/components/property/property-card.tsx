@@ -5,7 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, BedDouble, Bath, Home, Tag, Heart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, BedDouble, Bath, Maximize, Tag, Heart, Building2 } from 'lucide-react'; // Added Maximize
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   const saved = isAuthenticated && user?.role === 'user' && isPropertySaved(property.id);
 
   const handleSaveClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link navigation if button is inside Link
+    e.preventDefault();
     e.stopPropagation();
     toggleSaveProperty(property.id);
   };
@@ -39,6 +40,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm font-semibold">
           ₦{property.price.toLocaleString()}
         </div>
+         <Badge variant="secondary" className="absolute bottom-2 left-2 text-xs">{property.listingType}</Badge>
         {isAuthenticated && user?.role === 'user' && (
           <Button
             variant="ghost"
@@ -59,10 +61,10 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         </Link>
         <div className="flex items-center text-muted-foreground text-sm mb-1">
           <MapPin className="w-4 h-4 mr-1" />
-          {property.location}
+          {property.location}, {property.state}
         </div>
         <div className="flex items-center text-muted-foreground text-sm mb-3">
-          <Home className="w-4 h-4 mr-1" />
+          <Building2 className="w-4 h-4 mr-1" /> {/* Changed from Home */}
           {property.type}
         </div>
         <p className="text-sm text-foreground line-clamp-3 mb-3">{property.description}</p>
@@ -73,12 +75,14 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           <div className="flex items-center">
             <Bath className="w-4 h-4 mr-1 text-accent" /> {property.bathrooms} Baths
           </div>
-          <div className="flex items-center">
-            <Tag className="w-4 h-4 mr-1 text-accent" /> {property.areaSqFt} sq ft
-          </div>
+          {property.areaSqFt && (
+            <div className="flex items-center">
+              <Maximize className="w-4 h-4 mr-1 text-accent" /> {property.areaSqFt} sq ft
+            </div>
+          )}
         </div>
       </CardContent>
-      <CardFooter className="p-4 border-t">
+      <CardFooter className="p-4 border-t mt-auto">
         <Button asChild className="w-full" variant="default">
           <Link href={`/properties/${property.id}`}>View Details</Link>
         </Button>

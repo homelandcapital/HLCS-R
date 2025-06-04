@@ -12,22 +12,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition } from 'react';
-import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react';
+import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { mockProperties } from '@/lib/mock-data';
-import type { Property, Agent } from '@/lib/types';
+import type { Property, Agent, NigerianState, ListingType } from '@/lib/types';
+import { nigerianStates } from '@/lib/types'; // Import states constant
 
+const listingTypes = ['For Sale', 'For Rent', 'For Lease'] as const;
 
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
+  listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
   propertyType: z.enum(['House', 'Apartment', 'Condo', 'Townhouse', 'Land'], { required_error: "Property type is required."}),
-  location: z.string().min(5, { message: 'Location (Area/City) is required.' }),
+  location: z.string().min(3, { message: 'Location (Area/City) is required.' }),
+  state: z.enum(nigerianStates, { required_error: "State is required."}),
   address: z.string().min(5, { message: 'Full Address is required.' }),
   price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
   bedrooms: z.coerce.number().min(0, { message: 'Bedrooms must be a non-negative number.' }),
   bathrooms: z.coerce.number().min(0, { message: 'Bathrooms must be a non-negative number.' }),
-  areaSqFt: z.coerce.number().positive({ message: 'Area must be a positive number.' }),
+  areaSqFt: z.preprocess(
+    val => (val === "" || val === undefined ? undefined : val),
+    z.coerce.number().positive({ message: 'Area must be a positive number if provided.' }).optional()
+  ),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }).max(5000, {message: "Description must be less than 5000 characters."}),
   yearBuilt: z.coerce.number().min(1000, {message: "Year built seems too old."}).max(new Date().getFullYear(), {message: "Year built cannot be in the future."}).optional().or(z.literal('')),
   amenities: z.string().optional(),
@@ -37,7 +44,6 @@ const propertyFormSchema = z.object({
 
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
 
-// Helper functions for new ID format
 function generateRandomDigit(): string {
   return Math.floor(Math.random() * 10).toString();
 }
@@ -49,7 +55,7 @@ function generateRandomLetter(): string {
 function generatePropertyId(): string {
   const prefix = "HLCS-R";
   const currentYear = new Date().getFullYear();
-  const yearSuffix = String(currentYear).slice(-2); // Get last two digits of the year
+  const yearSuffix = String(currentYear).slice(-2);
 
   const part1 = generateRandomDigit();
   const part2 = generateRandomLetter();
@@ -69,13 +75,15 @@ export default function AddPropertyPage() {
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
       title: '',
+      listingType: undefined,
       propertyType: undefined,
       location: '',
+      state: undefined,
       address: '',
       price: 0,
       bedrooms: 0,
       bathrooms: 0,
-      areaSqFt: 0,
+      areaSqFt: undefined,
       description: '',
       yearBuilt: undefined,
       amenities: '',
@@ -100,33 +108,35 @@ export default function AddPropertyPage() {
       const newProperty: Property = {
         id: generatePropertyId(),
         title: values.title,
+        listingType: values.listingType,
         description: values.description,
         price: values.price,
         location: values.location,
+        state: values.state,
         address: values.address,
         type: values.propertyType,
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
-        areaSqFt: values.areaSqFt,
+        areaSqFt: values.areaSqFt ? Number(values.areaSqFt) : undefined,
         images: [
           'https://placehold.co/600x400.png',
           'https://placehold.co/600x400.png'
         ],
         agent: currentAgent,
-        status: 'pending', // New properties are pending approval
+        status: 'pending',
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
         yearBuilt: values.yearBuilt && values.yearBuilt !== '' ? Number(values.yearBuilt) : undefined,
         coordinates: {
-          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244,
-          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792,
+          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244, // Default to Lagos
+          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792, // Default to Lagos
         },
       };
 
-      mockProperties.unshift(newProperty); // Add to the beginning to see it easily in admin oversight
+      mockProperties.unshift(newProperty);
       
       toast({
-        title: 'Property Submitted!',
-        description: `${values.title} has been submitted for review. ID: ${newProperty.id}.`,
+        title: 'Property Submitted for Review!',
+        description: `${values.title} has been submitted with ID: ${newProperty.id}. It will be reviewed by an admin.`,
       });
       form.reset();
       router.push('/agents/dashboard/my-listings');
@@ -152,14 +162,34 @@ export default function AddPropertyPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FormField
                   control={form.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="lg:col-span-2">
                       <FormLabel className="flex items-center"><Home className="w-4 h-4 mr-1 text-muted-foreground"/>Property Title</FormLabel>
                       <FormControl><Input placeholder="e.g., Beautiful 3-Bedroom Duplex" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="listingType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Tag className="w-4 h-4 mr-1 text-muted-foreground"/>Listing Type</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select listing type" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {listingTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -169,7 +199,7 @@ export default function AddPropertyPage() {
                   name="propertyType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Home className="w-4 h-4 mr-1 text-muted-foreground"/>Property Type</FormLabel>
+                      <FormLabel className="flex items-center"><Building2 className="w-4 h-4 mr-1 text-muted-foreground"/>Property Type</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
@@ -192,7 +222,27 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Location (Area/City)</FormLabel>
-                      <FormControl><Input placeholder="e.g., Lekki Phase 1, Lagos" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., Ikeja GRA, Asokoro" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>State</FormLabel>
+                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {nigerianStates.map(state => (
+                            <SelectItem key={state} value={state}>{state}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -201,8 +251,8 @@ export default function AddPropertyPage() {
                   control={form.control}
                   name="address"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Full Address</FormLabel>
+                    <FormItem className="lg:col-span-3">
+                      <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Full Street Address</FormLabel>
                       <FormControl><Input placeholder="e.g., 15 Adeola Odeku Street, Victoria Island, Lagos" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -246,7 +296,7 @@ export default function AddPropertyPage() {
                   name="areaSqFt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Maximize className="w-4 h-4 mr-1 text-muted-foreground"/>Area (sq ft)</FormLabel>
+                      <FormLabel className="flex items-center"><Maximize className="w-4 h-4 mr-1 text-muted-foreground"/>Area (sq ft) (Optional)</FormLabel>
                       <FormControl><Input type="number" placeholder="e.g., 1800" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -263,30 +313,32 @@ export default function AddPropertyPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="latitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Latitude (Optional)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} /></FormControl>
-                      <FormDescription>If blank, defaults to Lagos.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="longitude"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Longitude (Optional)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} /></FormControl>
-                       <FormDescription>If blank, defaults to Lagos.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-6 lg:col-span-1">
+                    <FormField
+                    control={form.control}
+                    name="latitude"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Latitude</FormLabel>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} /></FormControl>
+                        <FormDescription className="text-xs">Optional. Defaults to Lagos if blank.</FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="longitude"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Longitude</FormLabel>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} /></FormControl>
+                        <FormDescription className="text-xs">Optional. Defaults to Lagos if blank.</FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
               </div>
 
               <FormField

@@ -28,17 +28,31 @@ export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
 
 export type PropertyStatus = 'pending' | 'approved' | 'rejected';
 
+export const nigerianStates = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos",
+  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
+  "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
+] as const;
+
+export type NigerianState = typeof nigerianStates[number];
+
+export type ListingType = 'For Sale' | 'For Rent' | 'For Lease';
+
 export interface Property {
   id: string;
   title: string;
   description: string;
   price: number;
-  location: string;
+  listingType: ListingType;
+  location: string; // Area/City
+  state: NigerianState;
   address: string;
   type: 'House' | 'Apartment' | 'Condo' | 'Townhouse' | 'Land';
   bedrooms: number;
   bathrooms: number;
-  areaSqFt: number;
+  areaSqFt?: number; // Made optional
   images: string[];
   agent: Agent;
   status: PropertyStatus;

@@ -6,7 +6,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Tag, ArrowRight, Heart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, BedDouble, Bath, Building2, Maximize, ArrowRight, Heart } from 'lucide-react'; // Changed HomeIcon to Building2, Tag to Maximize
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +20,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
   const saved = isAuthenticated && user?.role === 'user' && isPropertySaved(property.id);
 
   const handleSaveClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent link navigation
+    e.preventDefault();
     e.stopPropagation();
     toggleSaveProperty(property.id);
   };
@@ -38,6 +39,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
               data-ai-hint="house exterior building"
             />
           </Link>
+          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">{property.listingType}</Badge>
            {isAuthenticated && user?.role === 'user' && (
             <Button
               variant="ghost"
@@ -58,10 +60,10 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
           </Link>
           <div className="flex items-center text-muted-foreground text-sm mb-1">
             <MapPin className="w-4 h-4 mr-1 shrink-0" />
-            {property.location}
+            {property.location}, {property.state}
           </div>
           <div className="flex items-center text-muted-foreground text-sm mb-2">
-            <HomeIcon className="w-4 h-4 mr-1 shrink-0" />
+            <Building2 className="w-4 h-4 mr-1 shrink-0" /> {/* Changed Icon */}
             {property.type} - <span className="font-semibold text-accent ml-1">₦{property.price.toLocaleString()}</span>
           </div>
           <p className="text-sm text-foreground line-clamp-2 mb-3 flex-grow">
@@ -74,9 +76,11 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
             <div className="flex items-center">
               <Bath className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.bathrooms} Baths
             </div>
-            <div className="flex items-center">
-              <Tag className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.areaSqFt} sq ft
-            </div>
+            {property.areaSqFt && (
+              <div className="flex items-center">
+                <Maximize className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.areaSqFt} sq ft {/* Changed Icon */}
+              </div>
+            )}
           </div>
            <div className="mt-auto">
             <Button asChild variant="default" size="sm" className="w-full sm:w-auto">

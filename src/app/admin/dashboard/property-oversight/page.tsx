@@ -4,11 +4,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { mockProperties } from '@/lib/mock-data';
-import type { Property, PropertyStatus } from '@/lib/types';
+import type { Property, PropertyStatus, ListingType, NigerianState } from '@/lib/types'; // Added ListingType, NigerianState
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Home, Edit2, AlertCircle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { Eye, Search, Home as HomeIcon, Edit2, AlertCircle, CheckCircle, XCircle, MessageSquare, Tag } from 'lucide-react'; // Changed Home to HomeIcon
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 
 type PropertyTypeFilter = Property['type'] | 'all';
 type StatusFilter = PropertyStatus | 'all';
+type ListingTypeFilter = ListingType | 'all'; // Added
 
 export default function PropertyOversightPage() {
   const [allProperties, setAllProperties] = useState<Property[]>([]);
@@ -29,17 +30,18 @@ export default function PropertyOversightPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<PropertyTypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [listingTypeFilter, setListingTypeFilter] = useState<ListingTypeFilter>('all'); // Added
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [propertyToReject, setPropertyToReject] = useState<Property | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
-    // Sort by pending first, then by other criteria if needed
     const sortedProperties = [...mockProperties].sort((a, b) => {
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
-        return 0; // Keep original order for non-pending, or add date logic
+        // Could add date sorting here if new Date(a.id.slice(-10)).getTime() logic was for submission date
+        return 0; 
     });
     setAllProperties(sortedProperties);
     setFilteredProperties(sortedProperties);
@@ -54,30 +56,31 @@ export default function PropertyOversightPage() {
     if (statusFilter !== 'all') {
       properties = properties.filter(property => property.status === statusFilter);
     }
+    if (listingTypeFilter !== 'all') { // Added filter
+      properties = properties.filter(property => property.listingType === listingTypeFilter);
+    }
 
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       properties = properties.filter(property =>
         property.title.toLowerCase().includes(lowerSearchTerm) ||
-        property.location.toLowerCase().includes(lowerSearchTerm) ||
+        property.location.toLowerCase().includes(lowerSearchTerm) || // Searches Area/City
+        property.state.toLowerCase().includes(lowerSearchTerm) || // Searches State
         property.address.toLowerCase().includes(lowerSearchTerm) ||
         property.agent.name.toLowerCase().includes(lowerSearchTerm)
       );
     }
     setFilteredProperties(properties);
-  }, [searchTerm, typeFilter, statusFilter, allProperties]);
+  }, [searchTerm, typeFilter, statusFilter, listingTypeFilter, allProperties]); // Added listingTypeFilter
 
-  const propertyTypes = useMemo(() => {
-    const types = new Set(allProperties.map(p => p.type));
-    return Array.from(types);
-  }, [allProperties]);
-
+  const propertyTypes = useMemo(() => Array.from(new Set(allProperties.map(p => p.type))), [allProperties]);
   const propertyStatuses: PropertyStatus[] = ['pending', 'approved', 'rejected'];
+  const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease']; // Added
 
   const getStatusBadgeVariant = (status: PropertyStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case 'pending': return 'default'; // Use primary for pending
-      case 'approved': return 'secondary'; // Use a success-like color for approved (adjust theme if needed)
+      case 'pending': return 'default';
+      case 'approved': return 'secondary';
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -85,9 +88,8 @@ export default function PropertyOversightPage() {
 
   const handleApprove = (propertyId: string) => {
     const updatedMockProperties = mockProperties.map(p => p.id === propertyId ? { ...p, status: 'approved' as PropertyStatus, rejectionReason: undefined } : p);
-    mockProperties.length = 0; // Clear and push to reflect in other parts of app using mockProperties
+    mockProperties.length = 0;
     mockProperties.push(...updatedMockProperties);
-
     setAllProperties(prev => prev.map(p => p.id === propertyId ? { ...p, status: 'approved' as PropertyStatus, rejectionReason: undefined } : p));
     toast({ title: "Property Approved", description: "The property listing is now live." });
   };
@@ -106,7 +108,6 @@ export default function PropertyOversightPage() {
     const updatedMockProperties = mockProperties.map(p => p.id === propertyToReject.id ? { ...p, status: 'rejected' as PropertyStatus, rejectionReason } : p);
     mockProperties.length = 0;
     mockProperties.push(...updatedMockProperties);
-
     setAllProperties(prev => prev.map(p => p.id === propertyToReject.id ? { ...p, status: 'rejected' as PropertyStatus, rejectionReason } : p));
     toast({ title: "Property Rejected", description: "The property listing has been rejected." });
     setIsRejectModalOpen(false);
@@ -118,7 +119,7 @@ export default function PropertyOversightPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-headline flex items-center">
-          <Home className="mr-3 h-8 w-8 text-primary" /> Property Oversight
+          <HomeIcon className="mr-3 h-8 w-8 text-primary" /> Property Oversight
         </h1>
         <p className="text-muted-foreground">Review, approve, or reject property listings.</p>
       </div>
@@ -127,8 +128,8 @@ export default function PropertyOversightPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">All Platform Properties</CardTitle>
           <CardDescription>Manage all properties listed on the platform.</CardDescription>
-          <div className="pt-4 flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-grow">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Search by title, location, agent..."
@@ -137,18 +138,22 @@ export default function PropertyOversightPage() {
                 className="pl-10"
               />
             </div>
+            <Select value={listingTypeFilter} onValueChange={(value) => setListingTypeFilter(value as ListingTypeFilter)}>
+              <SelectTrigger><SelectValue placeholder="Filter by Listing Type" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Listing Types</SelectItem>{listingTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
+            </Select>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as PropertyTypeFilter)}>
-              <SelectTrigger className="w-full sm:w-[180px]"> <SelectValue placeholder="Filter by type" /> </SelectTrigger>
-              <SelectContent> <SelectItem value="all">All Types</SelectItem> {propertyTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))} </SelectContent>
+              <SelectTrigger><SelectValue placeholder="Filter by Prop. Type" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Prop. Types</SelectItem>{propertyTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-              <SelectTrigger className="w-full sm:w-[180px]"> <SelectValue placeholder="Filter by status" /> </SelectTrigger>
-              <SelectContent> <SelectItem value="all">All Statuses</SelectItem> {propertyStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))} </SelectContent>
+              <SelectTrigger><SelectValue placeholder="Filter by status" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Statuses</SelectItem>{propertyStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
-          {filteredProperties.length === 0 && (searchTerm || typeFilter !== 'all' || statusFilter !== 'all') ? (
+          {filteredProperties.length === 0 && (searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || listingTypeFilter !== 'all') ? (
             <div className="text-center py-10"> <p className="text-lg font-medium">No properties match your filters.</p> <p className="text-muted-foreground">Try adjusting your search or filters.</p> </div>
           ) : allProperties.length === 0 ? (
              <div className="text-center py-10"> <p className="text-lg font-medium">No properties found.</p> <p className="text-muted-foreground">There are currently no properties listed.</p> </div>
@@ -160,6 +165,7 @@ export default function PropertyOversightPage() {
                   <TableHead className="w-[80px]">Image</TableHead>
                   <TableHead>Title & Location</TableHead>
                   <TableHead>Price</TableHead>
+                  <TableHead>Listing Type</TableHead> {/* Added Col */}
                   <TableHead>Status</TableHead>
                   <TableHead>Listed By (Agent)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -173,10 +179,11 @@ export default function PropertyOversightPage() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{property.title}</div>
-                      <div className="text-xs text-muted-foreground">{property.location}</div>
+                      <div className="text-xs text-muted-foreground">{property.location}, {property.state}</div>
                       <div className="text-xs text-muted-foreground">ID: {property.id}</div>
                     </TableCell>
                     <TableCell> <Badge variant="secondary" className="text-base"> ₦{property.price.toLocaleString()} </Badge> </TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs"><Tag className="h-3 w-3 mr-1"/>{property.listingType}</Badge></TableCell> {/* Added Cell */}
                     <TableCell>
                         <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize text-sm px-3 py-1">{property.status}</Badge>
                         {property.status === 'rejected' && property.rejectionReason && (
@@ -204,7 +211,6 @@ export default function PropertyOversightPage() {
                           </Button>
                         </>
                       )}
-                      {/* Placeholder for edit/other actions based on status */}
                        {(property.status === 'approved' || property.status === 'rejected') && (
                          <Button variant="outline" size="icon" disabled title="Edit Property (Admin - Not Implemented)"> <Edit2 className="h-4 w-4" /> </Button>
                        )}

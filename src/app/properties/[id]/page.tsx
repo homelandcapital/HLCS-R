@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Building2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -126,10 +126,11 @@ export default function PropertyDetailsPage() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-headline text-primary mb-2">{property.title}</h1>
-              <div className="flex items-center text-muted-foreground text-lg">
-                <MapPin className="w-5 h-5 mr-2" />
-                {property.address}
+              <h1 className="text-3xl md:text-4xl font-headline text-primary mb-1">{property.title}</h1>
+              <div className="flex items-center text-muted-foreground text-sm mb-2">
+                <Badge variant="outline" className="mr-2">{property.listingType}</Badge>
+                <MapPin className="w-4 h-4 mr-1" />
+                {property.address}, {property.location}, {property.state}
               </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
@@ -246,11 +247,12 @@ export default function PropertyDetailsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-foreground">
-                <DetailItem icon={<HomeIcon />} label="Type" value={property.type} />
+                <DetailItem icon={<Building2 />} label="Property Type" value={property.type} />
                 <DetailItem icon={<BedDouble />} label="Bedrooms" value={property.bedrooms.toString()} />
                 <DetailItem icon={<Bath />} label="Bathrooms" value={property.bathrooms.toString()} />
-                <DetailItem icon={<Maximize />} label="Area" value={`${property.areaSqFt} sq ft`} />
+                {property.areaSqFt && <DetailItem icon={<Maximize />} label="Area" value={`${property.areaSqFt} sq ft`} />}
                 {property.yearBuilt && <DetailItem icon={<CalendarDays />} label="Year Built" value={property.yearBuilt.toString()} />}
+                <DetailItem icon={<Tag />} label="Listing Type" value={property.listingType} />
               </div>
               <Separator className="my-6" />
               <h3 className="text-xl font-headline mb-2">Description</h3>
@@ -300,15 +302,19 @@ export default function PropertyDetailsPage() {
   );
 }
 
-const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
-  <div className="flex items-start">
-    <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span>
-    <div>
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-semibold">{value}</p>
+const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | undefined }) => {
+  if (value === undefined) return null;
+  return (
+    <div className="flex items-start">
+      <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span>
+      <div>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="font-semibold">{value}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 const PropertyDetailsSkeleton = () => (
   <div className="space-y-8">
@@ -333,7 +339,7 @@ const PropertyDetailsSkeleton = () => (
         <Card>
           <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4"> {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)} </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4"> {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)} </div>
             <Skeleton className="h-px w-full my-6" />
             <Skeleton className="h-6 w-1/4 mb-2" /> <Skeleton className="h-20 w-full" />
             <Skeleton className="h-px w-full my-6" />
