@@ -8,7 +8,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { mockProperties, mockPlatformSettings } from '@/lib/mock-data';
 import type { PromotionTierConfig } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge'; // Added import
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
 
 // Mock data for charts (remains the same)
 const mockUserSignupsData = [
@@ -140,33 +141,42 @@ export default function PlatformAnalyticsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline flex items-center">
-            <Star className="mr-2 h-5 w-5 text-yellow-500" /> Active Promotions by Tier
+            <Star className="mr-2 h-5 w-5 text-yellow-500" /> Promotion Tier Analytics
           </CardTitle>
-          <CardDescription>Breakdown of currently active promoted listings by their promotion package.</CardDescription>
+          <CardDescription>Performance breakdown for each property promotion package.</CardDescription>
         </CardHeader>
         <CardContent>
           {promotionsByTier.length > 0 ? (
-            <div className="space-y-4">
-              {promotionsByTier.map(tier => (
-                <div key={tier.id} className="p-4 border rounded-lg bg-muted/50">
-                  <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-semibold text-lg text-primary">{tier.name}</h4>
-                    <Badge variant="secondary">{tier.promotedCount} {tier.promotedCount === 1 ? 'Listing' : 'Listings'}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{tier.description}</p>
-                  <div className="mt-2 text-sm">
-                    <span className="font-medium">Fee: ₦{tier.fee.toLocaleString()} per promotion</span>
-                    <span className="text-muted-foreground mx-1.5">|</span>
-                    <span className="font-medium">Duration: {tier.duration} days</span>
-                  </div>
-                  <div className="mt-1 font-semibold text-primary-foreground bg-primary/80 px-2 py-1 rounded w-fit text-xs">
-                    Revenue from this tier: ₦{tier.revenue.toLocaleString()}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tier Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Fee (₦)</TableHead>
+                    <TableHead className="text-right">Duration (Days)</TableHead>
+                    <TableHead className="text-right">Active Listings</TableHead>
+                    <TableHead className="text-right">Revenue (₦)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {promotionsByTier.map(tier => (
+                    <TableRow key={tier.id}>
+                      <TableCell className="font-medium text-primary">{tier.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground w-1/3">{tier.description}</TableCell>
+                      <TableCell className="text-right">{tier.fee.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">{tier.duration}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{tier.promotedCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{tier.revenue.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : (
-            <p className="text-muted-foreground">No listings are currently being promoted.</p>
+            <p className="text-muted-foreground text-center py-4">No listings are currently being promoted or no promotion tiers are configured.</p>
           )}
            {!mockPlatformSettings.promotionsEnabled && (
             <p className="mt-4 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-3 rounded-md">
@@ -218,7 +228,3 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
-
-    
-
-    
