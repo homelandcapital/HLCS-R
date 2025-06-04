@@ -8,7 +8,7 @@ import type { Inquiry, InquiryStatus } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MailQuestion, Search, Filter, MessageSquare, User, Briefcase, CalendarDays, Info } from 'lucide-react';
+import { MailQuestion, Search, Filter, MessageSquare, User, CalendarDays, Info } from 'lucide-react'; // Removed Briefcase
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function InquiryManagementPage() {
         inquiry.propertyName.toLowerCase().includes(lowerSearchTerm) ||
         inquiry.inquirerName.toLowerCase().includes(lowerSearchTerm) ||
         inquiry.inquirerEmail.toLowerCase().includes(lowerSearchTerm) ||
-        inquiry.agentName.toLowerCase().includes(lowerSearchTerm) ||
+        // inquiry.agentName.toLowerCase().includes(lowerSearchTerm) || // Removed agent search
         inquiry.message.toLowerCase().includes(lowerSearchTerm)
       );
     }
@@ -54,9 +54,9 @@ export default function InquiryManagementPage() {
       case 'contacted':
         return 'secondary';
       case 'resolved':
-        return 'outline'; // Using outline to signify completion, maybe with a green tint if customized
+        return 'outline'; 
       case 'archived':
-        return 'destructive'; // More muted than destructive, maybe a grey one
+        return 'destructive'; 
       default:
         return 'outline';
     }
@@ -121,7 +121,7 @@ export default function InquiryManagementPage() {
                   <TableHead>Property</TableHead>
                   <TableHead>Inquirer</TableHead>
                   <TableHead>Received</TableHead>
-                  <TableHead>Assigned Agent</TableHead>
+                  {/* <TableHead>Assigned Agent</TableHead> Removed Agent Column */}
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -156,7 +156,7 @@ export default function InquiryManagementPage() {
                             </div>
                         </div>
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                        <div className="flex items-center">
                         <Briefcase className="h-4 w-4 mr-2 text-muted-foreground" />
                         <div>
@@ -164,7 +164,7 @@ export default function InquiryManagementPage() {
                             <div className="text-xs text-muted-foreground">ID: {inquiry.agentId}</div>
                         </div>
                       </div>
-                    </TableCell>
+                    </TableCell> Removed Agent Cell */}
                     <TableCell>
                         <Badge variant={getStatusBadgeVariant(inquiry.status)} className="capitalize text-xs px-2 py-0.5">{inquiry.status}</Badge>
                     </TableCell>
@@ -173,7 +173,7 @@ export default function InquiryManagementPage() {
                         <Info className="h-4 w-4" />
                       </Button>
                        <Button variant="outline" size="sm" disabled title="Update Status (Not Implemented)">
-                         <MessageSquare className="h-4 w-4" /> {/* Could be Edit2 or CheckSquare for status updates */}
+                         <MessageSquare className="h-4 w-4" />
                        </Button>
                     </TableCell>
                   </TableRow>

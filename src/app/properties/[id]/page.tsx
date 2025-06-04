@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { mockProperties } from '@/lib/mock-data'; // Removed mockAgents as property.agent is sufficient
+import { mockProperties } from '@/lib/mock-data';
 import type { Property } from '@/lib/types';
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
@@ -205,10 +205,10 @@ export default function PropertyDetailsPage() {
 
         {/* Sidebar: Agent Info & Contact Form */}
         <div className="space-y-8">
-          {/* Agent Info Card */}
+          {/* Agent Info Card (Listing Agent) */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="font-headline">Agent Information</CardTitle>
+              <CardTitle className="font-headline">Listed By</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center text-center space-y-3">
               <Avatar className="w-24 h-24 border-2 border-primary">
@@ -217,18 +217,24 @@ export default function PropertyDetailsPage() {
               </Avatar>
               <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
               {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
-              <div className="space-y-1 text-sm text-foreground">
-                {/* Agent email and phone removed as per request */}
-              </div>
+              {/* Contact details for the listing agent can be shown here if desired */}
+              {agent.phone && 
+                <div className="flex items-center text-sm text-foreground">
+                  <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone}
+                </div>
+              }
+              {agent.email &&
+                <div className="flex items-center text-sm text-foreground">
+                  <Mail className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.email}
+                </div>
+              }
             </CardContent>
           </Card>
 
-          {/* Contact Form */}
+          {/* Contact Form (for platform admin) */}
           <ContactForm
             propertyTitle={property.title}
             propertyId={property.id}
-            agentId={agent.id}
-            agentName={agent.name}
           />
         </div>
       </div>

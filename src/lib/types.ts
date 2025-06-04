@@ -54,8 +54,6 @@ export interface Inquiry {
   id: string;
   propertyId: string;
   propertyName: string;
-  agentId: string;
-  agentName: string;
   inquirerName: string;
   inquirerEmail: string;
   inquirerPhone?: string;

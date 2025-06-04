@@ -26,11 +26,9 @@ type ContactFormValues = z.infer<typeof formSchema>;
 interface ContactFormProps {
   propertyTitle: string;
   propertyId: string;
-  agentId: string;
-  agentName: string;
 }
 
-const ContactForm = ({ propertyTitle, propertyId, agentId, agentName }: ContactFormProps) => {
+const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
   const { toast } = useToast();
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(formSchema),
@@ -47,8 +45,6 @@ const ContactForm = ({ propertyTitle, propertyId, agentId, agentName }: ContactF
       id: `inq-${Date.now()}`,
       propertyId,
       propertyName: propertyTitle,
-      agentId,
-      agentName,
       inquirerName: values.name,
       inquirerEmail: values.email,
       inquirerPhone: values.phone,
@@ -64,7 +60,7 @@ const ContactForm = ({ propertyTitle, propertyId, agentId, agentName }: ContactF
 
     toast({
       title: 'Inquiry Sent!',
-      description: `Your message about ${propertyTitle} has been sent successfully. The agent will contact you shortly.`,
+      description: `Your message about ${propertyTitle} has been sent successfully. The platform admin will contact you shortly.`,
       variant: 'default',
     });
     form.reset({
@@ -79,7 +75,7 @@ const ContactForm = ({ propertyTitle, propertyId, agentId, agentName }: ContactF
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="font-headline flex items-center">
-          <Mail className="w-5 h-5 mr-2 text-primary" /> Contact Agent
+          <Mail className="w-5 h-5 mr-2 text-primary" /> Contact Platform
         </CardTitle>
       </CardHeader>
       <CardContent>
