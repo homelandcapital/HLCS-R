@@ -2,79 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --background: 165 20% 95.1%; /* #F0F4F3 Very light green */
+    --foreground: 174 30% 20%; /* Dark Teal for text */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 174 30% 20%; /* Dark Teal */
+    --popover: 0 0% 100%; /* White */
+    --popover-foreground: 174 30% 20%; /* Dark Teal */
+    --primary: 174 100% 23.7%; /* #00796B Deep Teal */
+    --primary-foreground: 174 25% 95%; /* Light color for text on primary */
+    --secondary: 174 40% 85%; /* Lighter Teal Green */
+    --secondary-foreground: 174 100% 23.7%; /* Deep Teal for text on secondary */
+    --muted: 174 20% 90%; /* Very light teal */
+    --muted-foreground: 174 25% 40%; /* Darker teal for muted text */
+    --accent: 174 40% 50.6%; /* #4DB6AC Teal Green */
+    --accent-foreground: 0 0% 100%; /* White for text on accent */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 174 20% 80%; /* Light teal border */
+    --input: 174 20% 88%; /* Slightly darker for input background */
+    --ring: 174 40% 50.6%; /* Teal Green for focus rings */
+    --chart-1: 174 76% 61%;
+    --chart-2: 174 58% 39%;
+    --chart-3: 174 37% 24%;
+    --chart-4: 174 74% 66%;
+    --chart-5: 174 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Sidebar specific colors for light theme */
+    --sidebar-background: 174 30% 25%; /* Darker Teal for sidebar background */
+    --sidebar-foreground: 174 20% 90%; /* Light teal for sidebar text */
+    --sidebar-primary: 174 40% 50.6%; /* Teal Green for active items */
+    --sidebar-primary-foreground: 0 0% 100%; /* White text on active items */
+    --sidebar-accent: 174 30% 35%; /* Slightly lighter teal for hover */
+    --sidebar-accent-foreground: 174 20% 95%; /* Very light teal for text on hover */
+    --sidebar-border: 174 30% 30%;
+    --sidebar-ring: 174 40% 50.6%; /* Teal Green for focus rings */
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 174 20% 10%; /* Very dark teal/green */
+    --foreground: 174 20% 90%; /* Light teal/green */
+    --card: 174 20% 15%;
+    --card-foreground: 174 20% 90%;
+    --popover: 174 20% 15%;
+    --popover-foreground: 174 20% 90%;
+    --primary: 174 40% 50.6%; /* Teal Green #4DB6AC */
+    --primary-foreground: 174 100% 15%; /* Dark teal for text on primary */
+    --secondary: 174 30% 25%; /* Darker teal */
+    --secondary-foreground: 174 40% 80%; /* Lighter teal */
+    --muted: 174 20% 20%;
+    --muted-foreground: 174 20% 60%;
+    --accent: 174 100% 23.7%; /* Deep Teal #00796B */
+    --accent-foreground: 174 20% 95%; /* Very light teal/white */
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 174 20% 25%;
+    --input: 174 20% 22%;
+    --ring: 174 40% 50.6%; /* Teal Green */
+    --chart-1: 174 70% 50%;
+    --chart-2: 174 60% 45%;
+    --chart-3: 174 80% 55%;
+    --chart-4: 174 65% 60%;
+    --chart-5: 174 75% 55%;
+
+    /* Sidebar specific colors for dark theme */
+    --sidebar-background: 174 25% 8%; /* Even darker for sidebar */
+    --sidebar-foreground: 174 20% 85%;
+    --sidebar-primary: 174 100% 23.7%; /* Deep Teal for active items */
+    --sidebar-primary-foreground: 174 20% 95%;
+    --sidebar-accent: 174 25% 12%;
+    --sidebar-accent-foreground: 174 20% 90%;
+    --sidebar-border: 174 25% 10%;
+    --sidebar-ring: 174 40% 50.6%; /* Teal Green for focus rings */
   }
 }
 
