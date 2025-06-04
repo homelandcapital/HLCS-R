@@ -22,7 +22,7 @@ import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
 const Navbar = () => {
-  const { isAuthenticated, user, logout, loading } = useAuth();
+  const { isAuthenticated, user, signOut, loading } = useAuth(); // Changed logout to signOut
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -90,7 +90,7 @@ const Navbar = () => {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { logout(); closeMobileMenu(); }} className="cursor-pointer">
+            <DropdownMenuItem onClick={() => { signOut(); closeMobileMenu(); }} className="cursor-pointer"> {/* Changed logout to signOut */}
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </DropdownMenuItem>
