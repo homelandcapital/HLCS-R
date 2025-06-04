@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, Edit3 } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, MailSettings, CreditCard, Paintbrush } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -182,29 +182,56 @@ export default function PlatformSettingsPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-8 shadow-lg">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl">Advanced Settings & Integrations</CardTitle>
+          <CardDescription>Manage integrations and advanced customization options for the platform.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="apiKeyManagement">API Key Management</Label>
+            <Button variant="outline" disabled className="w-full justify-start">
+              <KeyRound className="mr-2 h-4 w-4" /> Manage API Keys (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Manage API keys for third-party services like mapping, analytics, etc.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="emailTemplates">Email Template Customization</Label>
+            <Button variant="outline" disabled className="w-full justify-start">
+              <MailSettings className="mr-2 h-4 w-4" /> Customize Email Templates (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Customize the content and branding of system-generated emails.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="paymentGateways">Payment Gateway Integration</Label>
+            <Button variant="outline" disabled className="w-full justify-start">
+              <CreditCard className="mr-2 h-4 w-4" /> Configure Payment Gateways (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Integrate with payment gateways for premium listings or agent subscriptions.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="customBranding">Custom Branding Options</Label>
+            <Button variant="outline" disabled className="w-full justify-start">
+              <Paintbrush className="mr-2 h-4 w-4" /> Manage Custom Branding (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Customize logos, color schemes, and other branding elements.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-end pt-4">
         <Button onClick={handleSaveChanges} size="lg">
           <Save className="mr-2 h-5 w-5" /> Save Changes
         </Button>
       </div>
-
-      <Card className="mt-8 shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline">Advanced Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            More advanced settings and integrations are planned for future updates. This may include:
-          </p>
-          <ul className="list-disc list-inside mt-2 text-muted-foreground space-y-1">
-            <li>API key management for third-party services</li>
-            <li>Email template customization</li>
-            <li>Payment gateway integration</li>
-            <li>Custom branding options</li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   );
 }
