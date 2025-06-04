@@ -47,7 +47,7 @@ function generateRandomLetter(): string {
 }
 
 function generatePropertyId(): string {
-  const prefix = "{HLCS-R}";
+  const prefix = "HLCS-R"; // Removed curly braces
   const part1 = generateRandomDigit();
   const part2 = generateRandomLetter();
   const part3 = generateRandomDigit();
