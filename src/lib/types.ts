@@ -63,6 +63,7 @@ export interface Property {
     lat: number;
     lng: number;
   };
+  isPromoted?: boolean; // Added for promotion feature
 }
 
 export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';

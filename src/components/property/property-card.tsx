@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, BedDouble, Bath, Maximize, Tag, Heart, Building2 } from 'lucide-react'; // Added Maximize
+import { MapPin, BedDouble, Bath, Maximize, Tag, Heart, Building2, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,14 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm font-semibold">
           ₦{property.price.toLocaleString()}
         </div>
-         <Badge variant="secondary" className="absolute bottom-2 left-2 text-xs">{property.listingType}</Badge>
+        <div className="absolute bottom-2 left-2 flex flex-col gap-1 items-start">
+            <Badge variant="secondary" className="text-xs">{property.listingType}</Badge>
+            {property.isPromoted && (
+                <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs">
+                    <Star className="h-3 w-3 mr-1"/> Promoted
+                </Badge>
+            )}
+        </div>
         {isAuthenticated && user?.role === 'user' && (
           <Button
             variant="ghost"

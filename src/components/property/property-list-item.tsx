@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, BedDouble, Bath, Building2, Maximize, ArrowRight, Heart } from 'lucide-react'; // Changed HomeIcon to Building2, Tag to Maximize
+import { MapPin, BedDouble, Bath, Building2, Maximize, ArrowRight, Heart, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,14 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
               data-ai-hint="house exterior building"
             />
           </Link>
-          <Badge variant="secondary" className="absolute top-2 right-2 text-xs">{property.listingType}</Badge>
+          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+            <Badge variant="secondary" className="text-xs">{property.listingType}</Badge>
+            {property.isPromoted && (
+                <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs">
+                    <Star className="h-3 w-3 mr-1"/> Promoted
+                </Badge>
+            )}
+          </div>
            {isAuthenticated && user?.role === 'user' && (
             <Button
               variant="ghost"
@@ -63,7 +70,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
             {property.location}, {property.state}
           </div>
           <div className="flex items-center text-muted-foreground text-sm mb-2">
-            <Building2 className="w-4 h-4 mr-1 shrink-0" /> {/* Changed Icon */}
+            <Building2 className="w-4 h-4 mr-1 shrink-0" /> 
             {property.type} - <span className="font-semibold text-accent ml-1">₦{property.price.toLocaleString()}</span>
           </div>
           <p className="text-sm text-foreground line-clamp-2 mb-3 flex-grow">
@@ -78,7 +85,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
             </div>
             {property.areaSqFt && (
               <div className="flex items-center">
-                <Maximize className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.areaSqFt} sq ft {/* Changed Icon */}
+                <Maximize className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.areaSqFt} sq ft
               </div>
             )}
           </div>

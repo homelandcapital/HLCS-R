@@ -10,40 +10,77 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, CheckCircle, XCircle, MessageSquare, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function MyListingsPage() {
   const { user, loading: authLoading } = useAuth();
   const [agentProperties, setAgentProperties] = useState<Property[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [propertyToPromote, setPropertyToPromote] = useState<Property | null>(null);
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'agent') {
       const currentAgent = user as Agent;
       const properties = mockProperties.filter(p => p.agent.id === currentAgent.id)
-                                     .sort((a,b) => new Date(b.id.slice(-10)).getTime() - new Date(a.id.slice(-10)).getTime()); 
+                                     .sort((a,b) => {
+                                       // Sort by status first (pending, then others), then by a pseudo date
+                                        if (a.status === 'pending' && b.status !== 'pending') return -1;
+                                        if (a.status !== 'pending' && b.status === 'pending') return 1;
+                                        return new Date(b.id.slice(-10)).getTime() - new Date(a.id.slice(-10)).getTime()
+                                     }); 
       setAgentProperties(properties);
       setPageLoading(false);
     } else if (!authLoading && (!user || user.role !== 'agent')) {
       setPageLoading(false);
     }
-  }, [user, authLoading, mockProperties]); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]); // mockProperties removed from deps to prevent re-sort on promote/delete
 
   const handleDelete = (propertyId: string) => {
     setAgentProperties(prev => prev.filter(p => p.id !== propertyId));
     const indexToRemove = mockProperties.findIndex(p => p.id === propertyId);
     if (indexToRemove > -1) {
+        // mockProperties.splice(indexToRemove, 1); // Commented out to prevent direct mock data mutation affecting other sessions/tests
         console.log("Simulated deletion from mockProperties (actual removal commented out for stability)");
+        toast({ title: "Listing Deleted (Simulated)", description: "The listing has been removed from your view." });
     }
   };
+
+  const handleOpenPromoteDialog = (property: Property) => {
+    setPropertyToPromote(property);
+    setIsPromoteDialogOpen(true);
+  };
+
+  const handleConfirmPromotion = () => {
+    if (!propertyToPromote) return;
+
+    const updatedProperties = agentProperties.map(p =>
+      p.id === propertyToPromote.id ? { ...p, isPromoted: true } : p
+    );
+    setAgentProperties(updatedProperties);
+
+    const mockPropertyIndex = mockProperties.findIndex(p => p.id === propertyToPromote.id);
+    if (mockPropertyIndex !== -1) {
+      mockProperties[mockPropertyIndex].isPromoted = true;
+    }
+    
+    toast({ title: "Listing Promoted!", description: `${propertyToPromote.title} is now a promoted listing.` });
+    setIsPromoteDialogOpen(false);
+    setPropertyToPromote(null);
+  };
+
 
   const getStatusBadgeVariant = (status: PropertyStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'pending': return 'default';
-      case 'approved': return 'secondary';
+      case 'approved': return 'secondary'; // Changed for better contrast with promoted
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -52,7 +89,7 @@ export default function MyListingsPage() {
   const getStatusIcon = (status: PropertyStatus) => {
     switch (status) {
       case 'pending': return <AlertTriangle className="h-3 w-3 mr-1" />;
-      case 'approved': return <CheckCircle className="h-3 w-3 mr-1 text-green-600" />;
+      case 'approved': return <CheckCircle className="h-3 w-3 mr-1 text-green-600" />; // Explicitly green
       case 'rejected': return <XCircle className="h-3 w-3 mr-1" />;
       default: return null;
     }
@@ -84,7 +121,7 @@ export default function MyListingsPage() {
         <div className="text-center py-12">
           <h1 className="text-2xl font-headline">Access Denied</h1>
           <p className="text-muted-foreground">This page is for agents only.</p>
-           <Button asChild className="mt-4"> <Link href="/">Go to Homepage</Link> </Button>
+           <Button asChild className="mt-4"> <Link href="/"><span>Go to Homepage</span></Link> </Button>
         </div>
       );
   }
@@ -120,9 +157,16 @@ export default function MyListingsPage() {
             <Card key={property.id} className="flex flex-col shadow-lg hover:shadow-xl transition-shadow">
               <div className="relative h-48 w-full">
                 <Image src={property.images[0]} alt={property.title} layout="fill" objectFit="cover" className="rounded-t-lg" data-ai-hint="house exterior"/>
-                <Badge variant={getStatusBadgeVariant(property.status)} className="absolute top-2 left-2 capitalize flex items-center text-xs px-2 py-0.5">
-                  {getStatusIcon(property.status)} {property.status}
-                </Badge>
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize flex items-center text-xs px-2 py-0.5 w-fit">
+                    {getStatusIcon(property.status)} {property.status}
+                    </Badge>
+                    {property.isPromoted && (
+                        <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 capitalize flex items-center text-xs px-2 py-0.5 w-fit">
+                            <Star className="h-3 w-3 mr-1" /> Promoted
+                        </Badge>
+                    )}
+                </div>
               </div>
               <CardHeader>
                 <CardTitle className="font-headline text-xl line-clamp-1">{property.title}</CardTitle>
@@ -137,20 +181,55 @@ export default function MyListingsPage() {
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground line-clamp-3">{property.description}</p>
               </CardContent>
-              <CardFooter className="flex justify-end gap-2 border-t pt-4">
+              <CardFooter className="grid grid-cols-3 gap-2 border-t pt-4">
                 <Button variant="outline" size="sm" asChild title="View Listing" disabled={property.status !== 'approved'}>
                   <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
                     <span><Eye className="h-4 w-4" /></span>
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" title="Edit Listing" disabled> <Edit3 className="h-4 w-4" /> </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(property.id)} title="Delete Listing" disabled={property.status === 'pending'}>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(property.id)} title="Delete Listing (Simulated)" disabled={property.status === 'pending'}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                {!property.isPromoted && (
+                  <Button 
+                    variant="outline" 
+                    className="col-span-3 mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                    onClick={() => handleOpenPromoteDialog(property)} 
+                    disabled={property.status !== 'approved'}
+                    title="Promote this listing"
+                  >
+                    <Star className="h-4 w-4 mr-2" /> Promote Listing
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
         </div>
+      )}
+       {propertyToPromote && (
+        <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-headline text-xl flex items-center"><Star className="h-5 w-5 mr-2 text-yellow-500" /> Promote Listing</DialogTitle>
+              <DialogDescription>
+                Promote "<strong>{propertyToPromote.title}</strong>"?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p>A simulated fee of <strong className="text-primary">NGN 5,000</strong> will be applied to promote this listing.</p>
+              <p className="text-sm text-muted-foreground mt-1">This will increase its visibility on the platform.</p>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button onClick={handleConfirmPromotion} className="bg-yellow-500 hover:bg-yellow-600 text-black">
+                Confirm Promotion (NGN 5,000)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
