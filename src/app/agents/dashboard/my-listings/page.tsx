@@ -23,26 +23,19 @@ export default function MyListingsPage() {
   useEffect(() => {
     if (!authLoading && user && user.role === 'agent') {
       const currentAgent = user as Agent;
-      // Simulate fetching agent's properties - ensure we get the latest from mockProperties
-      // The mockProperties array can be mutated by admin actions, so re-filter it.
       const properties = mockProperties.filter(p => p.agent.id === currentAgent.id)
-                                     .sort((a,b) => new Date(b.id.slice(-10)).getTime() - new Date(a.id.slice(-10)).getTime()); // crude sort by creation
+                                     .sort((a,b) => new Date(b.id.slice(-10)).getTime() - new Date(a.id.slice(-10)).getTime()); 
       setAgentProperties(properties);
       setPageLoading(false);
     } else if (!authLoading && (!user || user.role !== 'agent')) {
       setPageLoading(false);
     }
-  }, [user, authLoading, mockProperties]); // Add mockProperties to dependency array to re-run if it changes
+  }, [user, authLoading, mockProperties]); 
 
   const handleDelete = (propertyId: string) => {
-    // Simulate deletion - In a real app, call API.
-    // For mock, filter out from mockProperties array directly. This is tricky with shared mutable mock data.
-    // For this demo, we'll just update local state. A proper solution would involve backend.
     setAgentProperties(prev => prev.filter(p => p.id !== propertyId));
-    // Ideally, also update mockProperties array if this action should be globally reflected in the mock.
     const indexToRemove = mockProperties.findIndex(p => p.id === propertyId);
     if (indexToRemove > -1) {
-        // mockProperties.splice(indexToRemove, 1); // This line can cause issues if other components depend on stable mockProperties
         console.log("Simulated deletion from mockProperties (actual removal commented out for stability)");
     }
   };
@@ -103,13 +96,23 @@ export default function MyListingsPage() {
           <h1 className="text-3xl font-headline flex items-center"> <ListChecks className="mr-3 h-8 w-8 text-primary" /> My Listings </h1>
           <p className="text-muted-foreground">Manage your properties listed on Homeland Capital.</p>
         </div>
-        <Button asChild> <Link href="/agents/dashboard/add-property"> <PlusCircle className="mr-2 h-5 w-5" /> Add New Listing </Link> </Button>
+        <Button asChild>
+          <Link href="/agents/dashboard/add-property">
+            <span><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span>
+          </Link>
+        </Button>
       </div>
 
       {agentProperties.length === 0 ? (
         <Card className="text-center py-12 shadow-lg">
           <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader>
-          <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-property"> <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing </Link> </Button> </CardContent>
+          <CardContent>
+            <Button asChild size="lg">
+              <Link href="/agents/dashboard/add-property">
+                <span><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span>
+              </Link>
+            </Button>
+          </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
