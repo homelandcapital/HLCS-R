@@ -9,29 +9,25 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { Agent, GeneralUser, UserRole } from '@/lib/types';
-import { mockAgents, mockGeneralUsers } from '@/lib/mock-data'; // Import mockGeneralUsers
+import { mockAgents, mockGeneralUsers } from '@/lib/mock-data';
 import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon, Building, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
-  phone: z.string().optional(), // Optional at schema level, required for agent role in onSubmit
+  phone: z.string().optional(), 
   agency: z.string().optional(),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
-}).refine(data => {
-  // This refine is a bit tricky if role is not part of the schema itself.
-  // We will handle phone requirement for agent in onSubmit.
-  return true;
 });
 
 type RegisterFormValues = z.infer<typeof formSchema>;
@@ -40,7 +36,18 @@ const RegisterForm = () => {
   const { login } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user'); // Default to 'user'
+  const searchParams = useSearchParams();
+  
+  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
+
+  useEffect(() => {
+    const roleFromQuery = searchParams.get('role');
+    if (roleFromQuery === 'agent') {
+      setActiveRoleTab('agent');
+    } else {
+      setActiveRoleTab('user');
+    }
+  }, [searchParams]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(formSchema),
@@ -56,7 +63,7 @@ const RegisterForm = () => {
 
   function onSubmit(values: RegisterFormValues) {
     if (activeRoleTab === 'agent') {
-      if (!values.phone || values.phone.length < 10) {
+      if (!values.phone || values.phone.trim().length < 10) { // Also check if empty or just whitespace
         form.setError("phone", { type: "manual", message: "Phone number must be at least 10 digits for agents." });
         return;
       }
@@ -64,12 +71,12 @@ const RegisterForm = () => {
         id: `agent-${Date.now()}`, 
         name: values.name,
         email: values.email,
-        phone: values.phone, // phone is now validated to exist
+        phone: values.phone,
         agency: values.agency,
         role: 'agent',
-        avatarUrl: 'https://placehold.co/100x100.png' // Default avatar
+        avatarUrl: 'https://placehold.co/100x100.png'
       };
-      mockAgents.push(newAgentUser); // Add to mock data
+      mockAgents.push(newAgentUser);
       login(newAgentUser);
       toast({
         title: 'Agent Registration Successful!',
@@ -82,9 +89,9 @@ const RegisterForm = () => {
         name: values.name,
         email: values.email,
         role: 'user',
-        avatarUrl: 'https://placehold.co/100x100.png' // Default avatar
+        avatarUrl: 'https://placehold.co/100x100.png'
       };
-      mockGeneralUsers.push(newUser); // Add to mock data
+      mockGeneralUsers.push(newUser);
       login(newUser);
       toast({
         title: 'User Registration Successful!',
@@ -92,7 +99,6 @@ const RegisterForm = () => {
       });
       router.push('/');
     } else {
-      // Should not happen with controlled tabs
       toast({ title: "Registration Error", description: "Invalid role selected.", variant: "destructive"});
     }
   }
@@ -110,7 +116,7 @@ const RegisterForm = () => {
         <CardContent>
           <Tabs value={activeRoleTab} onValueChange={(value) => {
             setActiveRoleTab(value as UserRole);
-            form.clearErrors("phone"); // Clear phone error when switching tabs
+            form.clearErrors("phone"); 
           }} className="w-full mb-6">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="user" className="flex items-center gap-2">

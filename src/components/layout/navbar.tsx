@@ -43,7 +43,7 @@ const Navbar = () => {
             <Link href="/agents/login">Login</Link>
           </Button>
           <Button asChild onClick={closeMobileMenu} size="sm">
-            <Link href="/agents/register">Register Agent</Link>
+            <Link href="/agents/register?role=agent">Register Agent</Link>
           </Button>
         </>
       )}
