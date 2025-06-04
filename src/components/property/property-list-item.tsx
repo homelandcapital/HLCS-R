@@ -4,17 +4,28 @@
 import type { Property } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Tag, ArrowRight } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Home as HomeIcon, Tag, ArrowRight, Heart } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { cn } from '@/lib/utils';
 
 interface PropertyListItemProps {
   property: Property;
 }
 
 const PropertyListItem = ({ property }: PropertyListItemProps) => {
+  const { isAuthenticated, user, isPropertySaved, toggleSaveProperty } = useAuth();
+  const saved = isAuthenticated && user?.role === 'user' && isPropertySaved(property.id);
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent link navigation
+    e.stopPropagation();
+    toggleSaveProperty(property.id);
+  };
+
   return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full">
+    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full group">
       <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
         <div className="relative w-full sm:w-1/3 h-48 sm:h-auto rounded-md overflow-hidden shrink-0">
           <Link href={`/properties/${property.id}`}>
@@ -27,6 +38,17 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
               data-ai-hint="house exterior building"
             />
           </Link>
+           {isAuthenticated && user?.role === 'user' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSaveClick}
+              className="absolute top-2 left-2 bg-background/70 hover:bg-background text-foreground rounded-full h-8 w-8 z-10"
+              aria-label={saved ? "Unsave property" : "Save property"}
+            >
+              <Heart className={cn("h-4 w-4", saved ? "fill-red-500 text-red-500" : "text-muted-foreground group-hover:text-red-400")} />
+            </Button>
+          )}
         </div>
         <div className="flex flex-col flex-grow">
           <Link href={`/properties/${property.id}`}>

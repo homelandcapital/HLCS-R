@@ -17,12 +17,11 @@ export interface Agent extends BaseUser {
 
 export interface GeneralUser extends BaseUser {
   role: 'user';
-  // Add any user-specific fields if necessary, e.g., savedSearches, preferences
+  savedPropertyIds?: string[];
 }
 
 export interface PlatformAdmin extends BaseUser {
   role: 'platform_admin';
-  // Add any admin-specific fields if necessary, e.g., permissions
 }
 
 export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
@@ -39,7 +38,7 @@ export interface Property {
   bathrooms: number;
   areaSqFt: number;
   images: string[];
-  agent: Agent; // A property is listed by an Agent
+  agent: Agent;
   amenities?: string[];
   yearBuilt?: number;
   coordinates: {
@@ -58,6 +57,6 @@ export interface Inquiry {
   inquirerEmail: string;
   inquirerPhone?: string;
   message: string;
-  dateReceived: string; // Using string for simplicity with mock data, can be Date
+  dateReceived: string;
   status: InquiryStatus;
 }

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle, ShieldCheck } from "lucide-react";
+import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle, ShieldCheck, Heart, Bookmark } from "lucide-react"; // Added Bookmark for User Dashboard
 import { useState } from 'react';
 
 const Navbar = () => {
@@ -16,9 +16,12 @@ const Navbar = () => {
 
   const navLinks = [
     { href: '/', label: 'Properties' },
+    ...(isAuthenticated && user?.role === 'user'
+      ? [{ href: '/users/dashboard', label: 'My Dashboard' }]
+      : []),
     ...(isAuthenticated && user?.role === 'agent'
       ? [
-          { href: '/agents/dashboard', label: 'Dashboard' },
+          { href: '/agents/dashboard', label: 'Agent Dashboard' },
           { href: '/agents/dashboard/add-property', label: 'Add Property' },
         ]
       : []),
@@ -60,7 +63,8 @@ const Navbar = () => {
           {navLinks.map(link => (
             <Link key={link.href} href={link.href} className="text-foreground hover:text-primary transition-colors font-medium flex items-center">
                 {link.label === 'Admin Dashboard' && <ShieldCheck className="mr-1.5 h-4 w-4 text-primary" />}
-                {link.label === 'Dashboard' && user?.role === 'agent' && <LayoutDashboard className="mr-1.5 h-4 w-4 text-primary" />}
+                {link.label === 'Agent Dashboard' && <LayoutDashboard className="mr-1.5 h-4 w-4 text-primary" />}
+                {link.label === 'My Dashboard' && <Bookmark className="mr-1.5 h-4 w-4 text-primary" />}
                 {link.label}
             </Link>
           ))}
@@ -82,7 +86,8 @@ const Navbar = () => {
                  {navLinks.map(link => (
                     <Link key={link.href} href={link.href} onClick={closeMobileMenu} className="text-lg text-foreground hover:text-primary transition-colors py-2 flex items-center">
                        {link.label === 'Admin Dashboard' && <ShieldCheck className="mr-2 h-5 w-5 text-primary" />}
-                       {link.label === 'Dashboard' && user?.role === 'agent' && <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />}
+                       {link.label === 'Agent Dashboard' && <LayoutDashboard className="mr-2 h-5 w-5 text-primary" />}
+                       {link.label === 'My Dashboard' && <Bookmark className="mr-2 h-5 w-5 text-primary" />}
                         {link.label}
                     </Link>
                   ))}

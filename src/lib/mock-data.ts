@@ -29,6 +29,15 @@ export const mockGeneralUsers: GeneralUser[] = [
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
+    savedPropertyIds: ['prop1', 'prop3'],
+  },
+  {
+    id: 'user2',
+    name: 'Dave Guest',
+    email: 'dave@example.com',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    role: 'user',
+    savedPropertyIds: [],
   },
 ];
 
@@ -57,9 +66,9 @@ export let mockProperties: Property[] = [
     bathrooms: 3,
     areaSqFt: 2500,
     images: [
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
+      'https://placehold.co/600x400.png?width=600&height=400',
+      'https://placehold.co/600x400.png?width=600&height=401',
+      'https://placehold.co/600x400.png?width=600&height=402',
     ],
     agent: mockAgents[0],
     amenities: ['Garden', 'Garage', 'Fireplace', 'Hardwood Floors'],
@@ -79,8 +88,8 @@ export let mockProperties: Property[] = [
     bathrooms: 2,
     areaSqFt: 1200,
     images: [
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
+      'https://placehold.co/600x400.png?width=600&height=403',
+      'https://placehold.co/600x400.png?width=600&height=404',
     ],
     agent: mockAgents[1],
     amenities: ['Gym', 'Pool', 'Concierge', 'Balcony', 'City Views'],
@@ -100,8 +109,8 @@ export let mockProperties: Property[] = [
     bathrooms: 1,
     areaSqFt: 950,
     images: [
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
+      'https://placehold.co/600x400.png?width=600&height=405',
+      'https://placehold.co/600x400.png?width=600&height=406',
     ],
     agent: mockAgents[0],
     amenities: ['Beach Access', 'Community Pool', 'Balcony', 'Updated Kitchen'],
@@ -117,13 +126,13 @@ export let mockProperties: Property[] = [
     address: '1 Vista Lane, Serene Hills, PC 67890',
     type: 'House',
     bedrooms: 5,
-    bathrooms: 5.5, // Note: bathrooms can be float for 0.5 baths
+    bathrooms: 5.5,
     areaSqFt: 6000,
     images: [
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
-      'https://placehold.co/600x400.png',
+      'https://placehold.co/600x400.png?width=600&height=407',
+      'https://placehold.co/600x400.png?width=600&height=408',
+      'https://placehold.co/600x400.png?width=600&height=409',
+      'https://placehold.co/600x400.png?width=600&height=410',
     ],
     agent: mockAgents[1],
     amenities: ['Infinity Pool', 'Home Cinema', 'Smart Home System', 'Panoramic Views', 'Wine Cellar', 'Guest House'],
@@ -153,5 +162,15 @@ export let mockInquiries: Inquiry[] = [
     message: 'What are the HOA fees for the downtown apartment? Also interested in financing options.',
     dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     status: 'contacted',
+  },
+  {
+    id: 'inq3',
+    propertyId: 'prop1',
+    propertyName: 'Spacious Family Home in Suburbia',
+    inquirerName: 'Charlie User', // Inquiry from charlie
+    inquirerEmail: 'charlie@example.com',
+    message: 'Interested in prop1, can I get more photos?',
+    dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+    status: 'new',
   },
 ];

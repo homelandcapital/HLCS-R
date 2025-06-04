@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,10 +18,9 @@ import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from 'react';
 
-// Schema no longer includes role, as it's handled by tabs
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }), // Min 1 for demo purposes
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 type LoginFormValues = z.infer<typeof formSchema>;
@@ -31,7 +29,7 @@ const LoginForm = () => {
   const { login } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user'); // Default to 'user'
+  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
@@ -55,7 +53,6 @@ const LoginForm = () => {
         foundUser = mockPlatformAdmins.find(admin => admin.email === values.email);
         break;
       default:
-        // This should not happen with controlled tabs, but as a fallback:
         toast({
           title: 'Login Error',
           description: 'Invalid role selected.',
@@ -64,7 +61,6 @@ const LoginForm = () => {
         return;
     }
 
-    // In a real app, you'd verify password hash
     if (foundUser) {
       login(foundUser);
       toast({
@@ -76,8 +72,8 @@ const LoginForm = () => {
         router.push('/agents/dashboard');
       } else if (foundUser.role === 'platform_admin') {
         router.push('/admin/dashboard');
-      } else { // General user
-        router.push('/');
+      } else { 
+        router.push('/users/dashboard'); // Redirect general users to their dashboard
       }
     } else {
       toast({
@@ -180,4 +176,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-

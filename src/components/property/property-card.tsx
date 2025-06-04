@@ -1,17 +1,30 @@
+
+'use client';
 import type { Property } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, BedDouble, Bath, Home, Tag } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Home, Tag, Heart } from 'lucide-react';
+import { useAuth } from '@/contexts/auth-context';
+import { cn } from '@/lib/utils';
 
 interface PropertyCardProps {
   property: Property;
 }
 
 const PropertyCard = ({ property }: PropertyCardProps) => {
+  const { isAuthenticated, user, isPropertySaved, toggleSaveProperty } = useAuth();
+  const saved = isAuthenticated && user?.role === 'user' && isPropertySaved(property.id);
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent link navigation if button is inside Link
+    e.stopPropagation();
+    toggleSaveProperty(property.id);
+  };
+
   return (
-    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">
+    <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`}>
           <Image
@@ -26,6 +39,17 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm font-semibold">
           ${property.price.toLocaleString()}
         </div>
+        {isAuthenticated && user?.role === 'user' && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSaveClick}
+            className="absolute top-2 left-2 bg-background/70 hover:bg-background text-foreground rounded-full h-9 w-9"
+            aria-label={saved ? "Unsave property" : "Save property"}
+          >
+            <Heart className={cn("h-5 w-5", saved ? "fill-red-500 text-red-500" : "text-muted-foreground group-hover:text-red-400")} />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <Link href={`/properties/${property.id}`}>
