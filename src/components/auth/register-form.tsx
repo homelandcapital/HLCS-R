@@ -59,7 +59,8 @@ const RegisterForm = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      // Agent specific fields are undefined initially
+      phone: '', // Initialize to empty string
+      agency: '', // Initialize to empty string
     },
     context: { role: activeRoleTab } // Provide role context for conditional validation
   });
