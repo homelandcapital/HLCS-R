@@ -1,22 +1,50 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, ListChecks, PlusCircle, TrendingUp, MessageSquare, UserCircle } from 'lucide-react';
+import { Home, ListChecks, PlusCircle, TrendingUp, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { mockProperties } from '@/lib/mock-data'; // Assuming properties are linked to agents
+import { mockProperties } from '@/lib/mock-data'; 
+import type { Agent } from '@/lib/types'; // For casting and property.agent
+import { useEffect, useState } from 'react';
 
 export default function AgentDashboardPage() {
-  const { agent } = useAuth();
+  const { user, loading: authLoading } = useAuth(); // Changed agent to user
+  const [agentPropertiesCount, setAgentPropertiesCount] = useState(0);
+  const [activeListingsCount, setActiveListingsCount] = useState(0);
+  const [totalViewsCount, setTotalViewsCount] = useState(0);
+  const [totalInquiriesCount, setTotalInquiriesCount] = useState(0);
+  const [recentProperties, setRecentProperties] = useState<typeof mockProperties>([]);
+
+  useEffect(() => {
+    if (!authLoading && user && user.role === 'agent') {
+      const currentAgent = user as Agent;
+      const properties = mockProperties.filter(p => p.agent.id === currentAgent.id);
+      setAgentPropertiesCount(properties.length);
+      setActiveListingsCount(properties.filter(p => p.price > 0).length); // Example criteria
+      setTotalViewsCount(properties.reduce((sum, p) => sum + (p.price / 1000), 0)); // Dummy calculation
+      setTotalInquiriesCount(Math.floor(properties.length * 1.5)); // Dummy calculation
+      setRecentProperties(properties.slice(0,3));
+    }
+  }, [user, authLoading]);
   
-  // Filter properties for the current agent - simple simulation
-  const agentProperties = agent ? mockProperties.filter(p => p.agent.id === agent.id) : [];
-  const totalListings = agentProperties.length;
-  // Simulate some stats
-  const activeListings = agentProperties.filter(p => p.price > 0).length; // Example criteria
-  const totalViews = agentProperties.reduce((sum, p) => sum + (p.price / 1000), 0); // Dummy calculation
-  const totalInquiries = Math.floor(totalListings * 1.5); // Dummy calculation
+  if (authLoading) {
+    return <div className="text-center py-10">Loading dashboard data...</div>;
+  }
+
+  if (!user || user.role !== 'agent') {
+     return (
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-headline">Access Denied</h1>
+          <p className="text-muted-foreground">This dashboard is for agents only.</p>
+          <Button asChild className="mt-4">
+            <Link href="/">Go to Homepage</Link>
+          </Button>
+        </div>
+      );
+  }
 
   return (
     <div className="space-y-8">
@@ -30,10 +58,10 @@ export default function AgentDashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Listings" value={totalListings.toString()} icon={<Home />} description="All properties you manage." />
-        <StatCard title="Active Listings" value={activeListings.toString()} icon={<ListChecks />} description="Currently active on the market." />
-        <StatCard title="Total Views" value={Math.floor(totalViews).toLocaleString()} icon={<TrendingUp />} description="Across all your listings." />
-        <StatCard title="Inquiries Received" value={totalInquiries.toString()} icon={<MessageSquare />} description="Potential buyer contacts." />
+        <StatCard title="Total Listings" value={agentPropertiesCount.toString()} icon={<Home />} description="All properties you manage." />
+        <StatCard title="Active Listings" value={activeListingsCount.toString()} icon={<ListChecks />} description="Currently active on the market." />
+        <StatCard title="Total Views" value={Math.floor(totalViewsCount).toLocaleString()} icon={<TrendingUp />} description="Across all your listings." />
+        <StatCard title="Inquiries Received" value={totalInquiriesCount.toString()} icon={<MessageSquare />} description="Potential buyer contacts." />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -59,9 +87,9 @@ export default function AgentDashboardPage() {
             <CardDescription>Overview of recent events.</CardDescription>
           </CardHeader>
           <CardContent>
-            {agentProperties.length > 0 ? (
+            {recentProperties.length > 0 ? (
               <ul className="space-y-3">
-                {agentProperties.slice(0, 3).map(prop => (
+                {recentProperties.map(prop => (
                   <li key={prop.id} className="text-sm p-2 border rounded-md hover:bg-muted transition-colors">
                     <Link href={`/properties/${prop.id}`} className="font-medium text-primary hover:underline">{prop.title}</Link>
                     <p className="text-xs text-muted-foreground">Added/Updated recently</p>
@@ -99,4 +127,3 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
-

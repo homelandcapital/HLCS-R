@@ -1,3 +1,32 @@
+
+export type UserRole = 'agent' | 'user' | 'platform_admin';
+
+export interface BaseUser {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  role: UserRole;
+}
+
+export interface Agent extends BaseUser {
+  role: 'agent';
+  phone: string;
+  agency?: string;
+}
+
+export interface GeneralUser extends BaseUser {
+  role: 'user';
+  // Add any user-specific fields if necessary, e.g., savedSearches, preferences
+}
+
+export interface PlatformAdmin extends BaseUser {
+  role: 'platform_admin';
+  // Add any admin-specific fields if necessary, e.g., permissions
+}
+
+export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
+
 export interface Property {
   id: string;
   title: string;
@@ -10,20 +39,11 @@ export interface Property {
   bathrooms: number;
   areaSqFt: number;
   images: string[];
-  agent: Agent;
+  agent: Agent; // A property is listed by an Agent
   amenities?: string[];
   yearBuilt?: number;
   coordinates: {
     lat: number;
     lng: number;
   };
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  agency?: string;
-  avatarUrl?: string;
 }

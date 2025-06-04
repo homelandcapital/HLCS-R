@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,13 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { mockAgents } from '@/lib/mock-data'; // For simulation
+import { mockAgents, mockGeneralUsers, mockPlatformAdmins } from '@/lib/mock-data'; 
+import type { AuthenticatedUser } from '@/lib/types';
 import { LogIn, Mail, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  password: z.string().min(1, { message: 'Password is required.' }), // Min 1 for demo purposes
 });
 
 type LoginFormValues = z.infer<typeof formSchema>;
@@ -35,15 +37,33 @@ const LoginForm = () => {
   });
 
   function onSubmit(values: LoginFormValues) {
-    // Simulate login
-    const agent = mockAgents.find(a => a.email === values.email); // Simple check for demo
-    if (agent) { // In a real app, you'd verify password hash
-      login(agent);
+    // Simulate login by checking mock data
+    let foundUser: AuthenticatedUser | undefined = mockAgents.find(a => a.email === values.email);
+    if (!foundUser) {
+      foundUser = mockGeneralUsers.find(u => u.email === values.email);
+    }
+    if (!foundUser) {
+      foundUser = mockPlatformAdmins.find(admin => admin.email === values.email);
+    }
+
+    // In a real app, you'd verify password hash
+    if (foundUser) {
+      login(foundUser);
       toast({
         title: 'Login Successful',
-        description: `Welcome back, ${agent.name}!`,
+        description: `Welcome back, ${foundUser.name}! You are logged in as a ${foundUser.role}.`,
       });
-      router.push('/agents/dashboard');
+
+      if (foundUser.role === 'agent') {
+        router.push('/agents/dashboard');
+      } else if (foundUser.role === 'platform_admin') {
+        // Placeholder for admin dashboard redirect
+        toast({ title: "Admin Logged In", description: "Admin dashboard not yet implemented. Redirecting to home."});
+        router.push('/');
+      } else {
+        // General user redirect
+        router.push('/');
+      }
     } else {
       toast({
         title: 'Login Failed',
@@ -60,8 +80,8 @@ const LoginForm = () => {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <LogIn className="mx-auto h-12 w-12 text-primary mb-2" />
-          <CardTitle className="text-3xl font-headline">Agent Login</CardTitle>
-          <CardDescription>Access your EstateList agent dashboard.</CardDescription>
+          <CardTitle className="text-3xl font-headline">Login</CardTitle>
+          <CardDescription>Access your EstateList account.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -75,7 +95,7 @@ const LoginForm = () => {
                     <FormControl>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input type="email" placeholder="agent@example.com" {...field} className="pl-10" />
+                        <Input type="email" placeholder="your.email@example.com" {...field} className="pl-10" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -104,9 +124,9 @@ const LoginForm = () => {
             </form>
           </Form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            Don&apos;t have an agent account?{' '}
             <Link href="/agents/register" className="font-medium text-primary hover:underline">
-              Register here
+              Register as Agent
             </Link>
           </p>
         </CardContent>

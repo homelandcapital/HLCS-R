@@ -1,14 +1,15 @@
+
 // src/contexts/auth-context.tsx
 "use client";
 
-import type { Agent } from '@/lib/types';
+import type { AuthenticatedUser } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  agent: Agent | null;
-  login: (agentDetails: Agent) => void;
+  user: AuthenticatedUser | null;
+  login: (userDetails: AuthenticatedUser) => void;
   logout: () => void;
   loading: boolean;
 }
@@ -17,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [agent, setAgent] = useState<Agent | null>(null);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -26,9 +27,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const storedAuth = localStorage.getItem('estateListAuth');
       if (storedAuth) {
         const parsedAuth = JSON.parse(storedAuth);
-        if (parsedAuth.isAuthenticated && parsedAuth.agent) {
+        if (parsedAuth.isAuthenticated && parsedAuth.user) {
           setIsAuthenticated(true);
-          setAgent(parsedAuth.agent);
+          setUser(parsedAuth.user as AuthenticatedUser);
         }
       }
     } catch (error) {
@@ -38,11 +39,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const login = useCallback((agentDetails: Agent) => {
+  const login = useCallback((userDetails: AuthenticatedUser) => {
     setIsAuthenticated(true);
-    setAgent(agentDetails);
+    setUser(userDetails);
     try {
-      localStorage.setItem('estateListAuth', JSON.stringify({ isAuthenticated: true, agent: agentDetails }));
+      localStorage.setItem('estateListAuth', JSON.stringify({ isAuthenticated: true, user: userDetails }));
     } catch (error) {
       console.error("Failed to save auth state to localStorage", error);
     }
@@ -50,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = useCallback(() => {
     setIsAuthenticated(false);
-    setAgent(null);
+    setUser(null);
     try {
       localStorage.removeItem('estateListAuth');
     } catch (error) {
@@ -60,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, agent, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

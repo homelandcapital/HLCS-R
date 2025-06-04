@@ -1,3 +1,4 @@
+
 // src/components/layout/dashboard-layout.tsx
 "use client";
 
@@ -9,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Home, PlusCircle, ListChecks, LogOut, LayoutDashboard } from 'lucide-react';
 import Logo from '@/components/common/logo';
+import { useToast } from '@/hooks/use-toast';
+import type { Agent } from '@/lib/types';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -21,24 +24,35 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, loading, logout, agent } = useAuth();
+  const { isAuthenticated, user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/agents/login');
+    if (!loading) {
+      if (!isAuthenticated) {
+        router.push('/agents/login');
+      } else if (user && user.role !== 'agent') {
+        toast({ 
+          title: "Access Denied", 
+          description: "This dashboard is for agents only.",
+          variant: "destructive"
+        });
+        router.push('/');
+      }
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, user, loading, router, toast]);
 
-  if (loading || !isAuthenticated) {
-    // You can return a loading spinner here
+  if (loading || !isAuthenticated || (user && user.role !== 'agent')) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p className="text-lg text-muted-foreground">Loading dashboard...</p>
       </div>
     );
   }
+  
+  const currentAgent = user as Agent; // Safe to cast here due to the effect and conditional rendering
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -47,8 +61,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
            <Logo />
         </div>
         <div className="text-center border-b pb-4 mb-4">
-            <h2 className="text-xl font-headline font-semibold">{agent?.name}</h2>
-            <p className="text-sm text-muted-foreground">{agent?.email}</p>
+            <h2 className="text-xl font-headline font-semibold">{currentAgent?.name}</h2>
+            <p className="text-sm text-muted-foreground">{currentAgent?.email}</p>
         </div>
         <nav className="flex flex-col space-y-2">
           {navItems.map((item) => (

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { Agent } from '@/lib/types';
-import { UserPlus, User, Mail, KeyRound, Briefcase } from 'lucide-react';
+import type { Agent } from '@/lib/types'; // Keep Agent type for new agent registration
+import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon } from 'lucide-react'; // Renamed Phone to PhoneIcon
 import Link from 'next/link';
 
 const formSchema = z.object({
@@ -29,7 +30,7 @@ const formSchema = z.object({
 type RegisterFormValues = z.infer<typeof formSchema>;
 
 const RegisterForm = () => {
-  const { login } = useAuth(); // Use login to set auth state after registration
+  const { login } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
 
@@ -46,23 +47,22 @@ const RegisterForm = () => {
   });
 
   function onSubmit(values: RegisterFormValues) {
-    // Simulate registration
-    const newAgent: Agent = {
-      id: `agent-${Date.now()}`, // Simple ID generation for demo
+    // Simulate registration for an Agent
+    const newAgentUser: Agent = { 
+      id: `agent-${Date.now()}`, 
       name: values.name,
       email: values.email,
       phone: values.phone,
       agency: values.agency,
+      role: 'agent', // Explicitly set role for agent registration
       // password would be hashed and stored in a real backend
     };
     
-    // In a real app, you would send this to your backend to create the user
-    // For now, we'll "log in" the new agent directly
-    login(newAgent);
+    login(newAgentUser); // login function now accepts AuthenticatedUser, Agent is compatible
     
     toast({
       title: 'Registration Successful!',
-      description: `Welcome, ${newAgent.name}! Your account has been created.`,
+      description: `Welcome, ${newAgentUser.name}! Your agent account has been created.`,
     });
     router.push('/agents/dashboard');
   }
@@ -118,7 +118,7 @@ const RegisterForm = () => {
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <PhoneIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input type="tel" placeholder="(555) 123-4567" {...field} className="pl-10"/>
                       </div>
                     </FormControl>

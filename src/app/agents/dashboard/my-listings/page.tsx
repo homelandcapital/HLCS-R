@@ -1,9 +1,10 @@
+
 // src/app/agents/dashboard/my-listings/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { mockProperties } from '@/lib/mock-data';
-import type { Property } from '@/lib/types';
+import type { Property, Agent } from '@/lib/types'; // Agent for property.agent
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,22 +14,23 @@ import { Edit3, Trash2, Eye, PlusCircle, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MyListingsPage() {
-  const { agent, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth(); // Changed agent to user
   const [agentProperties, setAgentProperties] = useState<Property[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && agent) {
+    if (!authLoading && user && user.role === 'agent') {
+      const currentAgent = user as Agent; // Cast to Agent for agent-specific logic
       // Simulate fetching agent's properties
       setTimeout(() => {
-        const properties = mockProperties.filter(p => p.agent.id === agent.id);
+        const properties = mockProperties.filter(p => p.agent.id === currentAgent.id);
         setAgentProperties(properties);
         setPageLoading(false);
       }, 500);
-    } else if (!authLoading && !agent) {
-      setPageLoading(false); // Not authenticated or no agent data
+    } else if (!authLoading && (!user || user.role !== 'agent')) {
+      setPageLoading(false); // Not authenticated or not an agent
     }
-  }, [agent, authLoading]);
+  }, [user, authLoading]);
 
   const handleDelete = (propertyId: string) => {
     // Simulate deletion
@@ -65,6 +67,18 @@ export default function MyListingsPage() {
         </div>
       </div>
     );
+  }
+
+  if (user?.role !== 'agent') { // Ensure only agents see this page content
+     return (
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-headline">Access Denied</h1>
+          <p className="text-muted-foreground">This page is for agents only.</p>
+           <Button asChild className="mt-4">
+            <Link href="/">Go to Homepage</Link>
+          </Button>
+        </div>
+      );
   }
 
   return (

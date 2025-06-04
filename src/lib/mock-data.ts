@@ -1,4 +1,4 @@
-import type { Property, Agent } from './types';
+import type { Property, Agent, GeneralUser, PlatformAdmin } from './types';
 
 export const mockAgents: Agent[] = [
   {
@@ -8,6 +8,7 @@ export const mockAgents: Agent[] = [
     phone: '555-1234',
     agency: 'Wonderland Realty',
     avatarUrl: 'https://placehold.co/100x100.png',
+    role: 'agent',
   },
   {
     id: 'agent2',
@@ -16,8 +17,30 @@ export const mockAgents: Agent[] = [
     phone: '555-5678',
     agency: 'BuildIt Estates',
     avatarUrl: 'https://placehold.co/100x100.png',
+    role: 'agent',
   },
 ];
+
+export const mockGeneralUsers: GeneralUser[] = [
+  {
+    id: 'user1',
+    name: 'Charlie User',
+    email: 'charlie@example.com',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    role: 'user',
+  },
+];
+
+export const mockPlatformAdmins: PlatformAdmin[] = [
+  {
+    id: 'admin1',
+    name: 'Diana Admin',
+    email: 'diana@estatelist.com',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    role: 'platform_admin',
+  },
+];
+
 
 export const mockProperties: Property[] = [
   {
@@ -93,7 +116,7 @@ export const mockProperties: Property[] = [
     address: '1 Vista Lane, Serene Hills, PC 67890',
     type: 'House',
     bedrooms: 5,
-    bathrooms: 5.5,
+    bathrooms: 5.5, // Note: bathrooms can be float for 0.5 baths
     areaSqFt: 6000,
     images: [
       'https://placehold.co/600x400.png',

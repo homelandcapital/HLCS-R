@@ -1,3 +1,4 @@
+
 // src/components/layout/navbar.tsx
 "use client";
 
@@ -10,26 +11,28 @@ import { Menu, LogOut, UserCircle, LayoutDashboard, PlusCircle } from "lucide-re
 import { useState } from 'react';
 
 const Navbar = () => {
-  const { isAuthenticated, agent, logout, loading } = useAuth();
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
     { href: '/', label: 'Properties' },
-    ...(isAuthenticated
+    ...(isAuthenticated && user?.role === 'agent'
       ? [
           { href: '/agents/dashboard', label: 'Dashboard' },
           { href: '/agents/dashboard/add-property', label: 'Add Property' },
         ]
       : []),
+    // Could add links for other roles here if dashboards existed
+    // e.g., ...(isAuthenticated && user?.role === 'platform_admin' ? [{ href: '/admin/dashboard', label: 'Admin Panel' }] : [])
   ];
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   const AuthButtons = () => (
     <div className="flex flex-col sm:flex-row items-center gap-2">
-      {isAuthenticated ? (
+      {isAuthenticated && user ? (
         <>
-          <span className="text-sm text-foreground hidden sm:block">Welcome, {agent?.name}!</span>
+          <span className="text-sm text-foreground hidden sm:block">Welcome, {user.name}!</span>
           <Button variant="ghost" onClick={() => { logout(); closeMobileMenu(); }} size="sm">
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>
@@ -40,7 +43,7 @@ const Navbar = () => {
             <Link href="/agents/login">Login</Link>
           </Button>
           <Button asChild onClick={closeMobileMenu} size="sm">
-            <Link href="/agents/register">Register</Link>
+            <Link href="/agents/register">Register Agent</Link>
           </Button>
         </>
       )}
