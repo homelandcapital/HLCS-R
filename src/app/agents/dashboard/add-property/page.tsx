@@ -11,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import DescriptionGenerator from '@/components/ai/description-generator';
 import { useState, useTransition } from 'react';
 import { PlusCircle, UploadCloud, Home, DollarSign, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -31,7 +30,7 @@ const propertyFormSchema = z.object({
   areaSqFt: z.coerce.number().positive({ message: 'Area must be a positive number.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }).max(5000, {message: "Description must be less than 5000 characters."}),
   yearBuilt: z.coerce.number().min(1000, {message: "Year built seems too old."}).max(new Date().getFullYear(), {message: "Year built cannot be in the future."}).optional().or(z.literal('')),
-  amenities: z.string().optional(), 
+  amenities: z.string().optional(),
   latitude: z.coerce.number().min(-90).max(90).optional().or(z.literal('')),
   longitude: z.coerce.number().min(-180).max(180).optional().or(z.literal('')),
 });
@@ -41,7 +40,6 @@ type PropertyFormValues = z.infer<typeof propertyFormSchema>;
 export default function AddPropertyPage() {
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
-  const [descriptionFromAI, setDescriptionFromAI] = useState('');
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
@@ -63,11 +61,6 @@ export default function AddPropertyPage() {
       longitude: undefined,
     },
   });
-
-  const handleDescriptionGenerated = (newDescription: string) => {
-    setDescriptionFromAI(newDescription);
-    form.setValue('description', newDescription, { shouldValidate: true });
-  };
 
   function onSubmit(values: PropertyFormValues) {
     startTransition(async () => {
@@ -94,8 +87,8 @@ export default function AddPropertyPage() {
         bathrooms: values.bathrooms,
         areaSqFt: values.areaSqFt,
         images: [
-          'https://placehold.co/600x400.png?text=New+Property+Image+1', 
-          'https://placehold.co/600x400.png?text=New+Property+Image+2'
+          'https://placehold.co/600x400.png',
+          'https://placehold.co/600x400.png'
         ],
         agent: currentAgent,
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
@@ -113,7 +106,6 @@ export default function AddPropertyPage() {
         description: `${values.title} has been successfully added to your listings.`,
       });
       form.reset();
-      setDescriptionFromAI('');
       router.push('/agents/dashboard/my-listings');
     });
   }
@@ -127,13 +119,11 @@ export default function AddPropertyPage() {
         <p className="text-muted-foreground">Fill in the details for your new listing.</p>
       </div>
 
-      <DescriptionGenerator onDescriptionGenerated={handleDescriptionGenerated} />
-
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Property Information</CardTitle>
           <CardDescription>
-            Enter the specific details for the property. You can use the AI-generated description above or write your own.
+            Enter the specific details for the property.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,7 +276,7 @@ export default function AddPropertyPage() {
                       <Textarea placeholder="Detailed property description..." {...field} rows={8} />
                     </FormControl>
                     <FormDescription>
-                      {descriptionFromAI ? "Using AI-generated description. Edit as needed." : "Provide a captivating description for the property."}
+                      Provide a captivating description for the property.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
