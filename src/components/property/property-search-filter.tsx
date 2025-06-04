@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -55,13 +56,22 @@ const PropertySearchFilter = ({ onSearch }: PropertySearchFilterProps) => {
           </div>
           <div>
             <label htmlFor="propertyType" className="block text-sm font-medium text-foreground mb-1">Property Type</label>
-            <Select value={propertyType} onValueChange={setPropertyType}>
+            <Select
+              value={propertyType}
+              onValueChange={(selectedValue) => {
+                if (selectedValue === "__any__") {
+                  setPropertyType("");
+                } else {
+                  setPropertyType(selectedValue);
+                }
+              }}
+            >
               <SelectTrigger className="w-full">
                 <Home className="h-5 w-5 mr-2 text-muted-foreground" />
                 <SelectValue placeholder="Any Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any Type</SelectItem>
+                <SelectItem value="__any__">Any Type</SelectItem>
                 <SelectItem value="House">House</SelectItem>
                 <SelectItem value="Apartment">Apartment</SelectItem>
                 <SelectItem value="Condo">Condo</SelectItem>
