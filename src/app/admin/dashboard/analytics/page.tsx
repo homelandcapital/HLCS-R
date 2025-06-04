@@ -3,49 +3,43 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star, Link as LinkIcon } from 'lucide-react'; // Added LinkIcon
+import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star, Link as LinkIcon, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart as RechartsBarChart } from 'recharts';
 import { mockProperties, mockPlatformSettings } from '@/lib/mock-data';
-import type { Property } from '@/lib/types'; // Changed PromotionTierConfig to Property
+import type { Property } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import Link from 'next/link'; // Added NextLink for property links
-import { Button } from '@/components/ui/button'; // Added Button import
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { convertToCSV, downloadCSV } from '@/lib/export-utils';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 // Mock data for charts (remains the same)
 const mockUserSignupsData = [
-  { name: 'Jan', users: 30 },
-  { name: 'Feb', users: 45 },
-  { name: 'Mar', users: 60 },
-  { name: 'Apr', users: 50 },
-  { name: 'May', users: 70 },
-  { name: 'Jun', users: 85 },
+  { name: 'Jan', users: 30 }, { name: 'Feb', users: 45 }, { name: 'Mar', users: 60 },
+  { name: 'Apr', users: 50 }, { name: 'May', users: 70 }, { name: 'Jun', users: 85 },
 ];
 
 const mockPropertyListingsData = [
-  { name: 'Jan', listings: 10 },
-  { name: 'Feb', listings: 12 },
-  { name: 'Mar', listings: 15 },
-  { name: 'Apr', listings: 13 },
-  { name: 'May', listings: 18 },
-  { name: 'Jun', listings: 22 },
+  { name: 'Jan', listings: 10 }, { name: 'Feb', listings: 12 }, { name: 'Mar', listings: 15 },
+  { name: 'Apr', listings: 13 }, { name: 'May', listings: 18 }, { name: 'Jun', listings: 22 },
 ];
 
 export default function PlatformAnalyticsPage() {
-  // In a real app, this data would be fetched from a backend
   const totalUsers = 1250;
-  const totalProperties = mockProperties.length;
   const totalSalesVolume = 150000000;
   const siteEngagementRate = 65.5;
 
   const [promotedListingsCount, setPromotedListingsCount] = useState(0);
   const [totalPromotionRevenue, setTotalPromotionRevenue] = useState(0);
-  const [promotedPropertiesList, setPromotedPropertiesList] = useState<Property[]>([]); // New state for the list
+  const [promotedPropertiesList, setPromotedPropertiesList] = useState<Property[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     const promotedProps = mockProperties.filter(p => p.isPromoted && p.promotionDetails);
-    setPromotedPropertiesList(promotedProps); // Set the list of promoted properties
+    setPromotedPropertiesList(promotedProps);
     setPromotedListingsCount(promotedProps.length);
 
     let revenue = 0;
@@ -57,9 +51,25 @@ export default function PlatformAnalyticsPage() {
       }
     });
     setTotalPromotionRevenue(revenue);
-
   }, []);
 
+  const handleExportPromotedListings = () => {
+    const dataToExport = promotedPropertiesList.map(p => {
+      const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === p.promotionDetails?.tierId);
+      return {
+        propertyId: p.id,
+        propertyTitle: p.title,
+        tierName: p.promotionDetails?.tierName || 'N/A',
+        promotedDate: p.promotionDetails?.promotedAt ? format(new Date(p.promotionDetails.promotedAt), 'yyyy-MM-dd') : 'N/A',
+        tierFee: tierConfig?.fee || 0,
+        tierDurationDays: tierConfig?.duration || 0,
+      };
+    });
+    const headers = ['propertyId', 'propertyTitle', 'tierName', 'promotedDate', 'tierFee', 'tierDurationDays'];
+    const csvString = convertToCSV(dataToExport, headers);
+    downloadCSV(csvString, 'homeland-capital-promoted-listings.csv');
+    toast({ title: 'Export Started', description: 'Promoted listings CSV download has started.' });
+  };
 
   return (
     <div className="space-y-8">
@@ -74,7 +84,7 @@ export default function PlatformAnalyticsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard title="Total Users" value={totalUsers.toLocaleString()} icon={<Users />} description="Registered users and agents." />
-        <StatCard title="Total Properties" value={totalProperties.toLocaleString()} icon={<Home />} description="Active listings on platform." />
+        <StatCard title="Total Properties" value={mockProperties.length.toLocaleString()} icon={<Home />} description="Active listings on platform." />
         <StatCard title="Total Sales Volume" value={`₦${totalSalesVolume.toLocaleString()}`} icon={<span className="font-bold text-xl">₦</span>} description="Completed transactions value." />
         <StatCard title="Engagement Rate" value={`${siteEngagementRate}%`} icon={<Activity />} description="Average user activity." />
         <StatCard title="Active Promoted Listings" value={promotedListingsCount.toLocaleString()} icon={<Zap />} description="Currently boosted listings." />
@@ -122,11 +132,16 @@ export default function PlatformAnalyticsPage() {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center">
-            <Star className="mr-2 h-5 w-5 text-yellow-500" /> Promoted Listings Details
-          </CardTitle>
-          <CardDescription>Details of individual properties currently being promoted.</CardDescription>
+        <CardHeader className="flex flex-row justify-between items-center">
+          <div>
+            <CardTitle className="font-headline flex items-center">
+              <Star className="mr-2 h-5 w-5 text-yellow-500" /> Promoted Listings Details
+            </CardTitle>
+            <CardDescription>Details of individual properties currently being promoted.</CardDescription>
+          </div>
+          <Button onClick={handleExportPromotedListings} variant="outline">
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
         </CardHeader>
         <CardContent>
           {promotedPropertiesList.length > 0 ? (
@@ -193,7 +208,6 @@ export default function PlatformAnalyticsPage() {
   );
 }
 
-
 interface StatCardProps {
   title: string;
   value: string;
@@ -215,4 +229,3 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
-

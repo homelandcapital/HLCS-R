@@ -4,20 +4,23 @@
 
 import { useState, useEffect } from 'react';
 import { mockAgents, mockGeneralUsers, mockPlatformAdmins } from '@/lib/mock-data';
-import type { AuthenticatedUser, UserRole } from '@/lib/types';
+import type { AuthenticatedUser, UserRole, Agent, GeneralUser, PlatformAdmin } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Shield, Briefcase, UserCircle } from 'lucide-react';
+import { Users, Shield, Briefcase, UserCircle, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { convertToCSV, downloadCSV } from '@/lib/export-utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UserManagementPage() {
   const [allUsers, setAllUsers] = useState<AuthenticatedUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<AuthenticatedUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const { toast } = useToast();
 
   useEffect(() => {
     const combinedUsers: AuthenticatedUser[] = [
@@ -61,11 +64,11 @@ export default function UserManagementPage() {
   const getRoleBadgeVariant = (role: UserRole): "default" | "secondary" | "destructive" | "outline" | null | undefined => {
     switch (role) {
       case 'platform_admin':
-        return 'destructive'; // Or a specific admin color if defined
+        return 'destructive'; 
       case 'agent':
         return 'secondary';
       case 'user':
-        return 'default'; // Or outline
+        return 'default'; 
       default:
         return 'outline';
     }
@@ -84,6 +87,22 @@ export default function UserManagementPage() {
     }
   }
 
+  const handleExportUsers = () => {
+    const dataToExport = filteredUsers.map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: formatRole(user.role),
+      phone: (user as Agent).phone || '', // Only agents have phone
+      agency: (user as Agent).agency || '', // Only agents have agency
+    }));
+
+    const headers = ['id', 'name', 'email', 'role', 'phone', 'agency'];
+    const csvString = convertToCSV(dataToExport, headers);
+    downloadCSV(csvString, 'homeland-capital-users.csv');
+    toast({ title: 'Export Started', description: 'User data CSV download has started.' });
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -95,8 +114,15 @@ export default function UserManagementPage() {
 
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">User List</CardTitle>
-          <CardDescription>A comprehensive list of all registered users, agents, and administrators.</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="font-headline text-2xl">User List</CardTitle>
+              <CardDescription>A comprehensive list of all registered users, agents, and administrators.</CardDescription>
+            </div>
+            <Button onClick={handleExportUsers} variant="outline">
+              <Download className="mr-2 h-4 w-4" /> Export Users
+            </Button>
+          </div>
           <div className="pt-4 flex flex-col sm:flex-row gap-4">
             <Input
               placeholder="Search by name or email..."
@@ -158,7 +184,6 @@ export default function UserManagementPage() {
                     <TableCell className="text-xs text-muted-foreground">{user.id}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" disabled>Edit</Button>
-                      {/* Add more actions like Delete, View Details when implemented */}
                     </TableCell>
                   </TableRow>
                 ))}

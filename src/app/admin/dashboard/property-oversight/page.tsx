@@ -4,11 +4,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { mockProperties } from '@/lib/mock-data';
-import type { Property, PropertyStatus, ListingType, NigerianState } from '@/lib/types'; // Added ListingType, NigerianState
+import type { Property, PropertyStatus, ListingType, NigerianState } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Home as HomeIcon, Edit2, AlertCircle, CheckCircle, XCircle, MessageSquare, Tag } from 'lucide-react'; // Changed Home to HomeIcon
+import { Eye, Search, Home as HomeIcon, Edit2, CheckCircle, XCircle, MessageSquare, Tag, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { convertToCSV, downloadCSV } from '@/lib/export-utils';
 
 type PropertyTypeFilter = Property['type'] | 'all';
 type StatusFilter = PropertyStatus | 'all';
-type ListingTypeFilter = ListingType | 'all'; // Added
+type ListingTypeFilter = ListingType | 'all';
 
 export default function PropertyOversightPage() {
   const [allProperties, setAllProperties] = useState<Property[]>([]);
@@ -30,7 +31,7 @@ export default function PropertyOversightPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<PropertyTypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [listingTypeFilter, setListingTypeFilter] = useState<ListingTypeFilter>('all'); // Added
+  const [listingTypeFilter, setListingTypeFilter] = useState<ListingTypeFilter>('all');
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [propertyToReject, setPropertyToReject] = useState<Property | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -40,7 +41,6 @@ export default function PropertyOversightPage() {
     const sortedProperties = [...mockProperties].sort((a, b) => {
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
-        // Could add date sorting here if new Date(a.id.slice(-10)).getTime() logic was for submission date
         return 0; 
     });
     setAllProperties(sortedProperties);
@@ -56,7 +56,7 @@ export default function PropertyOversightPage() {
     if (statusFilter !== 'all') {
       properties = properties.filter(property => property.status === statusFilter);
     }
-    if (listingTypeFilter !== 'all') { // Added filter
+    if (listingTypeFilter !== 'all') {
       properties = properties.filter(property => property.listingType === listingTypeFilter);
     }
 
@@ -64,18 +64,18 @@ export default function PropertyOversightPage() {
       const lowerSearchTerm = searchTerm.toLowerCase();
       properties = properties.filter(property =>
         property.title.toLowerCase().includes(lowerSearchTerm) ||
-        property.location.toLowerCase().includes(lowerSearchTerm) || // Searches Area/City
-        property.state.toLowerCase().includes(lowerSearchTerm) || // Searches State
+        property.location.toLowerCase().includes(lowerSearchTerm) ||
+        property.state.toLowerCase().includes(lowerSearchTerm) ||
         property.address.toLowerCase().includes(lowerSearchTerm) ||
         property.agent.name.toLowerCase().includes(lowerSearchTerm)
       );
     }
     setFilteredProperties(properties);
-  }, [searchTerm, typeFilter, statusFilter, listingTypeFilter, allProperties]); // Added listingTypeFilter
+  }, [searchTerm, typeFilter, statusFilter, listingTypeFilter, allProperties]);
 
   const propertyTypes = useMemo(() => Array.from(new Set(allProperties.map(p => p.type))), [allProperties]);
   const propertyStatuses: PropertyStatus[] = ['pending', 'approved', 'rejected'];
-  const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease']; // Added
+  const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
   const getStatusBadgeVariant = (status: PropertyStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -114,6 +114,32 @@ export default function PropertyOversightPage() {
     setPropertyToReject(null);
   };
 
+  const handleExportProperties = () => {
+    const dataToExport = filteredProperties.map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      listingType: p.listingType,
+      propertyType: p.type,
+      location: p.location,
+      state: p.state,
+      address: p.address,
+      bedrooms: p.bedrooms,
+      bathrooms: p.bathrooms,
+      areaSqFt: p.areaSqFt || '',
+      status: p.status,
+      agentName: p.agent.name,
+      agentEmail: p.agent.email,
+      isPromoted: p.isPromoted ? 'Yes' : 'No',
+      promotionTierName: p.promotionDetails?.tierName || '',
+      rejectionReason: p.rejectionReason || '',
+      yearBuilt: p.yearBuilt || '',
+    }));
+    const headers = ['id', 'title', 'price', 'listingType', 'propertyType', 'location', 'state', 'address', 'bedrooms', 'bathrooms', 'areaSqFt', 'status', 'agentName', 'agentEmail', 'isPromoted', 'promotionTierName', 'rejectionReason', 'yearBuilt'];
+    const csvString = convertToCSV(dataToExport, headers);
+    downloadCSV(csvString, 'homeland-capital-properties.csv');
+    toast({ title: 'Export Started', description: 'Property data CSV download has started.' });
+  };
 
   return (
     <div className="space-y-8">
@@ -126,8 +152,15 @@ export default function PropertyOversightPage() {
 
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">All Platform Properties</CardTitle>
-          <CardDescription>Manage all properties listed on the platform.</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="font-headline text-2xl">All Platform Properties</CardTitle>
+              <CardDescription>Manage all properties listed on the platform.</CardDescription>
+            </div>
+            <Button onClick={handleExportProperties} variant="outline">
+              <Download className="mr-2 h-4 w-4" /> Export Properties
+            </Button>
+          </div>
           <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -165,7 +198,7 @@ export default function PropertyOversightPage() {
                   <TableHead className="w-[80px]">Image</TableHead>
                   <TableHead>Title & Location</TableHead>
                   <TableHead>Price</TableHead>
-                  <TableHead>Listing Type</TableHead> {/* Added Col */}
+                  <TableHead>Listing Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Listed By (Agent)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -183,7 +216,7 @@ export default function PropertyOversightPage() {
                       <div className="text-xs text-muted-foreground">ID: {property.id}</div>
                     </TableCell>
                     <TableCell> <Badge variant="secondary" className="text-base"> ₦{property.price.toLocaleString()} </Badge> </TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs"><Tag className="h-3 w-3 mr-1"/>{property.listingType}</Badge></TableCell> {/* Added Cell */}
+                    <TableCell><Badge variant="outline" className="text-xs"><Tag className="h-3 w-3 mr-1"/>{property.listingType}</Badge></TableCell>
                     <TableCell>
                         <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize text-sm px-3 py-1">{property.status}</Badge>
                         {property.status === 'rejected' && property.rejectionReason && (
