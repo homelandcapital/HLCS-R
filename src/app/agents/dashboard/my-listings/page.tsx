@@ -123,7 +123,7 @@ export default function MyListingsPage() {
               </div>
               <CardHeader>
                 <CardTitle className="font-headline text-xl line-clamp-1">{property.title}</CardTitle>
-                <CardDescription className="text-sm">${property.price.toLocaleString()} - {property.location}</CardDescription>
+                <CardDescription className="text-sm">₦{property.price.toLocaleString()} - {property.location}</CardDescription>
                 {property.status === 'rejected' && property.rejectionReason && (
                      <p className="text-xs text-destructive mt-1 flex items-start" title={property.rejectionReason}>
                         <MessageSquare className="h-3 w-3 mr-1 mt-0.5 shrink-0"/>
@@ -136,7 +136,9 @@ export default function MyListingsPage() {
               </CardContent>
               <CardFooter className="flex justify-end gap-2 border-t pt-4">
                 <Button variant="outline" size="sm" asChild title="View Listing" disabled={property.status !== 'approved'}>
-                  <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer"> <Eye className="h-4 w-4" /> </Link>
+                  <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
+                    <span><Eye className="h-4 w-4" /></span>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="sm" title="Edit Listing" disabled> <Edit3 className="h-4 w-4" /> </Button>
                 <Button variant="destructive" size="sm" onClick={() => handleDelete(property.id)} title="Delete Listing" disabled={property.status === 'pending'}>
