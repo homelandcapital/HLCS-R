@@ -4,20 +4,19 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Bookmark, ListChecks, UserCircle, LayoutDashboard } from 'lucide-react';
+import { Bookmark, ListChecks, LayoutDashboard, Search } from 'lucide-react'; // Changed UserCircle to Search
 import { useAuth } from '@/contexts/auth-context';
 import type { GeneralUser } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data'; // Import mockInquiries
-import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { mockInquiries } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
 
 export default function UserDashboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const [inquiriesCount, setInquiriesCount] = useState(0); // State for inquiries count
+  const [inquiriesCount, setInquiriesCount] = useState(0);
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'user') {
       const currentUser = user as GeneralUser;
-      // Calculate inquiries count
       const userSpecificInquiries = mockInquiries.filter(
         inq => inq.inquirerEmail.toLowerCase() === currentUser.email.toLowerCase()
       );
@@ -90,13 +89,25 @@ export default function UserDashboardPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/users/dashboard/saved-properties"><Bookmark className="mr-2 h-4 w-4" /> View Saved Properties</Link>
+            <Link href="/users/dashboard/saved-properties">
+              <span>
+                <Bookmark className="mr-2 h-4 w-4" /> View Saved Properties
+              </span>
+            </Link>
           </Button>
           <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/users/dashboard/my-inquiries"><ListChecks className="mr-2 h-4 w-4" /> View My Inquiries</Link>
+            <Link href="/users/dashboard/my-inquiries">
+              <span>
+                <ListChecks className="mr-2 h-4 w-4" /> View My Inquiries
+              </span>
+            </Link>
           </Button>
            <Button variant="outline" className="w-full justify-start" asChild>
-            <Link href="/properties"><UserCircle className="mr-2 h-4 w-4" /> Explore Properties</Link> {/* Changed Icon from UserCircle to Search or Home */}
+            <Link href="/properties">
+              <span>
+                <Search className="mr-2 h-4 w-4" /> Explore Properties
+              </span>
+            </Link>
           </Button>
         </CardContent>
       </Card>
