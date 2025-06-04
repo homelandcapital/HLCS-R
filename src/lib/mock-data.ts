@@ -1,3 +1,4 @@
+
 import type { Property, Agent, GeneralUser, PlatformAdmin } from './types';
 
 export const mockAgents: Agent[] = [
@@ -42,7 +43,7 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
 ];
 
 
-export const mockProperties: Property[] = [
+export let mockProperties: Property[] = [
   {
     id: 'prop1',
     title: 'Spacious Family Home in Suburbia',
