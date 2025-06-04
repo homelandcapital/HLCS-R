@@ -201,17 +201,28 @@ export default function InquiryManagementPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-                <InfoRow icon={<User />} label="Inquirer Name" value={selectedInquiry.inquirerName} />
-                <InfoRow icon={<Mail />} label="Inquirer Email" value={selectedInquiry.inquirerEmail} />
-                {selectedInquiry.inquirerPhone && <InfoRow icon={<Phone />} label="Inquirer Phone" value={selectedInquiry.inquirerPhone} />}
-                <InfoRow icon={<CalendarDays />} label="Date Received" value={format(new Date(selectedInquiry.dateReceived), "PPP p")} />
-                <InfoRow icon={<BuildingIcon />} label="Property ID" value={selectedInquiry.propertyId} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-4 border-b pb-4">
+                    <InfoRow icon={<User />} label="Inquirer Name" value={selectedInquiry.inquirerName} />
+                    <InfoRow icon={<Mail />} label="Inquirer Email" value={selectedInquiry.inquirerEmail} />
+                    {selectedInquiry.inquirerPhone && <InfoRow icon={<Phone />} label="Inquirer Phone" value={selectedInquiry.inquirerPhone} className="md:col-span-1" />}
+                    <InfoRow icon={<CalendarDays />} label="Date Received" value={format(new Date(selectedInquiry.dateReceived), "PPP p")} />
+                    <InfoRow icon={<BuildingIcon />} label="Property ID" value={selectedInquiry.propertyId} />
+                    
+                    <div className="space-y-1">
+                        <Label className="text-sm font-medium text-muted-foreground flex items-center">Current Status:</Label>
+                        <Badge variant={getStatusBadgeVariant(selectedInquiry.status)} className="capitalize text-sm px-3 py-1">{selectedInquiry.status}</Badge>
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="status-update-dialog" className="text-sm font-medium">Update Status</Label>
+                        <Select defaultValue={selectedInquiry.status} onValueChange={(newStatus) => handleUpdateStatus(selectedInquiry.id, newStatus as InquiryStatus)}>
+                            <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger>
+                            <SelectContent>{inquiryStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
+                        </Select>
+                    </div>
+                </div>
                 
                 <div><Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquareText className="w-4 h-4 mr-1.5"/> Initial Message</Label><p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedInquiry.message}</p></div>
                 
-                <div className="flex items-center space-x-3"><Label className="text-sm font-medium text-muted-foreground">Current Status:</Label><Badge variant={getStatusBadgeVariant(selectedInquiry.status)} className="capitalize text-sm px-3 py-1">{selectedInquiry.status}</Badge></div>
-                <div className="space-y-2"><Label htmlFor="status-update" className="text-sm font-medium">Update Status</Label><Select defaultValue={selectedInquiry.status} onValueChange={(newStatus) => handleUpdateStatus(selectedInquiry.id, newStatus as InquiryStatus)}><SelectTrigger id="status-update"><SelectValue placeholder="Change status" /></SelectTrigger><SelectContent>{inquiryStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent></Select></div>
-
                 {/* Conversation Thread */}
                 <div className="space-y-4 pt-4 border-t">
                     <h4 className="font-semibold text-lg">Conversation</h4>
@@ -246,9 +257,9 @@ export default function InquiryManagementPage() {
   );
 }
 
-interface InfoRowProps { icon: React.ReactNode; label: string; value: string | undefined; }
-const InfoRow = ({ icon, label, value }: InfoRowProps) => (
-    <div>
+interface InfoRowProps { icon: React.ReactNode; label: string; value: string | undefined; className?: string; }
+const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
+    <div className={cn(className)}>
         <Label className="text-sm font-medium text-muted-foreground flex items-center">
             {React.cloneElement(icon as React.ReactElement, { className: "w-4 h-4 mr-1.5" })} {label}
         </Label>
