@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -19,6 +19,22 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 
+interface PromotionTier {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  fee: string;
+  duration: string;
+  description: string;
+}
+
+const initialPromotionTiers: PromotionTier[] = [
+  { id: 'basic', name: 'Basic Boost', icon: <Star className="h-5 w-5 text-yellow-500" />, fee: '5000', duration: '7', description: 'Standard visibility boost for 7 days.' },
+  { id: 'premium', name: 'Premium Spotlight', icon: <TrendingUp className="h-5 w-5 text-orange-500" />, fee: '12000', duration: '14', description: 'Enhanced visibility and higher placement for 14 days.' },
+  { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
+];
+
+
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
   // Mock states for settings - in a real app, these would be fetched and updated via API
@@ -28,10 +44,16 @@ export default function PlatformSettingsPage() {
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post");
 
-  // New state for promotion settings
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
-  const [promotionFee, setPromotionFee] = useState('5000'); // Store as string for easier input handling
-  const [promotionDuration, setPromotionDuration] = useState('7'); // Duration in days
+  const [promotionTiers, setPromotionTiers] = useState<PromotionTier[]>(initialPromotionTiers);
+
+  const handleTierChange = (tierId: string, field: keyof Omit<PromotionTier, 'id' | 'name' | 'icon'>, value: string) => {
+    setPromotionTiers(currentTiers =>
+      currentTiers.map(tier =>
+        tier.id === tierId ? { ...tier, [field]: value } : tier
+      )
+    );
+  };
 
   const handleSaveChanges = () => {
     // Simulate saving changes
@@ -42,8 +64,11 @@ export default function PlatformSettingsPage() {
       notificationEmail, 
       predefinedAmenities,
       promotionsEnabled,
-      promotionFee: parseFloat(promotionFee), // Convert to number on save
-      promotionDuration: parseInt(promotionDuration, 10) // Convert to number on save
+      promotionTiers: promotionTiers.map(tier => ({
+        ...tier,
+        fee: parseFloat(tier.fee),
+        duration: parseInt(tier.duration, 10)
+      })),
     });
     toast({
       title: 'Settings Saved',
@@ -113,15 +138,15 @@ export default function PlatformSettingsPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
-            <Star className="mr-2 h-5 w-5 text-muted-foreground" /> Promotion Settings
+            <Zap className="mr-2 h-5 w-5 text-muted-foreground" /> Promotion Tier Settings
           </CardTitle>
-          <CardDescription>Configure property promotion features.</CardDescription>
+          <CardDescription>Configure different property promotion packages.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+          <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg mb-6">
             <div>
                 <Label htmlFor="promotionsEnabled" className="text-base">Enable Property Promotions</Label>
-                <p className="text-sm text-muted-foreground">Allow agents to promote their listings for better visibility.</p>
+                <p className="text-sm text-muted-foreground">Allow agents to promote their listings using defined tiers.</p>
             </div>
             <Switch
               id="promotionsEnabled"
@@ -129,31 +154,58 @@ export default function PlatformSettingsPage() {
               onCheckedChange={setPromotionsEnabled}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="promotionFee">Promotion Fee (NGN)</Label>
-            <Input
-              id="promotionFee"
-              type="number"
-              value={promotionFee}
-              onChange={(e) => setPromotionFee(e.target.value)}
-              placeholder="e.g., 5000"
-              min="0"
-              disabled={!promotionsEnabled}
-            />
-            <p className="text-xs text-muted-foreground">Cost for an agent to promote a single listing.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="promotionDuration">Promotion Duration (Days)</Label>
-            <Input
-              id="promotionDuration"
-              type="number"
-              value={promotionDuration}
-              onChange={(e) => setPromotionDuration(e.target.value)}
-              placeholder="e.g., 7"
-              min="1"
-              disabled={!promotionsEnabled}
-            />
-            <p className="text-xs text-muted-foreground">How long a promotion will last, in days.</p>
+
+          <div className="space-y-8">
+            {promotionTiers.map((tier) => (
+              <Card key={tier.id} className={!promotionsEnabled ? 'opacity-50 pointer-events-none' : ''}>
+                <CardHeader>
+                  <CardTitle className="font-headline text-lg flex items-center">
+                    {tier.icon}
+                    <span className="ml-2">{tier.name}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor={`${tier.id}-fee`}>Fee (NGN)</Label>
+                      <Input
+                        id={`${tier.id}-fee`}
+                        type="number"
+                        value={tier.fee}
+                        onChange={(e) => handleTierChange(tier.id, 'fee', e.target.value)}
+                        placeholder="e.g., 5000"
+                        min="0"
+                        disabled={!promotionsEnabled}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`${tier.id}-duration`}>Duration (Days)</Label>
+                      <Input
+                        id={`${tier.id}-duration`}
+                        type="number"
+                        value={tier.duration}
+                        onChange={(e) => handleTierChange(tier.id, 'duration', e.target.value)}
+                        placeholder="e.g., 7"
+                        min="1"
+                        disabled={!promotionsEnabled}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`${tier.id}-description`}>Description</Label>
+                    <Textarea
+                      id={`${tier.id}-description`}
+                      value={tier.description}
+                      onChange={(e) => handleTierChange(tier.id, 'description', e.target.value)}
+                      placeholder="Briefly describe this promotion tier..."
+                      rows={2}
+                      disabled={!promotionsEnabled}
+                    />
+                     <p className="text-xs text-muted-foreground">This description might be shown to agents.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </CardContent>
       </Card>
