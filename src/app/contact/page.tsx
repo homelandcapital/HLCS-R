@@ -37,11 +37,11 @@ export default function ContactPage() {
               </div>
               <div className="flex items-center">
                 <Phone className="w-5 h-5 mr-3 text-accent" />
-                <span>(555) 123-4567</span>
+                <span>0801 234 5670</span>
               </div>
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 mr-3 text-accent mt-1" />
-                <span>123 Real Estate Ave,<br />Property City, PC 54321</span>
+                <span>Plot 25, Admiralty Way,<br />Lekki Phase 1, Lagos, Nigeria</span>
               </div>
             </div>
             <div className="mt-6 border-t pt-6">
@@ -56,7 +56,7 @@ export default function ContactPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="name" className="text-foreground">Full Name</Label>
-                <Input id="name" name="name" placeholder="John Doe" required className="mt-1" />
+                <Input id="name" name="name" placeholder="Adekunle Adebayo" required className="mt-1" />
               </div>
               <div>
                 <Label htmlFor="email" className="text-foreground">Email Address</Label>
@@ -64,7 +64,7 @@ export default function ContactPage() {
               </div>
                <div>
                 <Label htmlFor="subject" className="text-foreground">Subject</Label>
-                <Input id="subject" name="subject" placeholder="Inquiry about..." required className="mt-1" />
+                <Input id="subject" name="subject" placeholder="Inquiry about properties..." required className="mt-1" />
               </div>
               <div>
                 <Label htmlFor="message" className="text-foreground">Message</Label>

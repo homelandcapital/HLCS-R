@@ -83,7 +83,7 @@ export default function PropertyDetailsPage() {
               </div>
             </div>
             <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg">
-              ${property.price.toLocaleString()}
+              ₦{property.price.toLocaleString()}
             </div>
           </div>
         </CardContent>

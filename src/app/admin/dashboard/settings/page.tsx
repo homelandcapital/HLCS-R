@@ -24,9 +24,9 @@ export default function PlatformSettingsPage() {
   // Mock states for settings - in a real app, these would be fetched and updated via API
   const [siteName, setSiteName] = useState('Homeland Capital');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [defaultCurrency, setDefaultCurrency] = useState('NGN'); // Changed to NGN
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
-  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors");
+  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post");
 
   const handleSaveChanges = () => {
     // Simulate saving changes
@@ -64,6 +64,22 @@ export default function PlatformSettingsPage() {
               onChange={(e) => setSiteName(e.target.value)}
               placeholder="Your Platform Name"
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="defaultCurrency">Default Currency</Label>
+            <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
+              <SelectTrigger id="defaultCurrency">
+                <SelectValue placeholder="Select default currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NGN">NGN (Nigerian Naira)</SelectItem>
+                <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                <SelectItem value="GBP">GBP (British Pound)</SelectItem>
+                <SelectItem value="EUR">EUR (Euro)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Default currency for displaying prices.</p>
           </div>
 
           <div className="flex items-center justify-between space-x-2 p-4 border rounded-lg">

@@ -4,19 +4,19 @@ import type { Property, Agent, GeneralUser, PlatformAdmin, Inquiry } from './typ
 export const mockAgents: Agent[] = [
   {
     id: 'agent1',
-    name: 'Alice Wonderland',
-    email: 'alice@homelandcapital.com',
-    phone: '555-1234',
-    agency: 'Wonderland Realty',
+    name: 'Adaobi Okeke',
+    email: 'adaobi@homelandcapital.com',
+    phone: '0801 234 5678',
+    agency: 'Okeke Premium Properties',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'agent',
   },
   {
     id: 'agent2',
-    name: 'Bob The Builder',
-    email: 'bob@homelandcapital.com',
-    phone: '555-5678',
-    agency: 'BuildIt Estates',
+    name: 'Bayo Adebayo',
+    email: 'bayo@homelandcapital.com',
+    phone: '0802 345 6789',
+    agency: 'Adebayo & Sons Estates',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'agent',
   },
@@ -25,7 +25,7 @@ export const mockAgents: Agent[] = [
 export const mockGeneralUsers: GeneralUser[] = [
   {
     id: 'user1',
-    name: 'Charlie User',
+    name: 'Charlie User', // Keeping generic for broad user base
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
@@ -44,7 +44,7 @@ export const mockGeneralUsers: GeneralUser[] = [
 export const mockPlatformAdmins: PlatformAdmin[] = [
   {
     id: 'admin1',
-    name: 'Diana Admin',
+    name: 'Diana Admin', // Keeping generic
     email: 'diana@homelandcapital.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'platform_admin',
@@ -55,12 +55,12 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
 export let mockProperties: Property[] = [
   {
     id: 'prop1',
-    title: 'Spacious Family Home in Suburbia',
+    title: 'Spacious Family Home in Ikeja GRA',
     description:
       'A beautiful and spacious family home located in a quiet suburban neighborhood. Features a large backyard, modern kitchen, and open floor plan. Perfect for families looking for comfort and style.',
-    price: 450000,
-    location: 'Willow Creek, Suburbia',
-    address: '123 Oak Street, Willow Creek, SU 98765',
+    price: 45000000, // Adjusted price for Naira
+    location: 'Ikeja GRA, Lagos',
+    address: '10 Oduduwa Crescent, Ikeja GRA, Lagos',
     type: 'House',
     bedrooms: 4,
     bathrooms: 3,
@@ -71,18 +71,18 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=402',
     ],
     agent: mockAgents[0],
-    amenities: ['Garden', 'Garage', 'Fireplace', 'Hardwood Floors'],
+    amenities: ['Garden', 'Garage', 'Fireplace', 'Hardwood Floors', 'Borehole'],
     yearBuilt: 2005,
-    coordinates: { lat: 34.0522, lng: -118.2437 }, // Los Angeles
+    coordinates: { lat: 6.6059, lng: 3.3490 }, // Ikeja, Lagos
   },
   {
     id: 'prop2',
-    title: 'Modern Downtown Apartment with City Views',
+    title: 'Modern Victoria Island Apartment with City Views',
     description:
-      'Chic and modern apartment in the heart of downtown. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
-    price: 750000,
-    location: 'Metropolis Center, Downtown',
-    address: '456 High Tower Ave, Suite 1502, Metropolis Center, MC 12345',
+      'Chic and modern apartment in the heart of Victoria Island. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
+    price: 75000000, // Adjusted price
+    location: 'Victoria Island, Lagos',
+    address: '20 Akin Adesola Street, Victoria Island, Lagos',
     type: 'Apartment',
     bedrooms: 2,
     bathrooms: 2,
@@ -92,18 +92,18 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=404',
     ],
     agent: mockAgents[1],
-    amenities: ['Gym', 'Pool', 'Concierge', 'Balcony', 'City Views'],
+    amenities: ['Gym', 'Pool', 'Concierge', 'Balcony', 'City Views', 'Standby Generator'],
     yearBuilt: 2018,
-    coordinates: { lat: 40.7128, lng: -74.0060 }, // New York
+    coordinates: { lat: 6.4281, lng: 3.4218 }, // Victoria Island, Lagos
   },
   {
     id: 'prop3',
-    title: 'Cozy Condo near the Beach',
+    title: 'Cozy Lekki Phase 1 Condo',
     description:
-      'Charming 2-bedroom condo just steps away from the sandy shores. Features an updated kitchen, private balcony, and community pool. Perfect for a vacation home or coastal living.',
-    price: 320000,
-    location: 'Sunset Beach, Coastline City',
-    address: '789 Ocean Drive, Unit B, Sunset Beach, CC 54321',
+      'Charming 2-bedroom condo in Lekki Phase 1. Features an updated kitchen, private balcony, and community amenities. Perfect for modern living or as an investment.',
+    price: 32000000, // Adjusted price
+    location: 'Lekki Phase 1, Lagos',
+    address: '5 Freedom Way, Lekki Phase 1, Lagos',
     type: 'Condo',
     bedrooms: 2,
     bathrooms: 1,
@@ -113,17 +113,17 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=406',
     ],
     agent: mockAgents[0],
-    amenities: ['Beach Access', 'Community Pool', 'Balcony', 'Updated Kitchen'],
+    amenities: ['Gated Community', 'Community Pool', 'Balcony', 'Updated Kitchen', '24/7 Security'],
     yearBuilt: 1995,
-    coordinates: { lat: 25.7617, lng: -80.1918 }, // Miami
+    coordinates: { lat: 6.4344, lng: 3.4824 }, // Lekki Phase 1, Lagos
   },
   {
     id: 'prop4',
-    title: 'Luxury Villa with Panoramic Views',
-    description: 'An exquisite luxury villa offering breathtaking panoramic views of the hills and city. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
-    price: 2500000,
-    location: 'Serene Hills, Prestige City',
-    address: '1 Vista Lane, Serene Hills, PC 67890',
+    title: 'Luxury Banana Island Villa with Panoramic Views',
+    description: 'An exquisite luxury villa in Banana Island offering breathtaking views. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
+    price: 250000000, // Adjusted price
+    location: 'Banana Island, Lagos',
+    address: '7 Banana Road, Banana Island, Lagos',
     type: 'House',
     bedrooms: 5,
     bathrooms: 5.5,
@@ -135,9 +135,9 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=410',
     ],
     agent: mockAgents[1],
-    amenities: ['Infinity Pool', 'Home Cinema', 'Smart Home System', 'Panoramic Views', 'Wine Cellar', 'Guest House'],
+    amenities: ['Infinity Pool', 'Home Cinema', 'Smart Home System', 'Panoramic Views', 'Wine Cellar', 'Guest Chalet', 'BQ'],
     yearBuilt: 2020,
-    coordinates: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+    coordinates: { lat: 6.4512, lng: 3.4450 }, // Banana Island, Lagos
   },
 ];
 
@@ -145,31 +145,31 @@ export let mockInquiries: Inquiry[] = [
   {
     id: 'inq1',
     propertyId: 'prop1',
-    propertyName: 'Spacious Family Home in Suburbia',
+    propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Eve Prospect',
     inquirerEmail: 'eve@example.com',
-    message: 'I am very interested in the family home in Willow Creek. Could I schedule a viewing?',
+    message: 'I am very interested in the family home in Ikeja GRA. Could I schedule a viewing?',
     dateReceived: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
     status: 'new',
   },
   {
     id: 'inq2',
     propertyId: 'prop2',
-    propertyName: 'Modern Downtown Apartment with City Views',
+    propertyName: 'Modern Victoria Island Apartment with City Views',
     inquirerName: 'Frank Buyer',
     inquirerEmail: 'frank@example.com',
-    inquirerPhone: '555-9876',
-    message: 'What are the HOA fees for the downtown apartment? Also interested in financing options.',
+    inquirerPhone: '0803 987 6543',
+    message: 'What are the service charges for the Victoria Island apartment? Also interested in financing options.',
     dateReceived: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     status: 'contacted',
   },
   {
     id: 'inq3',
     propertyId: 'prop1',
-    propertyName: 'Spacious Family Home in Suburbia',
+    propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Charlie User', // Inquiry from charlie
     inquirerEmail: 'charlie@example.com',
-    message: 'Interested in prop1, can I get more photos?',
+    message: 'Interested in the Ikeja GRA property, can I get more photos?',
     dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     status: 'new',
   },

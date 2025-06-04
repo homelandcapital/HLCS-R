@@ -37,7 +37,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           />
         </Link>
         <div className="absolute top-2 right-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm font-semibold">
-          ${property.price.toLocaleString()}
+          ₦{property.price.toLocaleString()}
         </div>
         {isAuthenticated && user?.role === 'user' && (
           <Button

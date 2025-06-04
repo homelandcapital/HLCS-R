@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition } from 'react';
-import { PlusCircle, UploadCloud, Home, DollarSign, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react';
+import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide } from 'lucide-react'; // Removed DollarSign
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { mockProperties } from '@/lib/mock-data';
@@ -22,7 +22,7 @@ import type { Property, Agent } from '@/lib/types';
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   propertyType: z.enum(['House', 'Apartment', 'Condo', 'Townhouse', 'Land'], { required_error: "Property type is required."}),
-  location: z.string().min(5, { message: 'Location (Neighborhood/City) is required.' }),
+  location: z.string().min(5, { message: 'Location (Area/City) is required.' }),
   address: z.string().min(5, { message: 'Full Address is required.' }),
   price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
   bedrooms: z.coerce.number().min(0, { message: 'Bedrooms must be a non-negative number.' }),
@@ -94,8 +94,8 @@ export default function AddPropertyPage() {
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
         yearBuilt: values.yearBuilt && values.yearBuilt !== '' ? Number(values.yearBuilt) : undefined,
         coordinates: {
-          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 34.0522, // Default to LA
-          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : -118.2437, // Default to LA
+          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244, // Default to Lagos
+          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792, // Default to Lagos
         },
       };
 
@@ -136,7 +136,7 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Home className="w-4 h-4 mr-1 text-muted-foreground"/>Property Title</FormLabel>
-                      <FormControl><Input placeholder="e.g., Beautiful 3-Bedroom Family Home" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., Beautiful 3-Bedroom Duplex" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -168,8 +168,8 @@ export default function AddPropertyPage() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Location (Neighborhood/City)</FormLabel>
-                      <FormControl><Input placeholder="e.g., Willow Creek, Suburbia" {...field} /></FormControl>
+                      <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Location (Area/City)</FormLabel>
+                      <FormControl><Input placeholder="e.g., Lekki Phase 1, Lagos" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -180,7 +180,7 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Full Address</FormLabel>
-                      <FormControl><Input placeholder="e.g., 123 Oak Street, City, State, Zip" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., 15 Adeola Odeku Street, Victoria Island, Lagos" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -190,8 +190,8 @@ export default function AddPropertyPage() {
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1 text-muted-foreground"/>Price</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 450000" {...field} /></FormControl>
+                      <FormLabel className="flex items-center"><span className="w-4 h-4 mr-1 text-muted-foreground font-bold">₦</span>Price</FormLabel>
+                      <FormControl><Input type="number" placeholder="e.g., 45000000" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -246,8 +246,8 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Latitude (Optional)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="e.g., 34.0522" {...field} /></FormControl>
-                      <FormDescription>If blank, defaults to Los Angeles.</FormDescription>
+                      <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} /></FormControl>
+                      <FormDescription>If blank, defaults to Lagos.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -258,8 +258,8 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Longitude (Optional)</FormLabel>
-                      <FormControl><Input type="number" step="any" placeholder="e.g., -118.2437" {...field} /></FormControl>
-                       <FormDescription>If blank, defaults to Los Angeles.</FormDescription>
+                      <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} /></FormControl>
+                       <FormDescription>If blank, defaults to Lagos.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -289,7 +289,7 @@ export default function AddPropertyPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Amenities (Optional)</FormLabel>
-                    <FormControl><Input placeholder="e.g., Pool, Garage, Gym" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g., Pool, Gym, Borehole, Standby Generator" {...field} /></FormControl>
                     <FormDescription>Comma-separated list of amenities.</FormDescription>
                     <FormMessage />
                   </FormItem>

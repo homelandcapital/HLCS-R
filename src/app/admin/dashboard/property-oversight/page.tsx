@@ -8,7 +8,7 @@ import type { Property } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Home, DollarSign, Edit2, AlertCircle } from 'lucide-react';
+import { Eye, Search, Home, Edit2, AlertCircle } from 'lucide-react'; // Removed DollarSign
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -132,8 +132,7 @@ export default function PropertyOversightPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="text-base">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        {property.price.toLocaleString()}
+                        ₦{property.price.toLocaleString()}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -173,4 +172,3 @@ export default function PropertyOversightPage() {
     </div>
   );
 }
-

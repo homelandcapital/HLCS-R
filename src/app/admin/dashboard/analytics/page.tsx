@@ -3,8 +3,8 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Users, Home, DollarSign, Activity } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart } from 'recharts';
+import { BarChart3, Users, Home, Activity } from 'lucide-react'; // Removed DollarSign
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart as RechartsBarChart } from 'recharts'; // Renamed BarChart to RechartsBarChart to avoid conflict
 
 // Mock data for charts
 const mockUserSignupsData = [
@@ -47,7 +47,7 @@ export default function PlatformAnalyticsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Users" value={totalUsers.toLocaleString()} icon={<Users />} description="Registered users and agents." />
         <StatCard title="Total Properties" value={totalProperties.toLocaleString()} icon={<Home />} description="Active listings on platform." />
-        <StatCard title="Total Sales Volume" value={`$${totalSalesVolume.toLocaleString()}`} icon={<DollarSign />} description="Completed transactions value." />
+        <StatCard title="Total Sales Volume" value={`₦${totalSalesVolume.toLocaleString()}`} icon={<span className="font-bold text-xl">₦</span>} description="Completed transactions value." />
         <StatCard title="Engagement Rate" value={`${siteEngagementRate}%`} icon={<Activity />} description="Average user activity." />
       </div>
 
@@ -78,14 +78,14 @@ export default function PlatformAnalyticsPage() {
           </CardHeader>
           <CardContent className="h-[300px] pt-6">
              <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockPropertyListingsData}>
+              <RechartsBarChart data={mockPropertyListingsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
                 <Bar dataKey="listings" fill="var(--accent)" name="New Listings" />
-              </BarChart>
+              </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

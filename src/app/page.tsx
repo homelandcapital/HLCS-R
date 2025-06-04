@@ -54,11 +54,11 @@ export default function InformationalHomePage() {
         <div className="absolute inset-0">
           <Image
             src="https://placehold.co/1200x600.png"
-            alt="Modern cityscape or beautiful homes"
+            alt="Lagos skyline or beautiful Nigerian homes"
             layout="fill"
             objectFit="cover"
             className="opacity-20"
-            data-ai-hint="modern architecture cityscape"
+            data-ai-hint="lagos skyline nigerian homes"
             priority
           />
            <div className="absolute inset-0 bg-background/50"></div>

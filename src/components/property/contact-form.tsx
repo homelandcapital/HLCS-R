@@ -90,7 +90,7 @@ const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
                   <FormControl>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input placeholder="John Doe" {...field} className="pl-10" />
+                      <Input placeholder="Adekunle Adebayo" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -122,7 +122,7 @@ const ContactForm = ({ propertyTitle, propertyId }: ContactFormProps) => {
                   <FormControl>
                      <div className="relative">
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <Input type="tel" placeholder=" (555) 123-4567" {...field} className="pl-10" />
+                      <Input type="tel" placeholder="080X XXX XXXX" {...field} className="pl-10" />
                     </div>
                   </FormControl>
                   <FormMessage />

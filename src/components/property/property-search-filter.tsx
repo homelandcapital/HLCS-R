@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, MapPin, Home, DollarSign } from 'lucide-react';
+import { Search, MapPin, Home } from 'lucide-react'; // Removed DollarSign
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface SearchFilters {
@@ -47,7 +47,7 @@ const PropertySearchFilter = ({ onSearch }: PropertySearchFilterProps) => {
               <Input
                 id="location"
                 type="text"
-                placeholder="City, Neighborhood, Zip Code"
+                placeholder="City, Area, State (e.g. Lagos, Ikeja)"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="pl-10"
@@ -82,30 +82,30 @@ const PropertySearchFilter = ({ onSearch }: PropertySearchFilterProps) => {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor="minPrice" className="block text-sm font-medium text-foreground mb-1">Min Price</label>
+              <label htmlFor="minPrice" className="block text-sm font-medium text-foreground mb-1">Min Price (₦)</label>
                <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground font-semibold">₦</span>
                 <Input
                   id="minPrice"
                   type="number"
                   placeholder="Min"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
-                  className="pl-10"
+                  className="pl-8" // Adjusted padding for Naira symbol
                 />
               </div>
             </div>
             <div>
-              <label htmlFor="maxPrice" className="block text-sm font-medium text-foreground mb-1">Max Price</label>
+              <label htmlFor="maxPrice" className="block text-sm font-medium text-foreground mb-1">Max Price (₦)</label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground font-semibold">₦</span>
                 <Input
                   id="maxPrice"
                   type="number"
                   placeholder="Max"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  className="pl-10"
+                  className="pl-8" // Adjusted padding for Naira symbol
                 />
               </div>
             </div>

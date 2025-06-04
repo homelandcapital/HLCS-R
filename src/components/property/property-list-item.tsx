@@ -62,7 +62,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
           </div>
           <div className="flex items-center text-muted-foreground text-sm mb-2">
             <HomeIcon className="w-4 h-4 mr-1 shrink-0" />
-            {property.type} - <span className="font-semibold text-accent ml-1">${property.price.toLocaleString()}</span>
+            {property.type} - <span className="font-semibold text-accent ml-1">₦{property.price.toLocaleString()}</span>
           </div>
           <p className="text-sm text-foreground line-clamp-2 mb-3 flex-grow">
             {property.description}
