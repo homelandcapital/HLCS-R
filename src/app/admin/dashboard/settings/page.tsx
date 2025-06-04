@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, MailSettings, CreditCard, Paintbrush } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -200,7 +200,7 @@ export default function PlatformSettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="emailTemplates">Email Template Customization</Label>
             <Button variant="outline" disabled className="w-full justify-start">
-              <MailSettings className="mr-2 h-4 w-4" /> Customize Email Templates (Placeholder)
+              <SlidersHorizontal className="mr-2 h-4 w-4" /> Customize Email Templates (Placeholder)
             </Button>
             <p className="text-xs text-muted-foreground">
               (Placeholder) Customize the content and branding of system-generated emails.
@@ -235,4 +235,3 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
-
