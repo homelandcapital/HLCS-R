@@ -47,7 +47,7 @@ function generateRandomLetter(): string {
 }
 
 function generatePropertyId(): string {
-  const prefix = "HLCS-R"; // Removed curly braces
+  const prefix = "HLCS-R";
   const part1 = generateRandomDigit();
   const part2 = generateRandomLetter();
   const part3 = generateRandomDigit();
@@ -96,7 +96,7 @@ export default function AddPropertyPage() {
       const currentAgent = user as Agent;
 
       const newProperty: Property = {
-        id: generatePropertyId(), // Use new ID generation function
+        id: generatePropertyId(),
         title: values.title,
         description: values.description,
         price: values.price,
@@ -111,19 +111,20 @@ export default function AddPropertyPage() {
           'https://placehold.co/600x400.png'
         ],
         agent: currentAgent,
+        status: 'pending', // New properties are pending approval
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
         yearBuilt: values.yearBuilt && values.yearBuilt !== '' ? Number(values.yearBuilt) : undefined,
         coordinates: {
-          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244, // Default to Lagos
-          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792, // Default to Lagos
+          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244,
+          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792,
         },
       };
 
-      mockProperties.push(newProperty);
+      mockProperties.unshift(newProperty); // Add to the beginning to see it easily in admin oversight
       
       toast({
-        title: 'Property Listed!',
-        description: `${values.title} has been successfully added to your listings with ID: ${newProperty.id}.`,
+        title: 'Property Submitted!',
+        description: `${values.title} has been submitted for review. ID: ${newProperty.id}.`,
       });
       form.reset();
       router.push('/agents/dashboard/my-listings');
@@ -136,7 +137,7 @@ export default function AddPropertyPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Property
         </h1>
-        <p className="text-muted-foreground">Fill in the details for your new listing.</p>
+        <p className="text-muted-foreground">Fill in the details for your new listing. It will be reviewed by an admin before publishing.</p>
       </div>
 
       <Card className="shadow-xl">
@@ -326,7 +327,7 @@ export default function AddPropertyPage() {
 
 
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || authLoading}>
-                {isSubmitting ? 'Submitting...' : 'Add Property'}
+                {isSubmitting ? 'Submitting for Review...' : 'Submit Property for Review'}
               </Button>
             </form>
           </Form>

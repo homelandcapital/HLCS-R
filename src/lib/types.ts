@@ -26,6 +26,8 @@ export interface PlatformAdmin extends BaseUser {
 
 export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
 
+export type PropertyStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Property {
   id: string;
   title: string;
@@ -39,6 +41,8 @@ export interface Property {
   areaSqFt: number;
   images: string[];
   agent: Agent;
+  status: PropertyStatus;
+  rejectionReason?: string;
   amenities?: string[];
   yearBuilt?: number;
   coordinates: {

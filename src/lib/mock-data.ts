@@ -25,11 +25,11 @@ export const mockAgents: Agent[] = [
 export const mockGeneralUsers: GeneralUser[] = [
   {
     id: 'user1',
-    name: 'Charlie User', // Keeping generic for broad user base
+    name: 'Charlie User',
     email: 'charlie@example.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'user',
-    savedPropertyIds: ['HLCS-R3B5D7F', 'HLCS-R9Z8Y7X'], // Updated IDs
+    savedPropertyIds: ['HLCS-R3B5D7F', 'HLCS-R9Z8Y7X'],
   },
   {
     id: 'user2',
@@ -44,7 +44,7 @@ export const mockGeneralUsers: GeneralUser[] = [
 export const mockPlatformAdmins: PlatformAdmin[] = [
   {
     id: 'admin1',
-    name: 'Diana Admin', // Keeping generic
+    name: 'Diana Admin',
     email: 'diana@homelandcapital.com',
     avatarUrl: 'https://placehold.co/100x100.png',
     role: 'platform_admin',
@@ -54,11 +54,11 @@ export const mockPlatformAdmins: PlatformAdmin[] = [
 
 export let mockProperties: Property[] = [
   {
-    id: 'HLCS-R3B5D7F', // Updated ID
+    id: 'HLCS-R3B5D7F',
     title: 'Spacious Family Home in Ikeja GRA',
     description:
       'A beautiful and spacious family home located in a quiet suburban neighborhood. Features a large backyard, modern kitchen, and open floor plan. Perfect for families looking for comfort and style.',
-    price: 45000000, // Adjusted price for Naira
+    price: 45000000,
     location: 'Ikeja GRA, Lagos',
     address: '10 Oduduwa Crescent, Ikeja GRA, Lagos',
     type: 'House',
@@ -71,16 +71,17 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=402',
     ],
     agent: mockAgents[0],
+    status: 'approved', // Existing properties are approved
     amenities: ['Garden', 'Garage', 'Fireplace', 'Hardwood Floors', 'Borehole'],
     yearBuilt: 2005,
-    coordinates: { lat: 6.6059, lng: 3.3490 }, // Ikeja, Lagos
+    coordinates: { lat: 6.6059, lng: 3.3490 },
   },
   {
-    id: 'HLCS-R1A2C3E', // Updated ID
+    id: 'HLCS-R1A2C3E',
     title: 'Modern Victoria Island Apartment with City Views',
     description:
       'Chic and modern apartment in the heart of Victoria Island. Enjoy stunning city views, high-end finishes, and access to building amenities like a gym and rooftop pool. Ideal for urban professionals.',
-    price: 75000000, // Adjusted price
+    price: 75000000,
     location: 'Victoria Island, Lagos',
     address: '20 Akin Adesola Street, Victoria Island, Lagos',
     type: 'Apartment',
@@ -92,16 +93,17 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=404',
     ],
     agent: mockAgents[1],
+    status: 'approved',
     amenities: ['Gym', 'Pool', 'Concierge', 'Balcony', 'City Views', 'Standby Generator'],
     yearBuilt: 2018,
-    coordinates: { lat: 6.4281, lng: 3.4218 }, // Victoria Island, Lagos
+    coordinates: { lat: 6.4281, lng: 3.4218 },
   },
   {
-    id: 'HLCS-R9Z8Y7X', // Updated ID
+    id: 'HLCS-R9Z8Y7X',
     title: 'Cozy Lekki Phase 1 Condo',
     description:
       'Charming 2-bedroom condo in Lekki Phase 1. Features an updated kitchen, private balcony, and community amenities. Perfect for modern living or as an investment.',
-    price: 32000000, // Adjusted price
+    price: 32000000,
     location: 'Lekki Phase 1, Lagos',
     address: '5 Freedom Way, Lekki Phase 1, Lagos',
     type: 'Condo',
@@ -113,15 +115,16 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=406',
     ],
     agent: mockAgents[0],
+    status: 'approved',
     amenities: ['Gated Community', 'Community Pool', 'Balcony', 'Updated Kitchen', '24/7 Security'],
     yearBuilt: 1995,
-    coordinates: { lat: 6.4344, lng: 3.4824 }, // Lekki Phase 1, Lagos
+    coordinates: { lat: 6.4344, lng: 3.4824 },
   },
   {
-    id: 'HLCS-R5G6H7J', // Updated ID
+    id: 'HLCS-R5G6H7J',
     title: 'Luxury Banana Island Villa with Panoramic Views',
     description: 'An exquisite luxury villa in Banana Island offering breathtaking views. This property boasts a private infinity pool, expansive terraces, a home cinema, and state-of-the-art security. Designed for opulent living and entertaining.',
-    price: 250000000, // Adjusted price
+    price: 250000000,
     location: 'Banana Island, Lagos',
     address: '7 Banana Road, Banana Island, Lagos',
     type: 'House',
@@ -135,16 +138,35 @@ export let mockProperties: Property[] = [
       'https://placehold.co/600x400.png?width=600&height=410',
     ],
     agent: mockAgents[1],
+    status: 'approved',
     amenities: ['Infinity Pool', 'Home Cinema', 'Smart Home System', 'Panoramic Views', 'Wine Cellar', 'Guest Chalet', 'BQ'],
     yearBuilt: 2020,
-    coordinates: { lat: 6.4512, lng: 3.4450 }, // Banana Island, Lagos
+    coordinates: { lat: 6.4512, lng: 3.4450 },
+  },
+  {
+    id: 'HLCS-P1E2N3D', // Example pending property
+    title: 'New Build in Eko Atlantic - Pending Approval',
+    description: 'A brand new architectural marvel in Eko Atlantic city. Awaiting final approval for listing. Features stunning ocean views and ultra-modern design.',
+    price: 180000000,
+    location: 'Eko Atlantic, Lagos',
+    address: '1 Ocean Drive, Eko Atlantic, Lagos',
+    type: 'Apartment',
+    bedrooms: 3,
+    bathrooms: 3,
+    areaSqFt: 2200,
+    images: ['https://placehold.co/600x400.png?width=600&height=411'],
+    agent: mockAgents[0],
+    status: 'pending',
+    amenities: ['Ocean View', 'Smart Home', 'Gym', 'Pool'],
+    yearBuilt: new Date().getFullYear(),
+    coordinates: { lat: 6.4000, lng: 3.4000 }, // Approximate Eko Atlantic
   },
 ];
 
 export let mockInquiries: Inquiry[] = [
   {
     id: 'inq1',
-    propertyId: 'HLCS-R3B5D7F', // Updated ID
+    propertyId: 'HLCS-R3B5D7F',
     propertyName: 'Spacious Family Home in Ikeja GRA',
     inquirerName: 'Eve Prospect',
     inquirerEmail: 'eve@example.com',
@@ -155,7 +177,7 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq2',
-    propertyId: 'HLCS-R1A2C3E', // Updated ID
+    propertyId: 'HLCS-R1A2C3E',
     propertyName: 'Modern Victoria Island Apartment with City Views',
     inquirerName: 'Frank Buyer',
     inquirerEmail: 'frank@example.com',
@@ -176,9 +198,9 @@ export let mockInquiries: Inquiry[] = [
   },
   {
     id: 'inq3',
-    propertyId: 'HLCS-R3B5D7F', // Updated ID
+    propertyId: 'HLCS-R3B5D7F',
     propertyName: 'Spacious Family Home in Ikeja GRA',
-    inquirerName: 'Charlie User', // Inquiry from charlie
+    inquirerName: 'Charlie User',
     inquirerEmail: 'charlie@example.com',
     message: 'Interested in the Ikeja GRA property, can I get more photos?',
     dateReceived: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago

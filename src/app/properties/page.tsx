@@ -19,10 +19,11 @@ export default function PropertiesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    // Simulate API call
+    // Simulate API call and filter for approved properties
     setTimeout(() => {
-      setProperties(mockProperties);
-      setFilteredProperties(mockProperties);
+      const approvedProperties = mockProperties.filter(p => p.status === 'approved');
+      setProperties(approvedProperties);
+      setFilteredProperties(approvedProperties);
       setLoading(false);
     }, 1000);
   }, []);
@@ -34,7 +35,8 @@ export default function PropertiesPage() {
     maxPrice: string;
   }) => {
     setLoading(true);
-    let tempProperties = [...properties];
+    // Start with all approved properties
+    let tempProperties = mockProperties.filter(p => p.status === 'approved');
 
     if (filters.location) {
       tempProperties = tempProperties.filter(p =>
@@ -64,7 +66,7 @@ export default function PropertiesPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-headline">
-          {loading ? 'Loading Properties...' : `Showing ${filteredProperties.length} Properties`}
+          {loading ? 'Loading Properties...' : `Showing ${filteredProperties.length} Approved Properties`}
         </h2>
         <div className="flex items-center gap-2">
           <Button
@@ -112,8 +114,8 @@ export default function PropertiesPage() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <h2 className="text-2xl font-headline mb-2">No Properties Found</h2>
-          <p className="text-muted-foreground">Try adjusting your search filters.</p>
+          <h2 className="text-2xl font-headline mb-2">No Approved Properties Found</h2>
+          <p className="text-muted-foreground">Try adjusting your search filters or check back later.</p>
         </div>
       )}
     </div>

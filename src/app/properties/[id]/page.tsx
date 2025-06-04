@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -36,18 +36,21 @@ export default function PropertyDetailsPage() {
 
   useEffect(() => {
     if (id) {
-      // Simulate API call
       setTimeout(() => {
         const foundProperty = mockProperties.find(p => p.id === id);
-        setProperty(foundProperty || null);
+        if (foundProperty) {
+          setProperty(foundProperty);
+        } else {
+          setProperty(null);
+        }
         setLoading(false);
-        setCurrentImageIndex(0); // Reset image index when property changes
+        setCurrentImageIndex(0);
       }, 500);
     }
   }, [id]);
 
   const handleInquireClick = () => {
-    if (authLoading) return; // Don't do anything if auth state is still loading
+    if (authLoading) return;
 
     if (!isAuthenticated) {
       toast({
@@ -77,6 +80,23 @@ export default function PropertyDetailsPage() {
     );
   }
 
+  if (property.status !== 'approved') {
+    return (
+      <div className="text-center py-20">
+        <ShieldAlert className="mx-auto h-16 w-16 text-amber-500 mb-4" />
+        <h1 className="text-3xl font-headline mb-3">Property Not Currently Available</h1>
+        <p className="text-muted-foreground mb-2">
+          This property listing is currently '{property.status}'.
+        </p>
+        {property.status === 'pending' && <p className="text-muted-foreground mb-6">It is under review and will be available once approved.</p>}
+        {property.status === 'rejected' && <p className="text-muted-foreground mb-6">This listing has been reviewed and is not currently active.</p>}
+        <Button asChild>
+          <Link href="/properties">Explore Other Listings</Link>
+        </Button>
+      </div>
+    );
+  }
+
   const { agent } = property;
 
   const prevImage = () => {
@@ -100,10 +120,8 @@ export default function PropertyDetailsPage() {
     }
   }
 
-
   return (
     <div className="space-y-8">
-      {/* Hero Section with Title and Price */}
       <Card className="shadow-lg">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -145,10 +163,8 @@ export default function PropertyDetailsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Image Gallery Slider */}
       <Card className="shadow-lg">
         <CardContent className="p-2 md:p-4">
-          {/* Main Image Display */}
           <div className="relative w-full aspect-[16/10] rounded-md overflow-hidden group">
             {property.images && property.images.length > 0 ? (
               <>
@@ -186,12 +202,12 @@ export default function PropertyDetailsPage() {
               </>
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
+                <EyeOff className="w-12 h-12 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">No images available</p>
               </div>
             )}
           </div>
 
-          {/* Thumbnails */}
           {property.images && property.images.length > 1 && (
             <div className="mt-3">
               <ScrollArea className="w-full whitespace-nowrap rounded-md">
@@ -222,10 +238,8 @@ export default function PropertyDetailsPage() {
         </CardContent>
       </Card>
       
-      {/* Main Content: Details, Map, Contact */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Property Details Card */}
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="font-headline">Property Details</CardTitle>
@@ -254,14 +268,9 @@ export default function PropertyDetailsPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* Map */}
           <PropertyMap coordinates={property.coordinates} title={property.title} />
         </div>
-
-        {/* Sidebar: Agent Info */}
         <div className="space-y-8">
-          {/* Agent Info Card (Listing Agent) */}
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="font-headline">Listed By</CardTitle>
@@ -306,42 +315,30 @@ const PropertyDetailsSkeleton = () => (
     <Card>
       <CardContent className="p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <Skeleton className="h-10 w-3/4 mb-2" />
-            <Skeleton className="h-6 w-1/2" />
-          </div>
+          <div> <Skeleton className="h-10 w-3/4 mb-2" /> <Skeleton className="h-6 w-1/2" /> </div>
           <Skeleton className="h-12 w-1/4 md:w-1/6" />
         </div>
       </CardContent>
     </Card>
-
     <Card>
       <CardContent className="p-2 md:p-4">
-        <Skeleton className="aspect-[16/10] w-full rounded-md" /> {/* Main image skeleton */}
+        <Skeleton className="aspect-[16/10] w-full rounded-md" />
         <div className="mt-3 flex space-x-2 p-1">
-          {[...Array(4)].map((_, i) => ( // Show 4 thumbnail skeletons
-            <Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" />
-          ))}
+          {[...Array(4)].map((_, i) => ( <Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" /> ))}
         </div>
       </CardContent>
     </Card>
-    
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-8">
         <Card>
           <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4"> {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)} </div>
             <Skeleton className="h-px w-full my-6" />
-            <Skeleton className="h-6 w-1/4 mb-2" />
-            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-6 w-1/4 mb-2" /> <Skeleton className="h-20 w-full" />
             <Skeleton className="h-px w-full my-6" />
             <Skeleton className="h-6 w-1/3 mb-3" />
-            <div className="flex flex-wrap gap-2">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-20" />)}
-            </div>
+            <div className="flex flex-wrap gap-2"> {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-20" />)} </div>
           </CardContent>
         </Card>
         <Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
@@ -350,15 +347,10 @@ const PropertyDetailsSkeleton = () => (
         <Card>
           <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
           <CardContent className="flex flex-col items-center space-y-3">
-            <Skeleton className="w-24 h-24 rounded-full" />
-            <Skeleton className="h-6 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="w-24 h-24 rounded-full" /> <Skeleton className="h-6 w-3/4" /> <Skeleton className="h-4 w-1/2" />
           </CardContent>
         </Card>
       </div>
     </div>
   </div>
 );
-
-
-    
