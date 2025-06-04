@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut } from 'lucide-react'; // Added BarChart3
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye } from 'lucide-react'; // Added Eye
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -19,7 +19,7 @@ interface AdminDashboardLayoutProps {
 const adminNavItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
-  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <ShieldCheck className="h-5 w-5" /> },
+  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <Eye className="h-5 w-5" /> }, // Using Eye as per page.tsx
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
@@ -33,7 +33,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.push('/agents/login'); // Or a generic login page if you create one
+        router.push('/agents/login'); 
       } else if (user && user.role !== 'platform_admin') {
         toast({
           title: "Access Denied",
@@ -67,19 +67,27 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             <p className="text-sm text-muted-foreground">Platform Administrator</p>
         </div>
         <nav className="flex flex-col space-y-2">
-          {adminNavItems.map((item) => (
-            <Button
-              key={item.href}
-              variant={pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/admin/dashboard') ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              asChild
-            >
-              <Link href={item.href}>
-                {item.icon}
-                <span className="ml-2">{item.label}</span>
-              </Link>
-            </Button>
-          ))}
+          {adminNavItems.map((item) => {
+            let isActive = false;
+            if (item.href === '/admin/dashboard') {
+              isActive = pathname === item.href;
+            } else {
+              isActive = pathname.startsWith(item.href);
+            }
+            return (
+              <Button
+                key={item.href}
+                variant={isActive ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                asChild
+              >
+                <Link href={item.href}>
+                  {item.icon}
+                  <span className="ml-2">{item.label}</span>
+                </Link>
+              </Button>
+            );
+          })}
         </nav>
         <Button variant="outline" className="w-full mt-auto justify-start" onClick={logout}>
           <LogOut className="h-5 w-5" />
