@@ -9,7 +9,7 @@ import type { Property, Agent, UserRole, GeneralUser, PlatformAdmin } from '@/li
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Added CardDescription
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'; // Removed DialogDescription as it's not used here
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -58,12 +58,12 @@ export default function PropertyDetailsPage() {
       const formattedProperty = {
         ...data,
         agent: data.agent ? { ...(data.agent as any), role: 'agent' as UserRole, id: data.agent.id! } as Agent : undefined,
-        images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [], 
-        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : JSON.parse(String(data.amenities))) : [], 
+        images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
+        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : JSON.parse(String(data.amenities))) : [],
       } as Property;
       setProperty(formattedProperty);
     } else {
-      setProperty(null); 
+      setProperty(null);
     }
     setLoading(false);
     setCurrentImageIndex(0);
@@ -162,7 +162,7 @@ export default function PropertyDetailsPage() {
   if (authContextUser) {
     contactFormInitialData.name = authContextUser.name;
     contactFormInitialData.email = authContextUser.email;
-    if (authContextUser.role === 'agent' || authContextUser.role === 'user') { 
+    if (authContextUser.role === 'agent' || authContextUser.role === 'user') {
       contactFormInitialData.phone = (authContextUser as Agent | GeneralUser).phone || undefined;
     }
   }
@@ -226,13 +226,14 @@ export default function PropertyDetailsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-headline">Inquire about: {property.title}</DialogTitle>
-            <DialogDescription>
+            {/* Using a regular p tag for description if DialogDescription is not explicitly imported/needed */}
+            <p className="text-sm text-muted-foreground">
               Fill out the form below. Your details (if logged in) have been pre-filled. The platform admin will get in touch.
-            </DialogDescription>
+            </p>
           </DialogHeader>
           <ContactForm
             propertyTitle={property.title}
-            propertyId={property.id} 
+            propertyId={property.id}
             initialName={contactFormInitialData.name}
             initialEmail={contactFormInitialData.email}
             initialPhone={contactFormInitialData.phone}
@@ -249,9 +250,9 @@ export default function PropertyDetailsPage() {
                 <Image
                   src={mainDisplayImage}
                   alt={`${property.title} - Image ${currentImageIndex + 1}`}
-                  fill 
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
-                  style={{objectFit:"cover"}} 
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  style={{objectFit:"cover"}}
                   className="transition-opacity duration-300 ease-in-out"
                   data-ai-hint="property interior detail"
                   priority={true}
@@ -292,7 +293,7 @@ export default function PropertyDetailsPage() {
           )}
         </CardContent>
       </Card>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className="shadow-lg">
