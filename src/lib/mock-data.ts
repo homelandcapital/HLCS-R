@@ -57,6 +57,8 @@ const defaultPromotionTiers: PromotionTierConfig[] = [
   { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
 ];
 
+// This mock is primarily for fallback or initial structure.
+// The admin settings page will fetch and save to the DB.
 export let mockPlatformSettings: PlatformSettings = {
   promotionsEnabled: true,
   promotionTiers: defaultPromotionTiers,
@@ -64,7 +66,8 @@ export let mockPlatformSettings: PlatformSettings = {
   defaultCurrency: 'NGN',
   maintenanceMode: false,
   notificationEmail: 'admin@homelandcapital.com',
-  predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
+  predefinedAmenities: "Pool,Garage,Gym,Air Conditioning,Balcony,Hardwood Floors,Borehole,Standby Generator,Security Post",
+  propertyTypes: ['House', 'Apartment', 'Condo', 'Townhouse', 'Land'],
 };
 
 
@@ -121,5 +124,3 @@ export let mockInquiries: Inquiry[] = [
   //   conversation: [],
   // },
 ];
-
-    

@@ -2,7 +2,7 @@
 // src/app/admin/dashboard/settings/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,18 +18,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
-import type { PromotionTierConfig } from '@/lib/types'; // Import PromotionTierConfig
+import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType } from '@/lib/types';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface AdminPromotionTier { // Local interface for form state (strings for fee/duration)
+interface AdminPromotionTier {
   id: string;
   name: string; 
-  icon: React.ReactNode;
+  icon: React.ReactNode; // Keep icon for UI only, not saved to DB
   fee: string; 
   duration: string; 
   description: string;
 }
 
-const initialAdminPromotionTiers: AdminPromotionTier[] = [
+const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
   { id: 'basic', name: 'Basic Boost', icon: <Star className="h-5 w-5 text-yellow-500" />, fee: '5000', duration: '7', description: 'Standard visibility boost for 7 days.' },
   { id: 'premium', name: 'Premium Spotlight', icon: <TrendingUp className="h-5 w-5 text-orange-500" />, fee: '12000', duration: '14', description: 'Enhanced visibility and higher placement for 14 days.' },
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
@@ -38,15 +40,63 @@ const initialAdminPromotionTiers: AdminPromotionTier[] = [
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
-  // Mock states for settings - in a real app, these would be fetched and updated via API
+  const [loading, setLoading] = useState(true);
+
+  // States for settings
   const [siteName, setSiteName] = useState('Homeland Capital');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('NGN');
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
-  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post");
+  
+  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym"); // Stored as comma-separated string
+  const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land"); // Stored as comma-separated string for Textarea
 
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
-  const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiers);
+  const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
+
+  const fetchPlatformSettings = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('platform_settings')
+      .select('*')
+      .eq('id', 1) // Assuming there's only one row with id=1
+      .single();
+
+    if (error) {
+      toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults.`, variant: 'destructive' });
+      // Use defaults if fetch fails, already set in useState
+    } else if (data) {
+      setSiteName(data.site_name || 'Homeland Capital');
+      setMaintenanceMode(data.maintenance_mode || false);
+      setDefaultCurrency(data.default_currency || 'NGN');
+      setNotificationEmail(data.notification_email || 'admin@homelandcapital.com');
+      setPredefinedAmenities((data.predefined_amenities as string || "Pool,Garage,Gym"));
+      setPropertyTypes((data.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
+      
+      setPromotionsEnabled(data.promotions_enabled || true);
+      if (data.promotion_tiers) {
+        const dbTiers = data.promotion_tiers as PromotionTierConfig[];
+        // Map DB tiers to UI tiers, preserving icons
+        const uiTiers = initialAdminPromotionTiersUI.map(uiTier => {
+          const dbMatch = dbTiers.find(dbT => dbT.id === uiTier.id);
+          return dbMatch ? {
+            ...uiTier, // Keep icon
+            name: dbMatch.name,
+            fee: dbMatch.fee.toString(),
+            duration: dbMatch.duration.toString(),
+            description: dbMatch.description,
+          } : uiTier; // Fallback to initial UI tier if no DB match (e.g. new tier added to UI)
+        });
+        setAdminPromotionTiers(uiTiers);
+      }
+    }
+    setLoading(false);
+  }, [toast]);
+
+  useEffect(() => {
+    fetchPlatformSettings();
+  }, [fetchPlatformSettings]);
+
 
   const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'icon'>, value: string) => {
     setAdminPromotionTiers(currentTiers =>
@@ -56,30 +106,52 @@ export default function PlatformSettingsPage() {
     );
   };
 
-  const handleSaveChanges = () => {
-    // Simulate saving changes
-    const savedPromotionTiers: PromotionTierConfig[] = adminPromotionTiers.map(tier => ({
-      id: tier.id,
-      name: tier.name,
-      fee: parseFloat(tier.fee) || 0, 
-      duration: parseInt(tier.duration, 10) || 0, 
-      description: tier.description,
-    }));
+  const handleSaveChanges = async () => {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers'> & { promotion_tiers: PromotionTierConfig[], property_types: string[] } & { id: number } = {
+      id: 1, // For upsert
+      site_name: siteName,
+      maintenance_mode: maintenanceMode,
+      default_currency: defaultCurrency,
+      notification_email: notificationEmail,
+      predefined_amenities: predefinedAmenities, // Save as comma-separated string
+      property_types: propertyTypes.split(',').map(pt => pt.trim()).filter(Boolean), // Save as array of strings
+      promotions_enabled: promotionsEnabled,
+      promotion_tiers: adminPromotionTiers.map(tier => ({ // Convert UI string values to number for DB
+        id: tier.id,
+        name: tier.name,
+        fee: parseFloat(tier.fee) || 0, 
+        duration: parseInt(tier.duration, 10) || 0, 
+        description: tier.description,
+      })),
+    };
+    
+    const { error } = await supabase
+      .from('platform_settings')
+      .upsert(settingsToSave, { onConflict: 'id' });
 
-    console.log('Saving settings:', { 
-      siteName, 
-      maintenanceMode, 
-      defaultCurrency, 
-      notificationEmail, 
-      predefinedAmenities,
-      promotionsEnabled,
-      promotionTiers: savedPromotionTiers, 
-    });
-    toast({
-      title: 'Settings Saved',
-      description: 'Platform settings have been successfully updated (simulated).',
-    });
+    if (error) {
+      toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
+    } else {
+      toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
+      fetchPlatformSettings(); // Re-fetch to confirm and ensure UI consistency
+    }
   };
+
+  if (loading) {
+    return (
+        <div className="space-y-8">
+            <Skeleton className="h-12 w-1/2 mb-2" />
+            <Skeleton className="h-8 w-3/4 mb-6" />
+            {[...Array(3)].map((_, i) => (
+                <Card key={i} className="shadow-xl mb-6">
+                    <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
+                    <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
+                </Card>
+            ))}
+            <div className="flex justify-end pt-4"> <Skeleton className="h-12 w-32" /> </div>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -136,6 +208,52 @@ export default function PlatformSettingsPage() {
               checked={maintenanceMode}
               onCheckedChange={setMaintenanceMode}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Home className="mr-2 h-5 w-5 text-muted-foreground" /> Property Listing Settings
+          </CardTitle>
+          <CardDescription>Configure options related to property listings.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="predefinedAmenities">Manage Predefined Amenities</Label>
+            <Textarea
+              id="predefinedAmenities"
+              value={predefinedAmenities}
+              onChange={(e) => setPredefinedAmenities(e.target.value)}
+              placeholder="Enter comma-separated amenities, e.g., Pool,Garage,Gym"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated list of standard amenities. Agents will be able to select from these or add their own.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="propertyTypes">Manage Property Types</Label>
+            <Textarea
+              id="propertyTypes"
+              value={propertyTypes}
+              onChange={(e) => setPropertyTypes(e.target.value)}
+              placeholder="Enter comma-separated property types, e.g., House,Apartment,Condo"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated list of available property types. These will appear in the property type selection dropdown for agents.
+            </p>
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="customFields">Manage Custom Fields for Properties</Label>
+             <Button variant="outline" disabled className="w-full justify-start">
+              <ListPlus className="mr-2 h-4 w-4" /> Define Custom Fields (Placeholder)
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              (Placeholder) Allow defining additional custom fields for property listings (e.g., Pet Policy: Yes/No).
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -225,51 +343,6 @@ export default function PlatformSettingsPage() {
         </CardContent>
       </Card>
       
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Home className="mr-2 h-5 w-5 text-muted-foreground" /> Property Listing Settings
-          </CardTitle>
-          <CardDescription>Configure options related to property listings.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="predefinedAmenities">Manage Predefined Amenities</Label>
-            <Textarea
-              id="predefinedAmenities"
-              value={predefinedAmenities}
-              onChange={(e) => setPredefinedAmenities(e.target.value)}
-              placeholder="Enter comma-separated amenities, e.g., Pool, Garage, Gym"
-              rows={3}
-              disabled 
-            />
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Define a list of standard amenities. In a full implementation, these could become selectable options for agents. Currently, this field is for display only.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="propertyTypes">Manage Property Types</Label>
-            <Input
-              id="propertyTypes"
-              placeholder="e.g., House, Apartment, Condo, Commercial, Land"
-              disabled
-            />
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Manage available property types. Current types are: House, Apartment, Condo, Townhouse, Land. This setting is a placeholder for a more complex feature.
-            </p>
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="customFields">Manage Custom Fields for Properties</Label>
-             <Button variant="outline" disabled className="w-full justify-start">
-              <ListPlus className="mr-2 h-4 w-4" /> Define Custom Fields (Placeholder)
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Allow defining additional custom fields for property listings (e.g., Pet Policy: Yes/No). This setting is a placeholder for a more complex feature.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
@@ -373,11 +446,10 @@ export default function PlatformSettingsPage() {
       </Card>
 
       <div className="flex justify-end pt-4">
-        <Button onClick={handleSaveChanges} size="lg">
-          <Save className="mr-2 h-5 w-5" /> Save Changes
+        <Button onClick={handleSaveChanges} size="lg" disabled={loading}>
+          <Save className="mr-2 h-5 w-5" /> {loading ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>
   );
 }
-

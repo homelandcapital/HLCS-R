@@ -42,6 +42,8 @@ export const nigerianStates = [
 export type ListingType = Database['public']['Enums']['listing_type_enum'];
 export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
+// This 'propertyTypes' const is still used by PropertySearchFilter and AddPropertyPage (initially).
+// It will be replaced by DB values in AddPropertyPage in a subsequent step.
 export type PropertyTypeEnum = Database['public']['Enums']['property_type_enum'];
 export const propertyTypes: PropertyTypeEnum[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land'];
 
@@ -71,7 +73,7 @@ export interface Property {
   location_area_city: string;
   state: NigerianState;
   address: string;
-  property_type: PropertyTypeEnum;
+  property_type: PropertyTypeEnum; // This will be validated against the dynamic list from DB in AddPropertyPage
   bedrooms: number; // INT
   bathrooms: number; // INT
   area_sq_ft?: number | null; // NUMERIC
@@ -96,11 +98,7 @@ export interface Property {
   created_at: string; // TIMESTAMPTZ (ISO string)
   updated_at: string; // TIMESTAMPTZ (ISO string)
 
-  // The fields below are not directly in DB `properties` table
-  // but used for frontend convenience or joined data previously.
-  // Keep if components rely on them and map data appropriately.
-  // For example, promotionDetails was a client-side construct.
-  promotionDetails?: PromotionDetails | null; // For UI convenience, map from DB fields
+  promotionDetails?: PromotionDetails | null;
 }
 
 
@@ -119,14 +117,14 @@ export interface InquiryMessage {
 
 export interface Inquiry {
   id: string; 
-  property_id: string; // This is the UUID of the property
+  property_id: string; 
   property_name: string;
   inquirer_name: string;
   inquirer_email: string;
   inquirer_phone?: string | null;
   initial_message: string; 
   created_at: string; 
-  updated_at?: string | null; // Make nullable
+  updated_at?: string | null; 
   status: InquiryStatus;
   user_id?: string | null; 
   conversation?: InquiryMessage[];
@@ -231,7 +229,8 @@ export interface PlatformSettings {
   defaultCurrency: string;
   maintenanceMode: boolean;
   notificationEmail: string;
-  predefinedAmenities: string;
+  predefinedAmenities: string; // Stored as comma-separated string
+  propertyTypes: string[]; // Stored as TEXT[] in DB
 }
 
 // Import Database type from supabase
