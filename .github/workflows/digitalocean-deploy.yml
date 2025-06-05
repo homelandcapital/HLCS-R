@@ -4,7 +4,7 @@ name: Deploy to DigitalOcean App Platform
 on:
   push:
     branches:
-      - main # TODO: Change this to your deployment branch if different
+      - main # Trigger deployment on pushes to the main branch
 
 jobs:
   build-and-deploy:
@@ -16,10 +16,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x' # TODO: Ensure this matches your project's Node.js version
+          node-version: '20.x' # Ensure this matches your project's Node.js version
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci # Use 'npm ci' for cleaner installs in CI
 
       - name: Build Next.js application
         run: npm run build
@@ -27,12 +27,13 @@ jobs:
           # These are build-time environment variables.
           # NEXT_PUBLIC_ variables are often inlined by Next.js during the build.
           # Ensure these secrets are created in your GitHub repository if your build needs them.
+          # These are distinct from the runtime variables set on DigitalOcean.
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_FOR_BUILD }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY_FOR_BUILD }}
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY_FOR_BUILD }}
-          # Add other NEXT_PUBLIC_ variables needed for build time here
-          # CLOUDINARY_... variables are typically server-side only and not directly needed for `next build`
-          # unless you have custom build scripts that use them.
+          # Add other NEXT_PUBLIC_ variables needed for build time here if any.
+          # Server-side only variables (like CLOUDINARY_...) are typically NOT needed for `next build`
+          # unless you have custom build scripts that use them. They are primarily runtime variables.
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -41,6 +42,7 @@ jobs:
 
       - name: Trigger DigitalOcean App Platform deployment
         # This command tells DigitalOcean to create a new deployment for your app.
-        # App Platform will then pull the latest code from the branch it's configured to watch (e.g., 'main') and deploy.
-        # The --wait flag makes the job wait for the deployment to complete. Remove if you prefer asynchronous triggering.
+        # App Platform will then pull the latest code from the branch it's configured to watch (e.g., 'main')
+        # and run its own build and deploy process using the runtime variables configured on DigitalOcean.
+        # The --wait flag makes the job wait for the DigitalOcean deployment to complete.
         run: doctl apps create-deployment ${{ secrets.DIGITALOCEAN_APP_ID }} --wait
