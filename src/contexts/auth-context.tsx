@@ -14,7 +14,7 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthenticatedUser | null;
-  loading: boolean; 
+  loading: boolean;
   isPropertySaved: (propertyId: string) => boolean;
   toggleSaveProperty: (propertyId: string) => void;
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initialize loading to true
   const [session, setSession] = useState<Session | null>(null);
   const router = useRouter();
   const { toast } = useToast();
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!userProfilesData || userProfilesData.length === 0) {
       console.warn('User profile not found in public.users for id:', supabaseUser.id);
       const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
-      if (currentAuthSession) { 
+      if (currentAuthSession) {
          toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
       }
       return null;
@@ -74,9 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Profile Error', description: 'Multiple profiles found for your account. Please contact support.', variant: 'destructive'});
       return null;
     }
-    
-    const baseProfile = userProfilesData[0] as UserProfile;
 
+    const baseProfile = userProfilesData[0] as UserProfile;
     let authenticatedUser: AuthenticatedUser;
 
     if (baseProfile.role === 'user') {
@@ -85,134 +84,121 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('property_id')
         .eq('user_id', baseProfile.id);
 
-      if (savedPropsError) {
-        console.error('Error fetching saved properties:', savedPropsError.message);
-      }
+      if (savedPropsError) console.error('Error fetching saved properties:', savedPropsError.message);
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
-      
-      authenticatedUser = {
-        ...baseProfile,
-        role: 'user',
-        savedPropertyIds,
-      } as GeneralUser;
-
+      authenticatedUser = { ...baseProfile, role: 'user', savedPropertyIds } as GeneralUser;
     } else if (baseProfile.role === 'agent') {
-      authenticatedUser = {
-        ...baseProfile,
-        role: 'agent',
-        phone: baseProfile.phone || '', 
-      } as Agent;
+      authenticatedUser = { ...baseProfile, role: 'agent', phone: baseProfile.phone || '' } as Agent;
     } else if (baseProfile.role === 'platform_admin') {
-      authenticatedUser = {
-        ...baseProfile,
-        role: 'platform_admin',
-      } as PlatformAdmin;
+      authenticatedUser = { ...baseProfile, role: 'platform_admin' } as PlatformAdmin;
     } else {
-        console.error('Unknown user role in profile:', baseProfile.role);
-        toast({ title: 'Profile Error', description: `Unknown user role: ${baseProfile.role}.`, variant: 'destructive'});
-        return null;
+      console.error('Unknown user role in profile:', baseProfile.role);
+      toast({ title: 'Profile Error', description: `Unknown user role: ${baseProfile.role}.`, variant: 'destructive'});
+      return null;
     }
-    
     return authenticatedUser;
-
   }, [toast]);
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      if (!isMountedRef.current) {
-        // If unmounted before starting, ensure loading is false if it was somehow true.
-        // This path is less likely if setLoading(true) is correctly inside the mounted check.
-        setLoading(false); 
-        return;
-      }
-      setLoading(true); 
-      try {
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
 
-        if (isMountedRef.current) { // Check mount status before any state updates
-          if (sessionError) {
-            console.error("Error getting initial session:", sessionError.message);
-            setUser(null);
-            setSession(null);
-            // Removed early return; finally block will handle setLoading(false)
-          } else {
-            setSession(initialSession);
-            if (initialSession?.user) {
-              const profile = await fetchUserProfileAndRelatedData(initialSession.user);
-              if (isMountedRef.current) { // Check again before setting user state
-                setUser(profile);
-              }
-            } else {
-              setUser(null); // No active session or user
+  useEffect(() => {
+    isMountedRef.current = true;
+    // setLoading(true) is handled by the initial state of `loading`
+
+    const performInitialAuthCheckInternal = async (): Promise<{ user: AuthenticatedUser | null, session: Session | null, errorOccurred: boolean }> => {
+        try {
+            const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+
+            if (!isMountedRef.current) return { user: null, session: null, errorOccurred: true };
+
+            if (sessionError) {
+                console.error("Error getting initial session:", sessionError.message);
+                return { user: null, session: null, errorOccurred: true };
             }
-          }
+
+            if (initialSession?.user) {
+                const profile = await fetchUserProfileAndRelatedData(initialSession.user);
+                // No need to check isMountedRef here before returning, the .then() will check
+                return { user: profile, session: initialSession, errorOccurred: !profile };
+            } else {
+                return { user: null, session: initialSession, errorOccurred: false };
+            }
+        } catch (error: any) {
+            console.error("Unhandled error during initial auth check internal function:", error.message, error.stack, error);
+            return { user: null, session: null, errorOccurred: true };
         }
-      } catch (error) {
-        console.error("Unhandled error during auth initialization:", error);
-        if (isMountedRef.current) {
-          setUser(null);
-          setSession(null);
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false); 
-        }
-      }
     };
 
-    initializeAuth();
+    performInitialAuthCheckInternal().then(result => {
+        if (isMountedRef.current) {
+            setUser(result.user);
+            setSession(result.session);
+            setLoading(false); // Crucial: set loading false after initial check completes
+        }
+    }).catch(error => {
+        console.error("Critical error in performInitialAuthCheckInternal promise chain:", error);
+        if (isMountedRef.current) {
+            setUser(null);
+            setSession(null);
+            setLoading(false); // Also ensure loading is false on critical error
+        }
+    });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
         if (!isMountedRef.current) return;
 
-        setSession(currentSession);
+        setSession(currentSession); // Update session state first
 
         if (event === 'SIGNED_IN' && currentSession?.user) {
-          if (!isMountedRef.current) return; 
-          setLoading(true); 
+          // This implies a new sign-in event, or re-authentication.
+          // Profile fetch will happen, so set loading true.
+          setLoading(true);
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-            if (isMountedRef.current) setUser(profile);
-            if (profile) {
+            if (isMountedRef.current) setUser(profile); // Update user if still mounted
+            if (profile) { // Redirect only if profile fetch was successful
               if (profile.role === 'agent') router.push('/agents/dashboard');
               else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
               else router.push('/users/dashboard');
             } else {
-               console.warn("Profile fetch failed after SIGNED_IN event.");
+               console.warn("Profile fetch failed after SIGNED_IN event. User not redirected.");
             }
-          } catch (e) { 
-            console.error("Error on SIGNED_IN profile fetch:", e); 
-            if (isMountedRef.current) setUser(null); 
-          } finally { 
-            if (isMountedRef.current) setLoading(false); 
+          } catch (e) {
+            console.error("Error on SIGNED_IN profile fetch:", e);
+            if (isMountedRef.current) setUser(null);
+          } finally {
+            if (isMountedRef.current) setLoading(false); // End loading for this operation
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
             setUser(null);
-            setLoading(false); 
+            setLoading(false); // Ensure loading is false on sign out
             router.push('/');
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
-          if (!isMountedRef.current) return;
-          setLoading(true); 
+          setLoading(true); // User object from Supabase changed, re-fetch profile
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
-          } catch (e) { 
-            console.error("Error on USER_UPDATED profile fetch:", e); 
-          } finally { 
-            if (isMountedRef.current) setLoading(false); 
+          } catch (e) {
+            console.error("Error on USER_UPDATED profile fetch:", e);
+          } finally {
+            if (isMountedRef.current) setLoading(false);
           }
         } else if (event === 'PASSWORD_RECOVERY' && currentSession) {
           if (isMountedRef.current) {
-            console.log("PASSWORD_RECOVERY event detected. Session (temporary for password update):", currentSession);
-            setSession(currentSession); 
-            setLoading(false); 
-            router.push('/update-password'); 
+            // Session is temporary for password update
+            setLoading(false); // No extensive loading needed here, just redirection
+            router.push('/update-password');
           }
         } else if (event === 'INITIAL_SESSION') {
-           // setLoading(false) is handled by initializeAuth's finally block for the initial load
+            // `performInitialAuthCheckInternal` handles the logic for the actual initial session.
+            // This event might fire alongside. If loading is true, it means initial check is ongoing.
+            // If loading is false, initial check is done.
+            // If `currentSession` is null here AND loading is false, it confirms no user.
+            if (!currentSession?.user && !loading && isMountedRef.current) {
+                // This is mostly a confirmation, state should already be correct.
+            }
         }
       }
     );
@@ -221,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authListener?.subscription.unsubscribe();
       isMountedRef.current = false;
     };
-  }, [fetchUserProfileAndRelatedData, router, toast]);
+  }, [fetchUserProfileAndRelatedData, router]); // Dependencies for the main useEffect
 
 
   const signInWithPassword = async (email: string, password: string) => {
@@ -229,13 +215,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
+    // onAuthStateChange will handle setting user, session, and loading states
     return { error };
   };
 
   const commonSignUp = async (
-    email: string, 
-    password: string, 
-    userRole: UserRole, 
+    email: string,
+    password: string,
+    userRole: UserRole,
     profileSpecificData: Partial<Omit<UserProfile, 'id' | 'email' | 'role' | 'avatar_url' | 'created_at' | 'updated_at' | 'name'> & { name: string }>
   ) => {
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -252,8 +239,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          id: signUpData.user.id, 
-          email: signUpData.user.email!, 
+          id: signUpData.user.id,
+          email: signUpData.user.email!,
           role: userRole,
           name: profileSpecificData.name,
           phone: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).phone : null,
@@ -277,13 +264,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
         }
-        
+
         if (signUpData.user?.id) {
           console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out user from auth table to attempt cleanup.`);
-          // Do not await signOut here, let it happen in background.
-          // onAuthStateChange will handle UI updates for SIGNED_OUT.
-          supabase.auth.signOut().catch(signOutError => {
-            console.error("Error during cleanup signOut:", signOutError);
+          supabase.auth.signOut().catch(signOutCleanupError => {
+            console.error("Error during cleanup signOut after profile creation failure:", signOutCleanupError);
           });
         }
         return { error: profileError as Error, data: null };
@@ -292,7 +277,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.` });
       } else if (signUpData.session) {
-        toast({ title: 'Registration Successful!', description: `Welcome, ${profileSpecificData.name}! You are now logged in.`});
+        // onAuthStateChange will handle SIGNED_IN: set user, session, loading, and redirect.
+        // We don't need to toast "logged in" here as SIGNED_IN will manage it.
       } else {
         toast({ title: 'Registration Incomplete', description: `There was an issue. If you've registered before, try logging in or check your email for verification.`, variant: 'destructive' });
       }
@@ -304,25 +290,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUpUser = async (name: string, email: string, password: string) => {
-    try {
-      return await commonSignUp(email, password, 'user', { name });
-    } catch (e) {
-      if (isMountedRef.current) {
-        toast({ title: "Registration Error", description: "An unexpected error occurred during user signup.", variant: "destructive" });
-      }
-      return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
-    }
+    return await commonSignUp(email, password, 'user', { name });
   };
 
   const signUpAgent = async (name: string, email: string, password: string, phone: string, agency?: string) => {
-     try {
-      return await commonSignUp(email, password, 'agent', { name, phone, agency });
-    } catch (e) {
-      if (isMountedRef.current) {
-        toast({ title: "Registration Error", description: "An unexpected error occurred during agent signup.", variant: "destructive" });
-      }
-      return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
-    }
+     return await commonSignUp(email, password, 'agent', { name, phone, agency });
   };
 
   const signOut = async () => {
@@ -331,22 +303,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
     } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        // onAuthStateChange handles setUser(null), setLoading(false), and router.push('/')
     }
   };
 
   const sendPasswordResetEmail = async (email: string) => {
     let errorResult: Error | null = null;
     try {
-      const redirectTo = `${window.location.origin}/update-password`; 
+      const redirectTo = `${window.location.origin}/update-password`;
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
       errorResult = error;
       if (error) {
         toast({ title: 'Password Reset Error', description: error.message, variant: 'destructive' });
       } else {
-        toast({ 
-          title: 'Password Reset Email Sent', 
+        toast({
+          title: 'Password Reset Email Sent',
           description: 'If an account exists for this email, a reset link has been sent. Please check your inbox (and spam folder).',
-          duration: 9000 
+          duration: 9000
         });
       }
     } catch (e) {
@@ -359,7 +332,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    if (!session) {
+    if (!session) { // Check for the session from AuthContext state
       toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
       return { error: new Error("No active password recovery session.") };
     }
@@ -373,10 +346,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
+        // Sign out the temporary recovery session. onAuthStateChange will handle redirect.
         supabase.auth.signOut().catch(signOutError => {
             console.error("Error during signOut after password update:", signOutError);
-            if(isMountedRef.current) setLoading(false);
-            router.push('/agents/login');
         });
       }
     } catch (e) {
@@ -407,7 +379,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "You need to be logged in as a user to save properties.",
         variant: "default",
       });
-      router.push('/agents/login'); 
+      router.push('/agents/login');
       return;
     }
 
@@ -435,7 +407,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase
           .from('saved_properties')
           .insert({ user_id: generalUser.id, property_id: propertyId });
-        
+
         if (error) {
           console.error('Error saving property:', error.message);
           toast({ title: 'Error', description: 'Could not save property. ' + error.message, variant: 'destructive' });
@@ -444,10 +416,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updatedSavedIds = [...(generalUser.savedPropertyIds || []), propertyId];
         toastMessage = "Property saved!";
       }
-      
+
       const updatedUser: GeneralUser = { ...generalUser, savedPropertyIds: updatedSavedIds };
-      if(isMountedRef.current) setUser(updatedUser); 
-      
+      if(isMountedRef.current) setUser(updatedUser);
+
       toast({ title: toastMessage });
     } catch (e) {
       console.error("Error in toggleSaveProperty:", e);
@@ -458,7 +430,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated: !!user && !!session, 
+      isAuthenticated: !!user && !!session,
       user,
       loading,
       isPropertySaved,
@@ -483,3 +455,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
