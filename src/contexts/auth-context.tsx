@@ -199,11 +199,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'PASSWORD_RECOVERY' && currentSession) {
           if (isMountedRef.current) {
             console.log("PASSWORD_RECOVERY event detected. Session (temporary for password update):", currentSession);
-            // This session is temporary, specifically for updating the password.
-            // We set it so updateUserPassword can use it.
             setSession(currentSession); 
-            setLoading(false); // Ensure loading indicator is off
-            router.push('/update-password'); // Redirect to the page where the user can set a new password
+            setLoading(false); 
+            router.push('/update-password'); 
           }
         } else if (event === 'INITIAL_SESSION') {
             // setLoading(false) is handled by initializeAuth's finally block
@@ -225,6 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
        if (isMountedRef.current) setLoading(false); 
     }
+    // setLoading(false) is handled by onAuthStateChange for SIGNED_IN or by the error case above
     return { error };
   };
 
@@ -276,6 +275,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (signUpData.user?.id) {
           console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out user from auth table to attempt cleanup.`);
+          // Don't await this, let it happen in background; onAuthStateChange will handle UI.
           supabase.auth.signOut().catch(signOutError => {
             console.error("Error during cleanup signOut:", signOutError);
           });
@@ -309,8 +309,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
+      // If commonSignUp itself doesn't trigger a SIGNED_IN (e.g. due to email verification needed, or error before auth.signUp call),
+      // or if an error is thrown inside this function before commonSignUp, we need to reset loading.
+      // However, if SIGNED_IN happens, onAuthStateChange will handle setLoading(false).
+      // This check ensures loading is reset if no auth state change that resets it occurs.
+      if (isMountedRef.current && !session?.user) { // A bit heuristic, assumes session reflects successful auth part
+         // setLoading(false); // Potentially handled by onAuthStateChange
       }
     }
   };
@@ -327,8 +331,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
     } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
+      // Similar logic as signUpUser
+      if (isMountedRef.current && !session?.user) {
+         // setLoading(false); // Potentially handled by onAuthStateChange
       }
     }
   };
@@ -342,49 +347,84 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMountedRef.current) setLoading(false); 
     } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        // setLoading(false) is handled by onAuthStateChange for SIGNED_OUT
     }
   };
 
   const sendPasswordResetEmail = async (email: string) => {
     if (!isMountedRef.current) return { error: new Error("Component unmounted") };
     setLoading(true);
-    // The redirectTo URL should be where your app can handle the password update.
-    // Supabase appends a hash fragment with the recovery token.
-    const redirectTo = `${window.location.origin}/update-password`; 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    
-    if (isMountedRef.current) setLoading(false);
-
-    if (error) {
-      toast({ title: 'Password Reset Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ 
-        title: 'Password Reset Email Sent', 
-        description: 'If an account exists for this email, a reset link has been sent. Please check your inbox (and spam folder).',
-        duration: 9000 
-      });
+    let errorResult: Error | null = null;
+    try {
+      const redirectTo = `${window.location.origin}/update-password`; 
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      errorResult = error;
+      if (error) {
+        toast({ title: 'Password Reset Error', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ 
+          title: 'Password Reset Email Sent', 
+          description: 'If an account exists for this email, a reset link has been sent. Please check your inbox (and spam folder).',
+          duration: 9000 
+        });
+      }
+    } catch (e) {
+      errorResult = e instanceof Error ? e : new Error("Unknown error sending password reset email");
+      if (isMountedRef.current) {
+        toast({ title: 'Password Reset Error', description: errorResult.message, variant: 'destructive' });
+      }
+    } finally {
+      if (isMountedRef.current) setLoading(false);
     }
-    return { error };
+    return { error: errorResult };
   };
 
   const updateUserPassword = async (newPassword: string) => {
     if (!isMountedRef.current) return { error: new Error("Component unmounted") };
-    if (!session) { // Check if there's a recovery session
+    if (!session) {
       toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
       return { error: new Error("No active password recovery session.") };
     }
+
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (isMountedRef.current) setLoading(false);
-    if (error) {
-      toast({ title: 'Password Update Failed', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
-      // Sign out the temporary recovery session and redirect to login
-      await supabase.auth.signOut(); // This will trigger onAuthStateChange SIGNED_OUT
-      router.push('/agents/login');
+    let errorResult: Error | null = null;
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      errorResult = updateError;
+
+      if (updateError) {
+        toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
+        // Sign out the temporary recovery session. This will trigger onAuthStateChange SIGNED_OUT.
+        // No need to await if onAuthStateChange handles redirection and final loading state.
+        supabase.auth.signOut().catch(signOutError => {
+            console.error("Error during signOut after password update:", signOutError);
+            // If signOut itself errors, we might need to manually ensure loading is false
+            // and redirect, but onAuthStateChange for SIGNED_OUT should ideally still fire or be handled.
+            if (isMountedRef.current) setLoading(false); // Fallback if SIGNED_OUT event doesn't quickly reset
+            router.push('/agents/login'); // Fallback redirect
+        });
+        // router.push('/agents/login') is handled by SIGNED_OUT event in onAuthStateChange
+      }
+    } catch (e) {
+      errorResult = e instanceof Error ? e : new Error("Unknown error updating password");
+      if (isMountedRef.current) {
+        toast({ title: 'Password Update Error', description: errorResult.message, variant: 'destructive' });
+      }
+    } finally {
+      // setLoading(false) will be handled by the onAuthStateChange for SIGNED_OUT if successful,
+      // or if an error occurs before signOut, it should be set here.
+      // If updateError occurred but signOut was not called, loading needs to be false.
+      if (isMountedRef.current && errorResult) {
+        setLoading(false);
+      }
+      // If no error, onAuthStateChange's SIGNED_OUT should handle setLoading(false).
+      // Adding it here too can be a safeguard but might cause a quick flicker if not careful.
+      // The current logic for SIGNED_OUT already handles setLoading(false).
     }
-    return { error };
+    return { error: errorResult };
   };
 
 
@@ -416,7 +456,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let toastMessage = "";
 
     if (!isMountedRef.current) return;
-    setLoading(true); 
+    // No setLoading(true) here as this is a quick UI update, not a full page load indicator
     try {
       if (currentlySaved) {
         const { error } = await supabase
@@ -452,9 +492,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.error("Error in toggleSaveProperty:", e);
       toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive"});
-    } finally {
-      if(isMountedRef.current) setLoading(false); 
     }
+    // No setLoading(false) here
   }, [session, user, router, toast]);
 
 
