@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { Property, Agent, UserRole, GeneralUser } from '@/lib/types';
+import type { Property, Agent, UserRole, GeneralUser, PlatformAdmin } from '@/lib/types';
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Hash } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Hash, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ export default function PropertyDetailsPage() {
 
   const fetchPropertyDetails = useCallback(async (propertyId: string) => {
     setLoading(true);
+    // Fetch property regardless of status first
     const { data, error } = await supabase
       .from('properties')
       .select(`
@@ -47,7 +48,6 @@ export default function PropertyDetailsPage() {
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
       `)
       .eq('id', propertyId)
-      .eq('status', 'approved') 
       .maybeSingle();
 
     if (error) {
@@ -97,7 +97,7 @@ export default function PropertyDetailsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) { // Consider authLoading as well
     return <PropertyDetailsSkeleton />;
   }
 
@@ -119,7 +119,22 @@ export default function PropertyDetailsPage() {
        <div className="text-center py-20">
         <EyeOff className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
         <h1 className="text-4xl font-headline mb-4">Property Not Found</h1>
-        <p className="text-muted-foreground mb-6">The property you are looking for does not exist, is not approved, or may have been removed.</p>
+        <p className="text-muted-foreground mb-6">The property you are looking for does not exist or may have been removed.</p>
+        <Button asChild>
+          <Link href="/properties">Back to Listings</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Access control: Only show non-approved properties to platform_admins
+  const isAdmin = authContextUser?.role === 'platform_admin';
+  if (property.status !== 'approved' && !isAdmin) {
+    return (
+       <div className="text-center py-20">
+        <EyeOff className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+        <h1 className="text-4xl font-headline mb-4">Property Not Available</h1>
+        <p className="text-muted-foreground mb-6">This property is currently not available for public viewing. It may be pending approval or has been rejected.</p>
         <Button asChild>
           <Link href="/properties">Back to Listings</Link>
         </Button>
@@ -156,6 +171,27 @@ export default function PropertyDetailsPage() {
 
   return (
     <div className="space-y-8">
+      {isAdmin && property.status !== 'approved' && (
+        <Card className={cn(
+            "border-2 p-4",
+            property.status === 'pending' && "border-yellow-500 bg-yellow-50/50",
+            property.status === 'rejected' && "border-destructive bg-destructive/10"
+        )}>
+            <CardContent className="flex items-center gap-3 p-0">
+                <AlertTriangle className={cn("h-6 w-6", property.status === 'pending' && "text-yellow-600", property.status === 'rejected' && "text-destructive")} />
+                <div>
+                    <CardTitle className={cn("text-base font-semibold", property.status === 'pending' && "text-yellow-700", property.status === 'rejected' && "text-destructive")}>
+                        Admin View: This property is currently <span className="font-bold uppercase">{property.status}</span>.
+                    </CardTitle>
+                    <CardDescription className={cn("text-sm", property.status === 'pending' && "text-yellow-600", property.status === 'rejected' && "text-destructive-foreground/80")}>
+                        {property.status === 'pending' && "Review the details below before approving or rejecting."}
+                        {property.status === 'rejected' && `Reason: ${property.rejection_reason || 'Not specified'}`}
+                    </CardDescription>
+                </div>
+            </CardContent>
+        </Card>
+      )}
+
       <Card className="shadow-lg">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -176,9 +212,11 @@ export default function PropertyDetailsPage() {
               <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right">
                 ₦{property.price.toLocaleString()}
               </div>
-              <Button variant="default" size="default" className="w-full md:w-auto" onClick={handleInquireClick} disabled={authLoading}>
-                <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : 'Inquire Now'}
-              </Button>
+              {property.status === 'approved' && (
+                <Button variant="default" size="default" className="w-full md:w-auto" onClick={handleInquireClick} disabled={authLoading}>
+                  <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : 'Inquire Now'}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -302,6 +340,20 @@ export default function PropertyDetailsPage() {
               </CardContent>
             </Card>
           )}
+          {/* Only show inquiry button if property is approved OR if admin is viewing */}
+          { (property.status === 'approved' || isAdmin) && (
+            <Card className="shadow-lg">
+                <CardHeader> <CardTitle className="font-headline">Interested?</CardTitle> </CardHeader>
+                <CardContent>
+                    <Button variant="default" size="lg" className="w-full" onClick={handleInquireClick} disabled={authLoading}>
+                        <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : (property.status === 'approved' ? 'Inquire Now' : 'Contact Agent (Admin)')}
+                    </Button>
+                     {property.status !== 'approved' && isAdmin &&
+                        <p className="text-xs text-muted-foreground mt-2 text-center">Note: The "Inquire Now" button is typically available for approved properties. This admin view allows contact regardless of status.</p>
+                    }
+                </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
@@ -331,3 +383,5 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
+
+    
