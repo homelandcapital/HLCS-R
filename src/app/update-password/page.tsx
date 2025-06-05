@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { KeyRound, CheckCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Still needed for initial checks/redirects
 import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
@@ -25,9 +25,8 @@ const formSchema = z.object({
 type UpdatePasswordFormValues = z.infer<typeof formSchema>;
 
 export default function UpdatePasswordPage() {
-  const { updateUserPassword, loading: authLoading, getSupabaseSession } = useAuth();
+  const { updateUserPassword, getSupabaseSession } = useAuth(); // Removed loading from here
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(false);
   const [tokenProcessed, setTokenProcessed] = useState(false);
 
@@ -40,31 +39,27 @@ export default function UpdatePasswordPage() {
   });
 
   useEffect(() => {
-    // Check if the URL fragment indicates a recovery flow (Supabase adds #type=recovery)
-    // Or if there's an active session which might be the temporary recovery session
     const hash = window.location.hash;
     const session = getSupabaseSession();
 
     if (hash.includes('type=recovery') || (session && session.user)) {
         setIsRecoveryFlow(true);
     }
-    // Mark token as "processed" after initial check to avoid UI flicker if user navigates away and back
     setTokenProcessed(true); 
   }, [getSupabaseSession]);
 
 
   async function onSubmit(values: UpdatePasswordFormValues) {
+    // updateUserPassword will handle its own toasts.
+    // Form's isSubmitting state will handle button.
     const { error } = await updateUserPassword(values.newPassword);
     if (!error) {
-      // The updateUserPassword function in AuthContext already handles redirecting to login
-      // and showing a success toast. We can reset the form here.
       form.reset();
+      // Redirection to login is handled by onAuthStateChange SIGNED_OUT event
     }
-    // Error handling (toast) is done within updateUserPassword
+    // Error handling (toast) is done within updateUserPassword in AuthContext
   }
 
-  // This check ensures we only render the form if it seems like a valid recovery flow.
-  // It also prevents rendering the form briefly if the user lands here without a token.
   if (!tokenProcessed && !isRecoveryFlow) {
      return (
         <div className="flex justify-center items-center min-h-[calc(100vh-200px)] py-12">
@@ -149,8 +144,8 @@ export default function UpdatePasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
-                {(form.formState.isSubmitting || authLoading) ? 'Updating Password...' : 'Update Password & Login'}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Updating Password...' : 'Update Password & Login'}
               </Button>
             </form>
           </Form>

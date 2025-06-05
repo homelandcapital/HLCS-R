@@ -14,7 +14,7 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthenticatedUser | null;
-  loading: boolean;
+  loading: boolean; // Global loading for navbar, initial load, profile sync
   isPropertySaved: (propertyId: string) => boolean;
   toggleSaveProperty: (propertyId: string) => void;
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Global loading state
   const [session, setSession] = useState<Session | null>(null);
   const router = useRouter();
   const { toast } = useToast();
@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
+    // This function itself should not set global loading; the caller (onAuthStateChange) will.
     const { data: userProfilesData, error: profileQueryError } = await supabase
       .from('users')
       .select('*')
@@ -120,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       if (!isMountedRef.current) return;
-      setLoading(true);
+      setLoading(true); // For initial page load and session check
       try {
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
 
@@ -148,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setSession(null);
         }
       } finally {
-        if (isMountedRef.current) setLoading(false);
+        if (isMountedRef.current) setLoading(false); // End initial load loading
       }
     };
 
@@ -162,7 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (event === 'SIGNED_IN' && currentSession?.user) {
           if (!isMountedRef.current) return; 
-          setLoading(true);
+          setLoading(true); // For profile fetch after sign-in
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
@@ -171,36 +172,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
               else router.push('/users/dashboard');
             } else {
-               console.warn("Profile fetch failed after SIGNED_IN event. User might be stuck or profile missing. Auth user exists but public.users profile couldn't be loaded.");
+               console.warn("Profile fetch failed after SIGNED_IN event.");
             }
           } catch (e) { 
             console.error("Error on SIGNED_IN profile fetch:", e); 
             if (isMountedRef.current) setUser(null); 
           } finally { 
-            if (isMountedRef.current) setLoading(false); 
+            if (isMountedRef.current) setLoading(false); // End profile fetch loading
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
             setUser(null);
-            setLoading(false); 
+            setLoading(false); // Ensure loading is false on explicit sign out
             router.push('/');
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
           if (!isMountedRef.current) return;
-          setLoading(true);
+          setLoading(true); // For profile fetch after user update
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
           } catch (e) { 
             console.error("Error on USER_UPDATED profile fetch:", e); 
           } finally { 
-            if (isMountedRef.current) setLoading(false); 
+            if (isMountedRef.current) setLoading(false); // End profile fetch loading
           }
         } else if (event === 'PASSWORD_RECOVERY' && currentSession) {
           if (isMountedRef.current) {
             console.log("PASSWORD_RECOVERY event detected. Session (temporary for password update):", currentSession);
             setSession(currentSession); 
-            setLoading(false); 
+            setLoading(false); // Ensure loading is false before redirect
             router.push('/update-password'); 
           }
         } else if (event === 'INITIAL_SESSION') {
@@ -211,19 +212,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       authListener?.subscription.unsubscribe();
+      isMountedRef.current = false;
     };
   }, [fetchUserProfileAndRelatedData, router, toast]);
 
 
   const signInWithPassword = async (email: string, password: string) => {
-    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
-    setLoading(true);
+    // setLoading(true/false) is not set here; form handles its own button state.
+    // onAuthStateChange will handle global loading for profile sync if successful.
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
-       if (isMountedRef.current) setLoading(false); 
     }
-    // setLoading(false) is handled by onAuthStateChange for SIGNED_IN or by the error case above
     return { error };
   };
 
@@ -233,6 +233,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userRole: UserRole, 
     profileSpecificData: Partial<Omit<UserProfile, 'id' | 'email' | 'role' | 'avatar_url' | 'created_at' | 'updated_at' | 'name'> & { name: string }>
   ) => {
+    // setLoading(true/false) is not set here; form handles its own button state.
+    // onAuthStateChange will handle global loading for profile sync if successful.
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -275,7 +277,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (signUpData.user?.id) {
           console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out user from auth table to attempt cleanup.`);
-          // Don't await this, let it happen in background; onAuthStateChange will handle UI.
           supabase.auth.signOut().catch(signOutError => {
             console.error("Error during cleanup signOut:", signOutError);
           });
@@ -298,62 +299,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUpUser = async (name: string, email: string, password: string) => {
-    if (!isMountedRef.current) return { error: new Error("Component unmounted"), data: null };
-    setLoading(true);
     try {
-      const result = await commonSignUp(email, password, 'user', { name });
-      return result;
+      return await commonSignUp(email, password, 'user', { name });
     } catch (e) {
       if (isMountedRef.current) {
         toast({ title: "Registration Error", description: "An unexpected error occurred during user signup.", variant: "destructive" });
       }
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
-    } finally {
-      // If commonSignUp itself doesn't trigger a SIGNED_IN (e.g. due to email verification needed, or error before auth.signUp call),
-      // or if an error is thrown inside this function before commonSignUp, we need to reset loading.
-      // However, if SIGNED_IN happens, onAuthStateChange will handle setLoading(false).
-      // This check ensures loading is reset if no auth state change that resets it occurs.
-      if (isMountedRef.current && !session?.user) { // A bit heuristic, assumes session reflects successful auth part
-         // setLoading(false); // Potentially handled by onAuthStateChange
-      }
     }
   };
 
   const signUpAgent = async (name: string, email: string, password: string, phone: string, agency?: string) => {
-    if (!isMountedRef.current) return { error: new Error("Component unmounted"), data: null };
-    setLoading(true);
-    try {
-      const result = await commonSignUp(email, password, 'agent', { name, phone, agency });
-      return result;
+     try {
+      return await commonSignUp(email, password, 'agent', { name, phone, agency });
     } catch (e) {
       if (isMountedRef.current) {
         toast({ title: "Registration Error", description: "An unexpected error occurred during agent signup.", variant: "destructive" });
       }
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
-    } finally {
-      // Similar logic as signUpUser
-      if (isMountedRef.current && !session?.user) {
-         // setLoading(false); // Potentially handled by onAuthStateChange
-      }
     }
   };
 
   const signOut = async () => {
-    if (!isMountedRef.current) return;
-    setLoading(true); 
+    // setLoading is handled by onAuthStateChange for SIGNED_OUT
     const { error } = await supabase.auth.signOut();
     if (error) {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
-        if (isMountedRef.current) setLoading(false); 
     } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        // setLoading(false) is handled by onAuthStateChange for SIGNED_OUT
     }
   };
 
   const sendPasswordResetEmail = async (email: string) => {
-    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
-    setLoading(true);
+    // setLoading is not set here; form handles its own button state.
     let errorResult: Error | null = null;
     try {
       const redirectTo = `${window.location.origin}/update-password`; 
@@ -373,22 +351,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isMountedRef.current) {
         toast({ title: 'Password Reset Error', description: errorResult.message, variant: 'destructive' });
       }
-    } finally {
-      if (isMountedRef.current) setLoading(false);
     }
     return { error: errorResult };
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
-    if (!session) {
+    // setLoading is not set here; form handles its own button state.
+    // onAuthStateChange will handle global loading for SIGNED_OUT.
+    if (!session) { // Check for current session, which should be the recovery session
       toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
       return { error: new Error("No active password recovery session.") };
     }
 
-    setLoading(true);
     let errorResult: Error | null = null;
-
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
       errorResult = updateError;
@@ -398,31 +373,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
         // Sign out the temporary recovery session. This will trigger onAuthStateChange SIGNED_OUT.
-        // No need to await if onAuthStateChange handles redirection and final loading state.
         supabase.auth.signOut().catch(signOutError => {
             console.error("Error during signOut after password update:", signOutError);
-            // If signOut itself errors, we might need to manually ensure loading is false
-            // and redirect, but onAuthStateChange for SIGNED_OUT should ideally still fire or be handled.
-            if (isMountedRef.current) setLoading(false); // Fallback if SIGNED_OUT event doesn't quickly reset
-            router.push('/agents/login'); // Fallback redirect
+             // Fallback if SIGNED_OUT event doesn't quickly reset or redirect
+            if(isMountedRef.current) setLoading(false);
+            router.push('/agents/login');
         });
-        // router.push('/agents/login') is handled by SIGNED_OUT event in onAuthStateChange
       }
     } catch (e) {
       errorResult = e instanceof Error ? e : new Error("Unknown error updating password");
       if (isMountedRef.current) {
         toast({ title: 'Password Update Error', description: errorResult.message, variant: 'destructive' });
       }
-    } finally {
-      // setLoading(false) will be handled by the onAuthStateChange for SIGNED_OUT if successful,
-      // or if an error occurs before signOut, it should be set here.
-      // If updateError occurred but signOut was not called, loading needs to be false.
-      if (isMountedRef.current && errorResult) {
-        setLoading(false);
-      }
-      // If no error, onAuthStateChange's SIGNED_OUT should handle setLoading(false).
-      // Adding it here too can be a safeguard but might cause a quick flicker if not careful.
-      // The current logic for SIGNED_OUT already handles setLoading(false).
     }
     return { error: errorResult };
   };
@@ -456,7 +418,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let toastMessage = "";
 
     if (!isMountedRef.current) return;
-    // No setLoading(true) here as this is a quick UI update, not a full page load indicator
     try {
       if (currentlySaved) {
         const { error } = await supabase
@@ -493,7 +454,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error in toggleSaveProperty:", e);
       toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive"});
     }
-    // No setLoading(false) here
   }, [session, user, router, toast]);
 
 

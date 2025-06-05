@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
-import { useToast } from '@/hooks/use-toast';
+// useToast is not directly used here, error toasts are handled in AuthContext
 import { LogIn, Mail, KeyRound, UserCircle, Building, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,8 +24,7 @@ const formSchema = z.object({
 type LoginFormValues = z.infer<typeof formSchema>;
 
 const LoginForm = () => {
-  const { signInWithPassword, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { signInWithPassword } = useAuth(); // Removed loading from here
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
 
   const form = useForm<LoginFormValues>({
@@ -37,11 +36,16 @@ const LoginForm = () => {
   });
 
   async function onSubmit(values: LoginFormValues) {
+    // signInWithPassword will now handle its own errors and toast messages
+    // and will not affect a global loading state directly.
+    // Form's isSubmitting state will handle button.
     const { error } = await signInWithPassword(values.email, values.password);
     if (error) {
+      // Set form errors if signInWithPassword indicates an issue
       form.setError("email", { type: "manual", message: "Invalid email or password." });
       form.setError("password", { type: "manual", message: " " }); 
     }
+    // On success, onAuthStateChange in AuthContext handles redirection.
   }
 
   return (
@@ -68,7 +72,7 @@ const LoginForm = () => {
           </Tabs>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4"> {/* Reduced space-y for tighter layout */}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -101,13 +105,13 @@ const LoginForm = () => {
                   </FormItem>
                 )}
               />
-              <div className="text-sm text-right -mt-2 mb-2"> {/* Adjust margins for link placement */}
+              <div className="text-sm text-right -mt-2 mb-2">
                 <Link href="/forgot-password" className="font-medium text-primary hover:underline">
                   Forgot password?
                 </Link>
               </div>
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
-                {(form.formState.isSubmitting || authLoading) ? 'Logging in...' : `Login`}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Logging in...' : `Login`}
               </Button>
             </form>
           </Form>

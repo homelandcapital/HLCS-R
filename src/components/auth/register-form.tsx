@@ -1,7 +1,7 @@
 
 'use client';
 
-import * as React from 'react'; // Added this line
+import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,8 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { UserRole } from '@/lib/types'; // Agent, GeneralUser not directly needed for form values
-// mockAgents, mockGeneralUsers are no longer needed
+import type { UserRole } from '@/lib/types';
 import { UserPlus, User, Mail, KeyRound, Briefcase, Phone as PhoneIcon, Building } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,9 +30,8 @@ const agentFormSchema = baseFormSchema.extend({
   agency: z.string().optional(),
 });
 
-const userFormSchema = baseFormSchema; // No additional fields for basic user
+const userFormSchema = baseFormSchema; 
 
-// Main schema that refines based on role and password confirmation
 const registerFormSchema = z.discriminatedUnion("role", [
   agentFormSchema.extend({ role: z.literal("agent") }),
   userFormSchema.extend({ role: z.literal("user") }),
@@ -45,27 +43,26 @@ const registerFormSchema = z.discriminatedUnion("role", [
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 const RegisterForm = () => {
-  const { signUpUser, signUpAgent, loading: authLoading } = useAuth();
-  const router = useRouter(); // Still used for redirection after successful registration
-  const { toast } = useToast();
+  const { signUpUser, signUpAgent } = useAuth(); // Removed loading from here
+  // useRouter is not directly used for navigation on submit anymore, AuthContext handles it.
+  const { toast } = useToast(); // Still used for potential direct error feedback if needed.
   
   const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
-      role: 'user', // Default role
+      role: 'user', 
       name: '',
       email: '',
       password: '',
       confirmPassword: '',
-      phone: '', // Initialize to empty string
-      agency: '', // Initialize to empty string
+      phone: '', 
+      agency: '', 
     },
-    context: { role: activeRoleTab } // Provide role context for conditional validation
+    context: { role: activeRoleTab } 
   });
   
-  // Watch activeRoleTab to update the form's context for Zod's discriminatedUnion
   React.useEffect(() => {
     form.setValue('role', activeRoleTab, { shouldValidate: true });
   }, [activeRoleTab, form]);
@@ -74,7 +71,6 @@ const RegisterForm = () => {
   async function onSubmit(values: RegisterFormValues) {
     let result;
     if (values.role === 'agent') {
-        // Type assertion because Zod already validated this structure
         const agentValues = values as Extract<RegisterFormValues, { role: 'agent' }>;
       result = await signUpAgent(agentValues.name, agentValues.email, agentValues.password, agentValues.phone, agentValues.agency);
     } else if (values.role === 'user') {
@@ -86,12 +82,8 @@ const RegisterForm = () => {
     }
 
     if (result && !result.error && result.data?.user) {
-      // Redirection will be handled by onAuthStateChange in AuthContext
-      // For agent, it might go to /agents/dashboard, for user to /users/dashboard or /
-      // toast message is handled in signUpUser/signUpAgent
-      form.reset(); // Reset form fields on success
+      form.reset(); 
     } else if (result && result.error) {
-      // Toast message already handled by signUpUser/signUpAgent
       form.setError("email", { type: "manual", message: result.error.message });
     }
   }
@@ -110,7 +102,7 @@ const RegisterForm = () => {
           <Tabs value={activeRoleTab} onValueChange={(value) => {
             const newRole = value as UserRole;
             setActiveRoleTab(newRole);
-            form.setValue('role', newRole, { shouldValidate: true }); // Update Zod's context
+            form.setValue('role', newRole, { shouldValidate: true }); 
             form.clearErrors("phone"); 
           }} className="w-full mb-6">
             <TabsList className="grid w-full grid-cols-2">
@@ -162,7 +154,7 @@ const RegisterForm = () => {
                 <>
                   <FormField
                     control={form.control}
-                    name="phone" // Zod will expect this path for agent role
+                    name="phone" 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Phone Number</FormLabel>
@@ -178,7 +170,7 @@ const RegisterForm = () => {
                   />
                   <FormField
                     control={form.control}
-                    name="agency" // Zod will expect this path for agent role
+                    name="agency" 
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Agency (Optional)</FormLabel>
@@ -227,8 +219,8 @@ const RegisterForm = () => {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
-                {(form.formState.isSubmitting || authLoading) ? 'Registering...' : `Register as ${activeRoleTab === 'user' ? 'User' : 'Agent'}`}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Registering...' : `Register as ${activeRoleTab === 'user' ? 'User' : 'Agent'}`}
               </Button>
             </form>
           </Form>

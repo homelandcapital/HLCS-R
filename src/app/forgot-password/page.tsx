@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/auth-context';
 import { MailQuestion, Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+// useRouter is not explicitly needed here for navigation as AuthContext handles toasts/feedback
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -20,8 +20,7 @@ const formSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof formSchema>;
 
 export default function ForgotPasswordPage() {
-  const { sendPasswordResetEmail, loading: authLoading } = useAuth();
-  const router = useRouter();
+  const { sendPasswordResetEmail } = useAuth(); // Removed loading from here
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(formSchema),
@@ -31,12 +30,13 @@ export default function ForgotPasswordPage() {
   });
 
   async function onSubmit(values: ForgotPasswordFormValues) {
+    // sendPasswordResetEmail will handle its own toasts.
+    // Form's isSubmitting state will handle button.
     const { error } = await sendPasswordResetEmail(values.email);
     if (!error) {
-      // Optionally, redirect or clear form. The toast in AuthContext already informs the user.
-      // router.push('/agents/login'); // Or show a message on this page
       form.reset();
     }
+    // Error toast is handled by sendPasswordResetEmail in AuthContext
   }
 
   return (
@@ -66,8 +66,8 @@ export default function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
-                {(form.formState.isSubmitting || authLoading) ? 'Sending...' : 'Send Reset Link'}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Sending...' : 'Send Reset Link'}
               </Button>
             </form>
           </Form>
