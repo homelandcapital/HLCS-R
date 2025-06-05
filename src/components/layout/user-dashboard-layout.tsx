@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { LogOut, LayoutDashboard, Bookmark, ListChecks, UserCircle } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
-import type { GeneralUser } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data'; // Import mockInquiries
-import { Badge } from '@/components/ui/badge'; // Import Badge
+import type { GeneralUser, Inquiry } from '@/lib/types';
+import { mockInquiries } from '@/lib/mock-data'; 
+import { Badge } from '@/components/ui/badge'; 
 
 interface UserDashboardLayoutProps {
   children: ReactNode;
@@ -34,7 +34,7 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.push('/agents/login'); // Or a general login page if you create one
+        router.push('/agents/login'); 
       } else if (user && user.role !== 'user') {
         toast({ 
           title: "Access Denied", 
@@ -56,10 +56,16 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   
   const currentUser = user as GeneralUser;
   
-  // Calculate new inquiries count for the current user
-  const newInquiriesCount = mockInquiries.filter(
-    inq => inq.inquirerEmail.toLowerCase() === currentUser.email.toLowerCase() && inq.status === 'new'
-  ).length;
+  const unreadUserMessagesCount = mockInquiries.filter(inquiry => {
+    if (inquiry.inquirerEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+      return false; 
+    }
+    if (inquiry.conversation && inquiry.conversation.length > 0) {
+      const lastMessage = inquiry.conversation[inquiry.conversation.length - 1];
+      return lastMessage.senderRole === 'platform_admin';
+    }
+    return false; // If no conversation, no unread admin message for the user
+  }).length;
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -94,9 +100,9 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
                     {item.icon}
                     <span className="ml-2">{item.label}</span>
                 </div>
-                {isMyInquiriesItem && newInquiriesCount > 0 && (
+                {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
                     <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                      {newInquiriesCount}
+                      {unreadUserMessagesCount}
                     </Badge>
                 )}
               </Link>

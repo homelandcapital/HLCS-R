@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
-import type { PlatformAdmin } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data'; // Import mockInquiries
-import { Badge } from '@/components/ui/badge'; // Import Badge
+import type { PlatformAdmin, Inquiry } from '@/lib/types';
+import { mockInquiries } from '@/lib/mock-data'; 
+import { Badge } from '@/components/ui/badge'; 
 
 interface AdminDashboardLayoutProps {
   children: ReactNode;
@@ -58,9 +58,15 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   }
   
   const currentAdmin = user as PlatformAdmin;
-  // Calculate new inquiries count directly in the render path for simplicity with mock data
-  // This will re-calculate on every render of this component.
-  const newInquiriesCount = mockInquiries.filter(inq => inq.status === 'new').length;
+
+  const unreadAdminMessagesCount = mockInquiries.filter(inquiry => {
+    if (inquiry.conversation && inquiry.conversation.length > 0) {
+      const lastMessage = inquiry.conversation[inquiry.conversation.length - 1];
+      return lastMessage.senderRole === 'user';
+    }
+    // If no conversation, or conversation is empty, but status is 'new', it's also new for admin
+    return inquiry.status === 'new' && (!inquiry.conversation || inquiry.conversation.length === 0);
+  }).length;
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -87,17 +93,17 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
               <Button
                 key={item.href}
                 variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-start" // Button itself uses justify-start
+                className="w-full justify-start" 
                 asChild
               >
-                <Link href={item.href} className="flex items-center justify-between w-full"> {/* Link uses justify-between */}
-                  <div className="flex items-center"> {/* Group icon and label */}
+                <Link href={item.href} className="flex items-center justify-between w-full"> 
+                  <div className="flex items-center"> 
                     {item.icon}
                     <span className="ml-2">{item.label}</span>
                   </div>
-                  {isMailItem && newInquiriesCount > 0 && (
+                  {isMailItem && unreadAdminMessagesCount > 0 && (
                     <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                      {newInquiriesCount}
+                      {unreadAdminMessagesCount}
                     </Badge>
                   )}
                 </Link>
