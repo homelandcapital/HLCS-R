@@ -1,63 +1,89 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropertyCard from '@/components/property/property-card';
 import PropertyListItem from '@/components/property/property-list-item';
 import PropertySearchFilter from '@/components/property/property-search-filter';
-import { mockProperties } from '@/lib/mock-data';
-import type { Property } from '@/lib/types';
+import type { Property, Agent, UserRole } from '@/lib/types'; // Agent and UserRole might not be directly needed here but good for consistency
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
+
+interface SearchFilters {
+  location: string;
+  propertyType: string;
+  minPrice: string;
+  maxPrice: string;
+}
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [allApprovedProperties, setAllApprovedProperties] = useState<Property[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Simulate API call and filter for approved properties
-    setTimeout(() => {
-      const approvedProperties = mockProperties.filter(p => p.status === 'approved');
-      setProperties(approvedProperties);
-      setFilteredProperties(approvedProperties);
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  const handleSearch = (filters: {
-    location: string;
-    propertyType: string;
-    minPrice: string;
-    maxPrice: string;
-  }) => {
+  const fetchApprovedProperties = useCallback(async (filters?: SearchFilters) => {
     setLoading(true);
-    // Start with all approved properties
-    let tempProperties = mockProperties.filter(p => p.status === 'approved');
+    let query = supabase
+      .from('properties')
+      .select(`
+        *,
+        agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
+      `)
+      .eq('status', 'approved');
 
-    if (filters.location) {
-      tempProperties = tempProperties.filter(p =>
-        p.location.toLowerCase().includes(filters.location.toLowerCase()) ||
-        p.address.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
-    if (filters.propertyType) {
-      tempProperties = tempProperties.filter(p => p.type === filters.propertyType);
-    }
-    if (filters.minPrice) {
-      tempProperties = tempProperties.filter(p => p.price >= parseInt(filters.minPrice, 10));
-    }
-    if (filters.maxPrice) {
-      tempProperties = tempProperties.filter(p => p.price <= parseInt(filters.maxPrice, 10));
+    if (filters) {
+      if (filters.location) {
+        // This is a simple text search, for more advanced search (e.g. PostGIS) use rpc
+        query = query.or(`title.ilike.%${filters.location}%,location_area_city.ilike.%${filters.location}%,address.ilike.%${filters.location}%`);
+      }
+      if (filters.propertyType) {
+        query = query.eq('property_type', filters.propertyType);
+      }
+      if (filters.minPrice) {
+        query = query.gte('price', parseInt(filters.minPrice, 10));
+      }
+      if (filters.maxPrice) {
+        query = query.lte('price', parseInt(filters.maxPrice, 10));
+      }
     }
     
-    setTimeout(() => { // Simulate search delay
-      setFilteredProperties(tempProperties);
-      setLoading(false);
-    }, 500);
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching properties:', error);
+      toast({ title: 'Error', description: 'Could not fetch properties.', variant: 'destructive' });
+      setAllApprovedProperties([]);
+      setFilteredProperties([]);
+    } else if (data) {
+      const formattedProperties = data.map(p => ({
+        ...p,
+        agent: p.agent ? { ...(p.agent as any), role: 'agent' as UserRole, id: p.agent.id! } as Agent : undefined,
+        images: p.images ? (Array.isArray(p.images) ? p.images : [String(p.images)]) : [],
+        amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : [String(p.amenities)]) : [],
+      })) as Property[];
+      
+      if (!filters) { // Initial load
+        setAllApprovedProperties(formattedProperties);
+      }
+      setFilteredProperties(formattedProperties);
+    }
+    setLoading(false);
+  }, [toast]);
+
+  useEffect(() => {
+    fetchApprovedProperties(); // Initial fetch without filters
+  }, [fetchApprovedProperties]);
+
+  const handleSearch = (filters: SearchFilters) => {
+    fetchApprovedProperties(filters);
   };
 
   return (

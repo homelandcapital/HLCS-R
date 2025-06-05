@@ -22,8 +22,13 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleSaveProperty(property.id);
+    if (property.id) {
+      toggleSaveProperty(property.id);
+    }
   };
+
+  const defaultImage = 'https://placehold.co/600x400.png?text=No+Image';
+  const displayImage = property.images && property.images.length > 0 ? property.images[0] : defaultImage;
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full group">
@@ -31,7 +36,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
         <div className="relative w-full sm:w-1/3 h-48 sm:h-auto rounded-md overflow-hidden shrink-0">
           <Link href={`/properties/${property.id}`}>
             <Image
-              src={property.images[0]}
+              src={displayImage}
               alt={property.title}
               layout="fill"
               objectFit="cover"
@@ -40,11 +45,11 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
             />
           </Link>
           <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-            <Badge variant="secondary" className="text-xs">{property.listingType}</Badge>
-            {property.isPromoted && (
+            <Badge variant="secondary" className="text-xs">{property.listing_type}</Badge>
+            {property.is_promoted && (
                 <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs flex items-center">
                     <Star className="h-3 w-3 mr-1"/> 
-                    {property.promotionDetails ? property.promotionDetails.tierName : 'Promoted'}
+                    {property.promotion_tier_name || 'Promoted'}
                 </Badge>
             )}
           </div>
@@ -68,11 +73,11 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
           </Link>
           <div className="flex items-center text-muted-foreground text-sm mb-1">
             <MapPin className="w-4 h-4 mr-1 shrink-0" />
-            {property.location}, {property.state}
+            {property.location_area_city}, {property.state}
           </div>
           <div className="flex items-center text-muted-foreground text-sm mb-2">
             <Building2 className="w-4 h-4 mr-1 shrink-0" /> 
-            {property.type} - <span className="font-semibold text-accent ml-1">₦{property.price.toLocaleString()}</span>
+            {property.property_type} - <span className="font-semibold text-accent ml-1">₦{property.price.toLocaleString()}</span>
           </div>
           <p className="text-sm text-foreground line-clamp-2 mb-3 flex-grow">
             {property.description}
@@ -84,9 +89,9 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
             <div className="flex items-center">
               <Bath className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.bathrooms} Baths
             </div>
-            {property.areaSqFt && (
+            {property.area_sq_ft && (
               <div className="flex items-center">
-                <Maximize className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.areaSqFt} sq ft
+                <Maximize className="w-4 h-4 mr-1 text-accent shrink-0" /> {property.area_sq_ft} sq ft
               </div>
             )}
           </div>

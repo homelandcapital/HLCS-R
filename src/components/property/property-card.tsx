@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, BedDouble, Bath, Maximize, Tag, Heart, Building2, Star } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Maximize, Building2, Heart, Star } from 'lucide-react'; // Changed Home to Building2
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -21,15 +21,20 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
   const handleSaveClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleSaveProperty(property.id);
+    if (property.id) {
+      toggleSaveProperty(property.id);
+    }
   };
+
+  const defaultImage = 'https://placehold.co/600x400.png?text=No+Image';
+  const displayImage = property.images && property.images.length > 0 ? property.images[0] : defaultImage;
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
       <CardHeader className="p-0 relative">
         <Link href={`/properties/${property.id}`}>
           <Image
-            src={property.images[0]}
+            src={displayImage}
             alt={property.title}
             width={400}
             height={250}
@@ -41,11 +46,11 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           ₦{property.price.toLocaleString()}
         </div>
         <div className="absolute bottom-2 left-2 flex flex-col gap-1 items-start">
-            <Badge variant="secondary" className="text-xs">{property.listingType}</Badge>
-            {property.isPromoted && (
+            <Badge variant="secondary" className="text-xs">{property.listing_type}</Badge>
+            {property.is_promoted && (
                 <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs flex items-center">
                     <Star className="h-3 w-3 mr-1"/> 
-                    {property.promotionDetails ? property.promotionDetails.tierName : 'Promoted'}
+                    {property.promotion_tier_name || 'Promoted'}
                 </Badge>
             )}
         </div>
@@ -69,11 +74,11 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
         </Link>
         <div className="flex items-center text-muted-foreground text-sm mb-1">
           <MapPin className="w-4 h-4 mr-1" />
-          {property.location}, {property.state}
+          {property.location_area_city}, {property.state}
         </div>
         <div className="flex items-center text-muted-foreground text-sm mb-3">
-          <Building2 className="w-4 h-4 mr-1" /> {/* Changed from Home */}
-          {property.type}
+          <Building2 className="w-4 h-4 mr-1" />
+          {property.property_type}
         </div>
         <p className="text-sm text-foreground line-clamp-3 mb-3">{property.description}</p>
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-foreground">
@@ -83,9 +88,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           <div className="flex items-center">
             <Bath className="w-4 h-4 mr-1 text-accent" /> {property.bathrooms} Baths
           </div>
-          {property.areaSqFt && (
+          {property.area_sq_ft && (
             <div className="flex items-center">
-              <Maximize className="w-4 h-4 mr-1 text-accent" /> {property.areaSqFt} sq ft
+              <Maximize className="w-4 h-4 mr-1 text-accent" /> {property.area_sq_ft} sq ft
             </div>
           )}
         </div>

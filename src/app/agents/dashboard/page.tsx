@@ -4,31 +4,50 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, ListChecks, PlusCircle, TrendingUp } from 'lucide-react'; // Removed MessageSquare
+import { Home, ListChecks, PlusCircle, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { mockProperties } from '@/lib/mock-data'; 
-import type { Agent } from '@/lib/types'; // For casting and property.agent
-import { useEffect, useState } from 'react';
+import type { Agent, Property } from '@/lib/types';
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AgentDashboardPage() {
-  const { user, loading: authLoading } = useAuth(); // Changed agent to user
+  const { user, loading: authLoading } = useAuth();
   const [agentPropertiesCount, setAgentPropertiesCount] = useState(0);
   const [activeListingsCount, setActiveListingsCount] = useState(0);
-  const [totalViewsCount, setTotalViewsCount] = useState(0);
-  // Removed totalInquiriesCount state
-  const [recentProperties, setRecentProperties] = useState<typeof mockProperties>([]);
+  const [pendingListingsCount, setPendingListingsCount] = useState(0);
+  const [recentProperties, setRecentProperties] = useState<Property[]>([]); // Property type
+  const { toast } = useToast();
+
+  const fetchAgentDashboardStats = useCallback(async (agentId: string) => {
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select('id, status, title, created_at, price') // Only select needed fields for dashboard
+      .eq('agent_id', agentId);
+
+    if (error) {
+      toast({ title: 'Error fetching agent stats', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    if (properties) {
+      setAgentPropertiesCount(properties.length);
+      setActiveListingsCount(properties.filter(p => p.status === 'approved').length);
+      setPendingListingsCount(properties.filter(p => p.status === 'pending').length);
+      
+      const sortedRecent = [...properties]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 3);
+      setRecentProperties(sortedRecent as Property[]); // Cast needed if select is partial
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'agent') {
       const currentAgent = user as Agent;
-      const properties = mockProperties.filter(p => p.agent.id === currentAgent.id);
-      setAgentPropertiesCount(properties.length);
-      setActiveListingsCount(properties.filter(p => p.price > 0).length); // Example criteria
-      setTotalViewsCount(properties.reduce((sum, p) => sum + (p.price / 1000), 0)); // Dummy calculation
-      // Removed totalInquiriesCount calculation
-      setRecentProperties(properties.slice(0,3));
+      fetchAgentDashboardStats(currentAgent.id);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchAgentDashboardStats]);
   
   if (authLoading) {
     return <div className="text-center py-10">Loading dashboard data...</div>;
@@ -57,47 +76,36 @@ export default function AgentDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"> {/* Adjusted grid to 3 columns */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <StatCard title="Total Listings" value={agentPropertiesCount.toString()} icon={<Home />} description="All properties you manage." />
-        <StatCard title="Active Listings" value={activeListingsCount.toString()} icon={<ListChecks />} description="Currently active on the market." />
-        <StatCard title="Total Views" value={Math.floor(totalViewsCount).toLocaleString()} icon={<TrendingUp />} description="Across all your listings." />
-        {/* Removed Inquiries Received StatCard */}
+        <StatCard title="Approved Listings" value={activeListingsCount.toString()} icon={<CheckCircle2 />} description="Currently live on the market." />
+        <StatCard title="Pending Review" value={pendingListingsCount.toString()} icon={<Clock />} description="Listings awaiting admin approval." />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline">Quick Actions</CardTitle>
-          </CardHeader>
+          <CardHeader> <CardTitle className="font-headline">Quick Actions</CardTitle> </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href="/agents/dashboard/my-listings"><ListChecks className="mr-2 h-4 w-4" /> View My Listings</Link>
-            </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href="/agents/dashboard/add-property"><PlusCircle className="mr-2 h-4 w-4" /> Add a New Property</Link>
-            </Button>
-            {/* Future actions can be added here */}
-            {/* <Button variant="outline" className="w-full justify-start"><UserCircle className="mr-2 h-4 w-4" /> Update Profile</Button> */}
+            <Button variant="outline" className="w-full justify-start" asChild> <Link href="/agents/dashboard/my-listings"><ListChecks className="mr-2 h-4 w-4" /> View My Listings</Link> </Button>
+            <Button variant="outline" className="w-full justify-start" asChild> <Link href="/agents/dashboard/add-property"><PlusCircle className="mr-2 h-4 w-4" /> Add a New Property</Link> </Button>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline">Recent Activity</CardTitle>
-            <CardDescription>Overview of recent events.</CardDescription>
-          </CardHeader>
+          <CardHeader> <CardTitle className="font-headline">Recent Listings</CardTitle> <CardDescription>Your latest additions.</CardDescription> </CardHeader>
           <CardContent>
             {recentProperties.length > 0 ? (
               <ul className="space-y-3">
                 {recentProperties.map(prop => (
                   <li key={prop.id} className="text-sm p-2 border rounded-md hover:bg-muted transition-colors">
                     <Link href={`/properties/${prop.id}`} className="font-medium text-primary hover:underline">{prop.title}</Link>
-                    <p className="text-xs text-muted-foreground">Added/Updated recently</p>
+                    <p className="text-xs text-muted-foreground">Added on: {new Date(prop.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-muted-foreground capitalize">Status: {prop.status}</p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground">No recent activity. Add some listings!</p>
+              <p className="text-muted-foreground">No listings yet. Add some!</p>
             )}
           </CardContent>
         </Card>

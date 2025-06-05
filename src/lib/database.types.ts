@@ -128,7 +128,7 @@ export type Database = {
       properties: {
         Row: {
           address: string
-          agent_id: string
+          agent_id: string | null
           amenities: Json | null
           area_sq_ft: number | null
           bathrooms: number
@@ -156,7 +156,7 @@ export type Database = {
         }
         Insert: {
           address: string
-          agent_id: string
+          agent_id?: string | null
           amenities?: Json | null
           area_sq_ft?: number | null
           bathrooms?: number
@@ -184,7 +184,7 @@ export type Database = {
         }
         Update: {
           address?: string
-          agent_id?: string
+          agent_id?: string | null
           amenities?: Json | null
           area_sq_ft?: number | null
           bathrooms?: number

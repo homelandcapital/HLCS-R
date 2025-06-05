@@ -2,11 +2,10 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { mockProperties } from '@/lib/mock-data';
-import type { Property, Agent } from '@/lib/types';
+import type { Property, Agent, UserRole } from '@/lib/types';
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Home as HomeIcon, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Building2 } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function PropertyDetailsPage() {
   const params = useParams();
@@ -30,24 +30,45 @@ export default function PropertyDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isInquiryDialogOpen, setIsInquiryDialogOpen] = useState(false);
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user: authContextUser, isAuthenticated, loading: authLoading } = useAuth(); // Renamed to avoid conflict
   const router = useRouter();
   const { toast } = useToast();
 
+  const fetchPropertyDetails = useCallback(async (propertyId: string) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`
+        *,
+        agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
+      `)
+      .eq('id', propertyId)
+      .maybeSingle(); // Use maybeSingle as it might return null if not found
+
+    if (error) {
+      console.error('Error fetching property details:', error);
+      toast({ title: 'Error', description: 'Could not fetch property details.', variant: 'destructive' });
+      setProperty(null);
+    } else if (data) {
+      const formattedProperty = {
+        ...data,
+        agent: data.agent ? { ...(data.agent as any), role: 'agent' as UserRole, id: data.agent.id! } as Agent : undefined,
+        images: data.images ? (Array.isArray(data.images) ? data.images : [String(data.images)]) : [],
+        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : [String(data.amenities)]) : [],
+      } as Property;
+      setProperty(formattedProperty);
+    } else {
+      setProperty(null); // Property not found
+    }
+    setLoading(false);
+    setCurrentImageIndex(0);
+  }, [toast]);
+
   useEffect(() => {
     if (id) {
-      setTimeout(() => {
-        const foundProperty = mockProperties.find(p => p.id === id);
-        if (foundProperty) {
-          setProperty(foundProperty);
-        } else {
-          setProperty(null);
-        }
-        setLoading(false);
-        setCurrentImageIndex(0);
-      }, 500);
+      fetchPropertyDetails(id);
     }
-  }, [id]);
+  }, [id, fetchPropertyDetails]);
 
   const handleInquireClick = () => {
     if (authLoading) return;
@@ -97,28 +118,31 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  const { agent } = property;
+  const { agent } = property; // Agent should now be populated from the Supabase query
+  const images = property.images || [];
 
   const prevImage = () => {
     setCurrentImageIndex((prevIndex) =>
-      prevIndex === 0 ? property.images.length - 1 : prevIndex - 1
+      prevIndex === 0 ? images.length - 1 : prevIndex - 1
     );
   };
 
   const nextImage = () => {
     setCurrentImageIndex((prevIndex) =>
-      prevIndex === property.images.length - 1 ? 0 : prevIndex + 1
+      prevIndex === images.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   let contactFormInitialData: { name?: string; email?: string; phone?: string } = {};
-  if (user) {
-    contactFormInitialData.name = user.name;
-    contactFormInitialData.email = user.email;
-    if (user.role === 'agent') { 
-      contactFormInitialData.phone = (user as Agent).phone;
+  if (authContextUser) {
+    contactFormInitialData.name = authContextUser.name;
+    contactFormInitialData.email = authContextUser.email;
+    if (authContextUser.role === 'agent') { 
+      contactFormInitialData.phone = (authContextUser as Agent).phone;
     }
   }
+  const defaultImage = 'https://placehold.co/1200x800.png?text=No+Image';
+  const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
 
   return (
     <div className="space-y-8">
@@ -128,9 +152,9 @@ export default function PropertyDetailsPage() {
             <div>
               <h1 className="text-3xl md:text-4xl font-headline text-primary mb-1">{property.title}</h1>
               <div className="flex items-center text-muted-foreground text-sm mb-2">
-                <Badge variant="outline" className="mr-2">{property.listingType}</Badge>
+                <Badge variant="outline" className="mr-2">{property.listing_type}</Badge>
                 <MapPin className="w-4 h-4 mr-1" />
-                {property.address}, {property.location}, {property.state}
+                {property.address}, {property.location_area_city}, {property.state}
               </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
@@ -167,10 +191,10 @@ export default function PropertyDetailsPage() {
       <Card className="shadow-lg">
         <CardContent className="p-2 md:p-4">
           <div className="relative w-full aspect-[16/10] rounded-md overflow-hidden group">
-            {property.images && property.images.length > 0 ? (
+            {images.length > 0 ? (
               <>
                 <Image
-                  src={property.images[currentImageIndex]}
+                  src={mainDisplayImage}
                   alt={`${property.title} - Image ${currentImageIndex + 1}`}
                   layout="fill"
                   objectFit="cover"
@@ -178,57 +202,33 @@ export default function PropertyDetailsPage() {
                   data-ai-hint="property interior detail"
                   priority={true}
                 />
-                {property.images.length > 1 && (
+                {images.length > 1 && (
                   <>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-background/60 hover:bg-background/90 text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                      onClick={prevImage}
-                      aria-label="Previous Image"
-                    >
-                      <ChevronLeft className="h-6 w-6" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-background/60 hover:bg-background/90 text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                      onClick={nextImage}
-                      aria-label="Next Image"
-                    >
-                      <ChevronRight className="h-6 w-6" />
-                    </Button>
+                    <Button variant="outline" size="icon" className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-background/60 hover:bg-background/90 text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-full" onClick={prevImage} aria-label="Previous Image"> <ChevronLeft className="h-6 w-6" /> </Button>
+                    <Button variant="outline" size="icon" className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-background/60 hover:bg-background/90 text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-full" onClick={nextImage} aria-label="Next Image"> <ChevronRight className="h-6 w-6" /> </Button>
                   </>
                 )}
               </>
             ) : (
-              <div className="w-full h-full bg-muted flex items-center justify-center">
+              <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
                 <EyeOff className="w-12 h-12 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">No images available</p>
               </div>
             )}
           </div>
 
-          {property.images && property.images.length > 1 && (
+          {images.length > 1 && (
             <div className="mt-3">
               <ScrollArea className="w-full whitespace-nowrap rounded-md">
                 <div className="flex space-x-2 p-1">
-                  {property.images.map((img, index) => (
+                  {images.map((img, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={cn(
-                        "block rounded-md overflow-hidden w-20 h-14 md:w-24 md:h-16 relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-background",
-                        currentImageIndex === index ? "ring-2 ring-primary ring-offset-2" : "hover:opacity-75 transition-opacity"
-                      )}
+                      className={cn( "block rounded-md overflow-hidden w-20 h-14 md:w-24 md:h-16 relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-background", currentImageIndex === index ? "ring-2 ring-primary ring-offset-2" : "hover:opacity-75 transition-opacity" )}
                       aria-label={`View image ${index + 1}`}
                     >
-                      <Image
-                        src={img}
-                        alt={`Thumbnail ${property.title} ${index + 1}`}
-                        layout="fill"
-                        objectFit="cover"
-                      />
+                      <Image src={img} alt={`Thumbnail ${property.title} ${index + 1}`} layout="fill" objectFit="cover" />
                     </button>
                   ))}
                 </div>
@@ -242,17 +242,15 @@ export default function PropertyDetailsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline">Property Details</CardTitle>
-            </CardHeader>
+            <CardHeader> <CardTitle className="font-headline">Property Details</CardTitle> </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-foreground">
-                <DetailItem icon={<Building2 />} label="Property Type" value={property.type} />
+                <DetailItem icon={<Building2 />} label="Property Type" value={property.property_type} />
                 <DetailItem icon={<BedDouble />} label="Bedrooms" value={property.bedrooms.toString()} />
                 <DetailItem icon={<Bath />} label="Bathrooms" value={property.bathrooms.toString()} />
-                {property.areaSqFt && <DetailItem icon={<Maximize />} label="Area" value={`${property.areaSqFt} sq ft`} />}
-                {property.yearBuilt && <DetailItem icon={<CalendarDays />} label="Year Built" value={property.yearBuilt.toString()} />}
-                <DetailItem icon={<Tag />} label="Listing Type" value={property.listingType} />
+                {property.area_sq_ft && <DetailItem icon={<Maximize />} label="Area" value={`${property.area_sq_ft} sq ft`} />}
+                {property.year_built && <DetailItem icon={<CalendarDays />} label="Year Built" value={property.year_built.toString()} />}
+                <DetailItem icon={<Tag />} label="Listing Type" value={property.listing_type} />
               </div>
               <Separator className="my-6" />
               <h3 className="text-xl font-headline mb-2">Description</h3>
@@ -262,101 +260,58 @@ export default function PropertyDetailsPage() {
                   <Separator className="my-6" />
                   <h3 className="text-xl font-headline mb-3">Amenities</h3>
                   <div className="flex flex-wrap gap-2">
-                    {property.amenities.map(amenity => (
-                      <Badge key={amenity} variant="secondary" className="text-sm px-3 py-1">{amenity}</Badge>
-                    ))}
+                    {property.amenities.map(amenity => ( <Badge key={amenity} variant="secondary" className="text-sm px-3 py-1">{amenity}</Badge> ))}
                   </div>
                 </>
               )}
             </CardContent>
           </Card>
-          <PropertyMap coordinates={property.coordinates} title={property.title} />
+          {property.coordinates_lat && property.coordinates_lng &&
+            <PropertyMap coordinates={{lat: property.coordinates_lat, lng: property.coordinates_lng}} title={property.title} />
+          }
         </div>
         <div className="space-y-8">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-headline">Listed By</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center space-y-3">
-              <Avatar className="w-24 h-24 border-2 border-primary">
-                <AvatarImage src={agent.avatarUrl || `https://placehold.co/100x100.png`} alt={agent.name} data-ai-hint="professional portrait" />
-                <AvatarFallback>{agent.name.substring(0,2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
-              {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
-              {agent.phone && 
-                <div className="flex items-center text-sm text-foreground">
-                  <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone}
-                </div>
-              }
-              {agent.email &&
-                <div className="flex items-center text-sm text-foreground">
-                  <Mail className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.email}
-                </div>
-              }
-            </CardContent>
-          </Card>
+          {agent && (
+            <Card className="shadow-lg">
+              <CardHeader> <CardTitle className="font-headline">Listed By</CardTitle> </CardHeader>
+              <CardContent className="flex flex-col items-center text-center space-y-3">
+                <Avatar className="w-24 h-24 border-2 border-primary">
+                  <AvatarImage src={agent.avatar_url || `https://placehold.co/100x100.png`} alt={agent.name} data-ai-hint="professional portrait" />
+                  <AvatarFallback>{agent.name.substring(0,2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
+                {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
+                {agent.phone && <div className="flex items-center text-sm text-foreground"> <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone} </div> }
+                {agent.email && <div className="flex items-center text-sm text-foreground"> <Mail className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.email} </div> }
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | undefined }) => {
-  if (value === undefined) return null;
+const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | undefined | null }) => {
+  if (value === undefined || value === null) return null;
   return (
     <div className="flex items-start">
       <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span>
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-semibold">{value}</p>
-      </div>
+      <div> <p className="text-sm text-muted-foreground">{label}</p> <p className="font-semibold">{value}</p> </div>
     </div>
   );
 };
 
-
 const PropertyDetailsSkeleton = () => (
   <div className="space-y-8">
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div> <Skeleton className="h-10 w-3/4 mb-2" /> <Skeleton className="h-6 w-1/2" /> </div>
-          <Skeleton className="h-12 w-1/4 md:w-1/6" />
-        </div>
-      </CardContent>
-    </Card>
-    <Card>
-      <CardContent className="p-2 md:p-4">
-        <Skeleton className="aspect-[16/10] w-full rounded-md" />
-        <div className="mt-3 flex space-x-2 p-1">
-          {[...Array(4)].map((_, i) => ( <Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" /> ))}
-        </div>
-      </CardContent>
-    </Card>
+    <Card> <CardContent className="p-6"> <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"> <div> <Skeleton className="h-10 w-3/4 mb-2" /> <Skeleton className="h-6 w-1/2" /> </div> <Skeleton className="h-12 w-1/4 md:w-1/6" /> </div> </CardContent> </Card>
+    <Card> <CardContent className="p-2 md:p-4"> <Skeleton className="aspect-[16/10] w-full rounded-md" /> <div className="mt-3 flex space-x-2 p-1"> {[...Array(4)].map((_, i) => ( <Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" /> ))} </div> </CardContent> </Card>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-8">
-        <Card>
-          <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4"> {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)} </div>
-            <Skeleton className="h-px w-full my-6" />
-            <Skeleton className="h-6 w-1/4 mb-2" /> <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-px w-full my-6" />
-            <Skeleton className="h-6 w-1/3 mb-3" />
-            <div className="flex flex-wrap gap-2"> {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-20" />)} </div>
-          </CardContent>
-        </Card>
+        <Card> <CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader> <CardContent className="space-y-4"> <div className="grid grid-cols-2 sm:grid-cols-3 gap-4"> {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)} </div> <Skeleton className="h-px w-full my-6" /> <Skeleton className="h-6 w-1/4 mb-2" /> <Skeleton className="h-20 w-full" /> <Skeleton className="h-px w-full my-6" /> <Skeleton className="h-6 w-1/3 mb-3" /> <div className="flex flex-wrap gap-2"> {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-20" />)} </div> </CardContent> </Card>
         <Card><CardContent className="p-6"><Skeleton className="h-96 w-full" /></CardContent></Card>
       </div>
-      <div className="space-y-8">
-        <Card>
-          <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader>
-          <CardContent className="flex flex-col items-center space-y-3">
-            <Skeleton className="w-24 h-24 rounded-full" /> <Skeleton className="h-6 w-3/4" /> <Skeleton className="h-4 w-1/2" />
-          </CardContent>
-        </Card>
-      </div>
+      <div className="space-y-8"> <Card> <CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader> <CardContent className="flex flex-col items-center space-y-3"> <Skeleton className="w-24 h-24 rounded-full" /> <Skeleton className="h-6 w-3/4" /> <Skeleton className="h-4 w-1/2" /> </CardContent> </Card> </div>
     </div>
   </div>
 );

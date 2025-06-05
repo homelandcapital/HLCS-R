@@ -2,22 +2,22 @@
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
-  id: string; // Supabase user ID is UUID, comes as string
+  id: string; 
   name: string;
   email: string;
-  avatarUrl?: string;
+  avatar_url?: string | null; // Changed from avatarUrl to match DB
   role: UserRole;
 }
 
 export interface Agent extends BaseUser {
   role: 'agent';
   phone: string;
-  agency?: string;
+  agency?: string | null;
 }
 
 export interface GeneralUser extends BaseUser {
   role: 'user';
-  savedPropertyIds?: string[]; // These would be property UUIDs from the DB
+  savedPropertyIds?: string[];
 }
 
 export interface PlatformAdmin extends BaseUser {
@@ -26,10 +26,11 @@ export interface PlatformAdmin extends BaseUser {
 
 export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
 
-// ENUM types matching the database
-export type PropertyStatus = 'pending' | 'approved' | 'rejected';
+
+export type PropertyStatus = Database['public']['Enums']['property_status_enum'];
 export const propertyStatuses: PropertyStatus[] = ['pending', 'approved', 'rejected'];
 
+export type NigerianState = Database['public']['Enums']['nigerian_state_enum'];
 export const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
   "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo",
@@ -37,12 +38,11 @@ export const nigerianStates = [
   "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ] as const;
-export type NigerianState = typeof nigerianStates[number];
 
-export type ListingType = 'For Sale' | 'For Rent' | 'For Lease';
+export type ListingType = Database['public']['Enums']['listing_type_enum'];
 export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
-export type PropertyTypeEnum = 'House' | 'Apartment' | 'Condo' | 'Townhouse' | 'Land';
+export type PropertyTypeEnum = Database['public']['Enums']['property_type_enum'];
 export const propertyTypes: PropertyTypeEnum[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land'];
 
 
@@ -54,43 +54,55 @@ export interface PromotionTierConfig {
   description: string;
 }
 
-// Updated Property interface to align with the new database schema
+export interface PromotionDetails {
+  tier_id: string;
+  tier_name: string;
+  promoted_at: string;
+}
+
+// Interface for Property aligning with Supabase 'properties' table
 export interface Property {
-  id: string; // UUID from DB
+  id: string; // UUID
   title: string;
   description: string;
-  price: number;
-  listing_type: ListingType; // Column name: listing_type
-  location_area_city: string; // Column name: location_area_city
+  price: number; // NUMERIC
+  listing_type: ListingType;
+  location_area_city: string;
   state: NigerianState;
   address: string;
-  property_type: PropertyTypeEnum; // Column name: property_type
-  bedrooms: number;
-  bathrooms: number;
-  area_sq_ft?: number | null; // Nullable in DB
-  images?: string[] | null; // JSONB, maps to string[] or null
-  amenities?: string[] | null; // JSONB, maps to string[] or null
-  year_built?: number | null; // Nullable in DB
-  coordinates_lat?: number | null; // Nullable in DB
-  coordinates_lng?: number | null; // Nullable in DB
+  property_type: PropertyTypeEnum;
+  bedrooms: number; // INT
+  bathrooms: number; // INT
+  area_sq_ft?: number | null; // NUMERIC
+  images?: string[] | null; // JSONB (array of URLs)
+  amenities?: string[] | null; // JSONB (array of strings)
+  year_built?: number | null; // INT
+  coordinates_lat?: number | null; // DOUBLE PRECISION
+  coordinates_lng?: number | null; // DOUBLE PRECISION
   
-  agent_id: string; // UUID of the agent from users table
-  agent?: Agent; // Optional: To be populated by client-side join/fetch if needed
+  agent_id: string | null; // UUID, FK to users.id
+  agent?: Agent | null; // For populated agent data
 
   status: PropertyStatus;
-  rejection_reason?: string | null; // Nullable in DB
+  rejection_reason?: string | null; // TEXT
 
-  is_promoted?: boolean | null; // Nullable in DB
-  promotion_tier_id?: string | null; // Nullable in DB
-  promotion_tier_name?: string | null; // Nullable in DB
-  promoted_at?: string | null; // TIMESTAMPTZ, maps to string or null
+  is_promoted?: boolean | null; // BOOLEAN
+  promotion_tier_id?: string | null; // TEXT
+  promotion_tier_name?: string | null; // TEXT
+  promoted_at?: string | null; // TIMESTAMPTZ (ISO string)
+  
+  created_at: string; // TIMESTAMPTZ (ISO string)
+  updated_at: string; // TIMESTAMPTZ (ISO string)
 
-  created_at: string; // TIMESTAMPTZ from DB
-  updated_at: string; // TIMESTAMPTZ from DB
+  // The fields below are not directly in DB `properties` table
+  // but used for frontend convenience or joined data previously.
+  // Keep if components rely on them and map data appropriately.
+  // For example, promotionDetails was a client-side construct.
+  promotionDetails?: PromotionDetails | null; // For UI convenience, map from DB fields
 }
 
 
-export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
+export type InquiryStatus = Database['public']['Enums']['inquiry_status'];
 export const inquiryStatuses: InquiryStatus[] = ['new', 'contacted', 'resolved', 'archived'];
 
 export interface InquiryMessage {
@@ -105,14 +117,14 @@ export interface InquiryMessage {
 
 export interface Inquiry {
   id: string; 
-  property_id: string; // This should now be a UUID from the properties table
+  property_id: string; 
   property_name: string;
   inquirer_name: string;
   inquirer_email: string;
   inquirer_phone?: string | null;
   initial_message: string; 
-  created_at: string; // Mapped from dateReceived
-  updated_at?: string; 
+  created_at: string; 
+  updated_at?: string | null; // Make nullable
   status: InquiryStatus;
   user_id?: string | null; 
   conversation?: InquiryMessage[];
@@ -219,3 +231,6 @@ export interface PlatformSettings {
   notificationEmail: string;
   predefinedAmenities: string;
 }
+
+// Import Database type from supabase
+import type { Database } from './database.types';

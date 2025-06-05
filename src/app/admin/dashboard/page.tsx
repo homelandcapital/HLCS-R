@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,25 +6,55 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Users, Home, ShieldCheck, Settings, BarChart3, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { mockProperties, mockAgents, mockGeneralUsers } from '@/lib/mock-data';
 import type { PlatformAdmin } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const [totalProperties, setTotalProperties] = useState(0);
   const [totalAgents, setTotalAgents] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
-  // Add more state for other stats as needed
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  const { toast } = useToast();
+
+  const fetchDashboardStats = useCallback(async () => {
+    const { count: propertiesCount, error: propertiesError } = await supabase
+      .from('properties')
+      .select('id', { count: 'exact', head: true });
+    if (propertiesError) toast({ title: 'Error fetching properties count', description: propertiesError.message, variant: 'destructive' });
+    else setTotalProperties(propertiesCount || 0);
+
+    const { count: agentsCount, error: agentsError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'agent');
+    if (agentsError) toast({ title: 'Error fetching agents count', description: agentsError.message, variant: 'destructive' });
+    else setTotalAgents(agentsCount || 0);
+    
+    const { count: generalUsersCount, error: usersError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('role', 'user');
+    if (usersError) toast({ title: 'Error fetching users count', description: usersError.message, variant: 'destructive' });
+    else setTotalUsers(generalUsersCount || 0);
+
+    const { count: pendingPropsCount, error: pendingPropsError } = await supabase
+      .from('properties')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    if (pendingPropsError) toast({ title: 'Error fetching pending properties', description: pendingPropsError.message, variant: 'destructive' });
+    else setPendingApprovals(pendingPropsCount || 0);
+
+  }, [toast]);
+
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'platform_admin') {
-      setTotalProperties(mockProperties.length);
-      setTotalAgents(mockAgents.length);
-      setTotalUsers(mockGeneralUsers.length);
-      // Fetch other stats if necessary
+      fetchDashboardStats();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchDashboardStats]);
 
   if (authLoading) {
     return <div className="text-center py-10">Loading admin dashboard data...</div>;
@@ -60,7 +89,6 @@ export default function AdminDashboardPage() {
         <StatCard title="Total Properties" value={totalProperties.toString()} icon={<Home />} description="Active listings on the platform." />
         <StatCard title="Registered Agents" value={totalAgents.toString()} icon={<Users />} description="Agents using the platform." />
         <StatCard title="Registered Users" value={totalUsers.toString()} icon={<Users color="var(--chart-2)" />} description="General users of the platform." />
-        {/* Add more StatCards as needed, e.g., Pending Approvals, Site Traffic, etc. */}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -101,11 +129,12 @@ export default function AdminDashboardPage() {
              <div className="flex items-center justify-between p-3 bg-muted rounded-md">
                 <div className="flex items-center">
                     <AlertTriangle className="mr-2 h-5 w-5 text-orange-500" />
-                    <span>0 Pending Approvals</span>
+                    <span>{pendingApprovals} Pending Approvals</span>
                 </div>
-                <Button variant="ghost" size="sm">Review</Button>
+                 <Button variant="ghost" size="sm" asChild>
+                    <Link href="/admin/dashboard/property-oversight">Review</Link>
+                </Button>
             </div>
-            {/* More system status items */}
           </CardContent>
         </Card>
       </div>
@@ -134,4 +163,3 @@ function StatCard({ title, value, icon, description }: StatCardProps) {
     </Card>
   );
 }
-
