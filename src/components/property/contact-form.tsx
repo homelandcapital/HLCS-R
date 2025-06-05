@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardTitle
 import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Phone } from 'lucide-react';
 import { mockInquiries } from '@/lib/mock-data';
@@ -97,13 +97,9 @@ const ContactForm = ({
   }
 
   return (
-    <Card className="shadow-none border-none"> {/* Remove Card styling if used in Dialog */}
-      <CardHeader className="px-0 pt-0 pb-4"> {/* Adjust padding if needed */}
-        <CardTitle className="font-headline flex items-center text-lg sr-only"> {/* Sr-only if DialogTitle is present */}
-          <Mail className="w-5 h-5 mr-2 text-primary" /> Contact Platform Admin
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0"> {/* Adjust padding if needed */}
+    <Card className="shadow-none border-none">
+      {/* Removed CardHeader and its CardTitle from here */}
+      <CardContent className="p-0"> {/* Adjust padding if needed, was p-0 */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -178,4 +174,3 @@ const ContactForm = ({
 };
 
 export default ContactForm;
-
