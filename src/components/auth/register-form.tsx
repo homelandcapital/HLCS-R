@@ -89,6 +89,7 @@ const RegisterForm = () => {
       // Redirection will be handled by onAuthStateChange in AuthContext
       // For agent, it might go to /agents/dashboard, for user to /users/dashboard or /
       // toast message is handled in signUpUser/signUpAgent
+      form.reset(); // Reset form fields on success
     } else if (result && result.error) {
       // Toast message already handled by signUpUser/signUpAgent
       form.setError("email", { type: "manual", message: result.error.message });
