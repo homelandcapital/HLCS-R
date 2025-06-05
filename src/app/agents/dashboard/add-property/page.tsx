@@ -16,11 +16,20 @@ import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, Calen
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Agent, NigerianState, ListingType, PropertyTypeEnum } from '@/lib/types';
-import { nigerianStates, listingTypes, propertyTypes } from '@/lib/types'; 
+import { nigerianStates, listingTypes, propertyTypes } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 
-// Schema matches the form fields, will be mapped to DB schema on submit
+// Helper function to generate random alphanumeric string
+function generateRandomAlphanumeric(length: number): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   humanReadableId: z.string().optional().refine(val => !val || /^[a-zA-Z0-9-]*$/.test(val), {
@@ -72,7 +81,7 @@ export default function AddPropertyPage() {
       locationAreaCity: '',
       state: undefined,
       address: '',
-      price: undefined, 
+      price: undefined,
       bedrooms: 0,
       bathrooms: 0,
       areaSqFt: undefined,
@@ -97,9 +106,15 @@ export default function AddPropertyPage() {
 
       const currentAgent = user as Agent;
 
+      let finalHumanReadableId = values.humanReadableId?.trim() || null;
+      if (!finalHumanReadableId) {
+        const randomSuffix = generateRandomAlphanumeric(7);
+        finalHumanReadableId = `HLC-${randomSuffix}`;
+      }
+
       const propertyDataToInsert: TablesInsert<'properties'> = {
         title: values.title,
-        human_readable_id: values.humanReadableId || null, // Save new ID
+        human_readable_id: finalHumanReadableId,
         description: values.description,
         price: values.price,
         listing_type: values.listingType,
@@ -110,18 +125,18 @@ export default function AddPropertyPage() {
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
         area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
-        images: [ 
-          'https://placehold.co/600x400.png?width=600&height=400',
-          'https://placehold.co/600x400.png?width=600&height=401'
+        images: [
+          'https://placehold.co/600x400.png', // Using simpler placeholders now that width/height are in URL
+          'https://placehold.co/600x401.png'
         ],
         agent_id: currentAgent.id,
-        status: 'pending', 
+        status: 'pending',
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : null,
         year_built: values.yearBuilt ? Number(values.yearBuilt) : null,
         coordinates_lat: values.latitude ? Number(values.latitude) : null,
         coordinates_lng: values.longitude ? Number(values.longitude) : null,
       };
-      
+
       const { data: newProperty, error } = await supabase
         .from('properties')
         .insert(propertyDataToInsert)
@@ -132,15 +147,15 @@ export default function AddPropertyPage() {
         console.error("Error saving property to DB:", error);
         toast({
           title: 'Error Adding Property',
-          description: `Could not save property: ${error.message}. Please try again.`,
+          description: `Could not save property: ${error.message}. This could be due to a duplicate Custom Property ID if one was provided or generated. Please try again or contact support.`,
           variant: 'destructive',
         });
         return;
       }
-      
+
       toast({
         title: 'Property Submitted for Review!',
-        description: `${values.title} has been submitted. It will be reviewed by an admin.`,
+        description: `${values.title} (ID: ${finalHumanReadableId}) has been submitted. It will be reviewed by an admin.`,
       });
       form.reset();
       router.push('/agents/dashboard/my-listings');
@@ -185,7 +200,7 @@ export default function AddPropertyPage() {
                     <FormItem>
                       <FormLabel className="flex items-center"><Hash className="w-4 h-4 mr-1 text-muted-foreground"/>Custom Property ID (Optional)</FormLabel>
                       <FormControl><Input placeholder="e.g., IKEJA-DUPLEX-001" {...field} /></FormControl>
-                      <FormDescription className="text-xs">User-friendly ID for display. Unique if provided.</FormDescription>
+                      <FormDescription className="text-xs">Leave blank for auto-generation (e.g., HLC-XXXXXXX).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -232,7 +247,7 @@ export default function AddPropertyPage() {
                 />
                  <FormField
                   control={form.control}
-                  name="locationAreaCity" 
+                  name="locationAreaCity"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Location (Area/City)</FormLabel>
@@ -386,7 +401,7 @@ export default function AddPropertyPage() {
                   </FormItem>
                 )}
               />
-              
+
               <FormItem>
                 <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1 text-muted-foreground"/>Property Images</FormLabel>
                 <FormControl>
@@ -406,3 +421,5 @@ export default function AddPropertyPage() {
     </div>
   );
 }
+
+    
