@@ -22,10 +22,10 @@ import type { PromotionTierConfig } from '@/lib/types'; // Import PromotionTierC
 
 interface AdminPromotionTier { // Local interface for form state (strings for fee/duration)
   id: string;
-  name: string;
+  name: string; 
   icon: React.ReactNode;
-  fee: string; // Kept as string for input field compatibility
-  duration: string; // Kept as string for input field compatibility
+  fee: string; 
+  duration: string; 
   description: string;
 }
 
@@ -48,7 +48,7 @@ export default function PlatformSettingsPage() {
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiers);
 
-  const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'name' | 'icon'>, value: string) => {
+  const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'icon'>, value: string) => {
     setAdminPromotionTiers(currentTiers =>
       currentTiers.map(tier =>
         tier.id === tierId ? { ...tier, [field]: value } : tier
@@ -61,8 +61,8 @@ export default function PlatformSettingsPage() {
     const savedPromotionTiers: PromotionTierConfig[] = adminPromotionTiers.map(tier => ({
       id: tier.id,
       name: tier.name,
-      fee: parseFloat(tier.fee) || 0, // Convert to number, default to 0 if invalid
-      duration: parseInt(tier.duration, 10) || 0, // Convert to number, default to 0 if invalid
+      fee: parseFloat(tier.fee) || 0, 
+      duration: parseInt(tier.duration, 10) || 0, 
       description: tier.description,
     }));
 
@@ -73,7 +73,7 @@ export default function PlatformSettingsPage() {
       notificationEmail, 
       predefinedAmenities,
       promotionsEnabled,
-      promotionTiers: savedPromotionTiers, // Log the converted tiers
+      promotionTiers: savedPromotionTiers, 
     });
     toast({
       title: 'Settings Saved',
@@ -164,10 +164,20 @@ export default function PlatformSettingsPage() {
             {adminPromotionTiers.map((tier) => (
               <Card key={tier.id} className={!promotionsEnabled ? 'opacity-50 pointer-events-none' : ''}>
                 <CardHeader>
-                  <CardTitle className="font-headline text-lg flex items-center">
-                    {tier.icon}
-                    <span className="ml-2">{tier.name}</span>
-                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0">{tier.icon}</span>
+                    <div className="flex-grow">
+                      <Label htmlFor={`${tier.id}-name`} className="text-xs font-medium text-muted-foreground">Tier Name</Label>
+                      <Input
+                        id={`${tier.id}-name`}
+                        value={tier.name}
+                        onChange={(e) => handleTierChange(tier.id, 'name', e.target.value)}
+                        placeholder="e.g., Basic Boost"
+                        className="text-lg font-headline mt-0.5" 
+                        disabled={!promotionsEnabled}
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -231,7 +241,7 @@ export default function PlatformSettingsPage() {
               onChange={(e) => setPredefinedAmenities(e.target.value)}
               placeholder="Enter comma-separated amenities, e.g., Pool, Garage, Gym"
               rows={3}
-              disabled // For now, keep it simple. Full implementation would be complex.
+              disabled 
             />
             <p className="text-xs text-muted-foreground">
               (Placeholder) Define a list of standard amenities. In a full implementation, these could become selectable options for agents. Currently, this field is for display only.
@@ -370,3 +380,4 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
+
