@@ -20,6 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const cloudinaryBaseUrl = "https://res.cloudinary.com/douzsh9ui/image/upload";
+  // Ensure this path points to the "HC" logo with teal H and gold C
   const logoVersionAndPath = "v1749088331/main-inverted-logo-no-bg_o987qt.png";
 
   return (
