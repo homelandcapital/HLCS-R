@@ -122,15 +122,17 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
               asChild
             >
               <Link href={item.href} className="flex items-center justify-between w-full">
-                 <div className="flex items-center">
-                    {item.icon}
-                    <span className="ml-2">{item.label}</span>
-                </div>
-                {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
-                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                      {unreadUserMessagesCount}
-                    </Badge>
-                )}
+                <>
+                  <div className="flex items-center">
+                      {item.icon}
+                      <span className="ml-2">{item.label}</span>
+                  </div>
+                  {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
+                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
+                        {unreadUserMessagesCount}
+                      </Badge>
+                  )}
+                </>
               </Link>
             </Button>
             );

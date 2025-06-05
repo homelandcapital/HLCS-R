@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, UserCircle } from "lucide-react"; // Removed HomeIcon, Briefcase, Info, MailIcon, Building
+import { Menu, LogOut, LayoutDashboard, UserCircle } from "lucide-react"; 
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
@@ -85,8 +85,10 @@ const Navbar = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild onClick={closeMobileMenu}>
               <Link href={getDashboardPath()} className="flex items-center cursor-pointer">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <span>Dashboard</span>
+                <>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  <span>Dashboard</span>
+                </>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -102,10 +104,10 @@ const Navbar = () => {
     return (
       <div className={`flex gap-2 ${isMobile ? 'flex-col pt-4 border-t border-border' : 'items-center'}`}>
         <Button variant={isMobile ? "outline" : "ghost"} asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
-          <Link href="/agents/login">Login</Link>
+          <Link href="/agents/login"><span>Login</span></Link>
         </Button>
         <Button asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
-          <Link href="/agents/register">Register</Link>
+          <Link href="/agents/register"><span>Register</span></Link>
         </Button>
       </div>
     );
@@ -120,7 +122,7 @@ const Navbar = () => {
           {navLinks.map(link => (
             <Button key={link.href} variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
               <Link href={link.href} className="flex items-center">
-                {link.label}
+                <span>{link.label}</span>
               </Link>
             </Button>
           ))}
@@ -146,7 +148,7 @@ const Navbar = () => {
                {navLinks.map(link => (
                   <Button key={link.href} variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
                     <Link href={link.href} className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
-                        {link.label}
+                        <span>{link.label}</span>
                     </Link>
                   </Button>
                 ))}

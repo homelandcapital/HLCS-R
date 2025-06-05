@@ -37,24 +37,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user || user.role !== 'platform_admin') return;
-
-    // Count inquiries where status is 'new' AND there's no conversation yet (initial inquiry)
-    const { count: newInquiriesCount, error: newInquiriesError } = await supabase
-      .from('inquiries')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'new')
-      .is('conversation', null); 
-
-    // A more robust way is to count inquiries where the last message is from a user.
-    // This requires fetching messages, which might be heavy for a layout.
-    // For simplicity, let's count inquiries with status 'new' for now.
-    // A more advanced solution would be a dedicated 'unread_for_admin' flag or a function.
-    // As a proxy: count inquiries where status is 'new' OR last message is from 'user'
     
-    const { data: inquiriesWithLastUserMessage, error: lastUserMessageError } = await supabase
-      .rpc('count_inquiries_with_last_user_message'); // Assumes a DB function
-
-    // If DB function not available, use client-side approximation or simpler 'new' count:
     let count = 0;
     const { data: allInquiries, error: inquiriesError } = await supabase
       .from('inquiries')
@@ -68,7 +51,6 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             if (inq.status === 'new' && (!inq.conversation || inq.conversation.length === 0)) {
                 count++;
             } else if (inq.conversation && inq.conversation.length > 0) {
-                // Ensure conversation is sorted by timestamp if not already
                 const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 if (sortedConversation[0]?.sender_role === 'user') {
                     count++;
@@ -83,9 +65,8 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'platform_admin') {
       fetchUnreadCount();
-      // Consider setting up a Supabase real-time subscription for inquiries/messages to update count live.
     }
-  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); // Re-fetch on pathname change too
+  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); 
 
   useEffect(() => {
     if (!loading) {
@@ -141,15 +122,17 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
                 asChild
               >
                 <Link href={item.href} className="flex items-center justify-between w-full"> 
-                  <div className="flex items-center"> 
-                    {item.icon}
-                    <span className="ml-2">{item.label}</span>
-                  </div>
-                  {isMailItem && unreadAdminMessagesCount > 0 && (
-                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                      {unreadAdminMessagesCount}
-                    </Badge>
-                  )}
+                  <>
+                    <div className="flex items-center"> 
+                      {item.icon}
+                      <span className="ml-2">{item.label}</span>
+                    </div>
+                    {isMailItem && unreadAdminMessagesCount > 0 && (
+                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
+                        {unreadAdminMessagesCount}
+                      </Badge>
+                    )}
+                  </>
                 </Link>
               </Button>
             );
