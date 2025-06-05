@@ -11,6 +11,8 @@ import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestio
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
+import { mockInquiries } from '@/lib/mock-data'; // Import mockInquiries
+import { Badge } from '@/components/ui/badge'; // Import Badge
 
 interface AdminDashboardLayoutProps {
   children: ReactNode;
@@ -56,6 +58,9 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   }
   
   const currentAdmin = user as PlatformAdmin;
+  // Calculate new inquiries count directly in the render path for simplicity with mock data
+  // This will re-calculate on every render of this component.
+  const newInquiriesCount = mockInquiries.filter(inq => inq.status === 'new').length;
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -71,22 +76,30 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
         <nav className="flex flex-col space-y-2">
           {adminNavItems.map((item) => {
             let isActive = false;
-            // Check for exact match for overview, otherwise check if path starts with href
             if (item.href === '/admin/dashboard') {
               isActive = pathname === item.href;
             } else {
               isActive = pathname.startsWith(item.href);
             }
+            const isMailItem = item.href === '/admin/dashboard/inquiries';
+
             return (
               <Button
                 key={item.href}
                 variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-start"
+                className="w-full justify-start" // Button itself uses justify-start
                 asChild
               >
-                <Link href={item.href}>
-                  {item.icon}
-                  <span className="ml-2">{item.label}</span>
+                <Link href={item.href} className="flex items-center justify-between w-full"> {/* Link uses justify-between */}
+                  <div className="flex items-center"> {/* Group icon and label */}
+                    {item.icon}
+                    <span className="ml-2">{item.label}</span>
+                  </div>
+                  {isMailItem && newInquiriesCount > 0 && (
+                    <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
+                      {newInquiriesCount}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
             );
