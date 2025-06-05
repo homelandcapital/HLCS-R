@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole } from '@/lib/types';
@@ -30,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [loading, setLoading] = useState(true); // Initialize loading to true
+  const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const router = useRouter();
   const { toast } = useToast();
@@ -101,9 +100,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    isMountedRef.current = true;
-    // setLoading(true) is handled by the initial state of `loading`
-
     const performInitialAuthCheckInternal = async (): Promise<{ user: AuthenticatedUser | null, session: Session | null, errorOccurred: boolean }> => {
         try {
             const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
@@ -117,7 +113,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (initialSession?.user) {
                 const profile = await fetchUserProfileAndRelatedData(initialSession.user);
-                // No need to check isMountedRef here before returning, the .then() will check
                 return { user: profile, session: initialSession, errorOccurred: !profile };
             } else {
                 return { user: null, session: initialSession, errorOccurred: false };
@@ -128,35 +123,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    performInitialAuthCheckInternal().then(result => {
+    // Initial check - setLoading(true) is the default state
+    performInitialAuthCheckInternal()
+      .then(result => {
         if (isMountedRef.current) {
-            setUser(result.user);
-            setSession(result.session);
-            setLoading(false); // Crucial: set loading false after initial check completes
+          setUser(result.user);
+          setSession(result.session);
         }
-    }).catch(error => {
+      })
+      .catch(error => {
         console.error("Critical error in performInitialAuthCheckInternal promise chain:", error);
         if (isMountedRef.current) {
-            setUser(null);
-            setSession(null);
-            setLoading(false); // Also ensure loading is false on critical error
+          setUser(null);
+          setSession(null);
         }
-    });
+      })
+      .finally(() => {
+        if (isMountedRef.current) {
+          setLoading(false); // Ensure loading is set to false after initial check completes
+        }
+      });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
         if (!isMountedRef.current) return;
 
-        setSession(currentSession); // Update session state first
+        setSession(currentSession);
 
         if (event === 'SIGNED_IN' && currentSession?.user) {
-          // This implies a new sign-in event, or re-authentication.
-          // Profile fetch will happen, so set loading true.
-          setLoading(true);
+          if (isMountedRef.current) setLoading(true);
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-            if (isMountedRef.current) setUser(profile); // Update user if still mounted
-            if (profile) { // Redirect only if profile fetch was successful
+            if (isMountedRef.current) setUser(profile);
+            if (profile) {
               if (profile.role === 'agent') router.push('/agents/dashboard');
               else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
               else router.push('/users/dashboard');
@@ -167,16 +166,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.error("Error on SIGNED_IN profile fetch:", e);
             if (isMountedRef.current) setUser(null);
           } finally {
-            if (isMountedRef.current) setLoading(false); // End loading for this operation
+            if (isMountedRef.current) setLoading(false);
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
             setUser(null);
-            setLoading(false); // Ensure loading is false on sign out
+            setLoading(false);
             router.push('/');
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
-          setLoading(true); // User object from Supabase changed, re-fetch profile
+          if (isMountedRef.current) setLoading(true);
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
@@ -187,17 +186,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else if (event === 'PASSWORD_RECOVERY' && currentSession) {
           if (isMountedRef.current) {
-            // Session is temporary for password update
-            setLoading(false); // No extensive loading needed here, just redirection
+            setLoading(false);
             router.push('/update-password');
           }
         } else if (event === 'INITIAL_SESSION') {
-            // `performInitialAuthCheckInternal` handles the logic for the actual initial session.
-            // This event might fire alongside. If loading is true, it means initial check is ongoing.
-            // If loading is false, initial check is done.
-            // If `currentSession` is null here AND loading is false, it confirms no user.
             if (!currentSession?.user && !loading && isMountedRef.current) {
-                // This is mostly a confirmation, state should already be correct.
+              // Handled by performInitialAuthCheckInternal.finally
             }
         }
       }
@@ -205,9 +199,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => {
       authListener?.subscription.unsubscribe();
-      isMountedRef.current = false;
     };
-  }, [fetchUserProfileAndRelatedData, router]); // Dependencies for the main useEffect
+  }, [fetchUserProfileAndRelatedData, router]);
 
 
   const signInWithPassword = async (email: string, password: string) => {
@@ -215,7 +208,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
-    // onAuthStateChange will handle setting user, session, and loading states
     return { error };
   };
 
@@ -264,9 +256,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
         }
-
+        
         if (signUpData.user?.id) {
-          console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out user from auth table to attempt cleanup.`);
+          console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Attempting to sign out user from auth table for cleanup.`);
           supabase.auth.signOut().catch(signOutCleanupError => {
             console.error("Error during cleanup signOut after profile creation failure:", signOutCleanupError);
           });
@@ -277,8 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.` });
       } else if (signUpData.session) {
-        // onAuthStateChange will handle SIGNED_IN: set user, session, loading, and redirect.
-        // We don't need to toast "logged in" here as SIGNED_IN will manage it.
+        // Handled by onAuthStateChange
       } else {
         toast({ title: 'Registration Incomplete', description: `There was an issue. If you've registered before, try logging in or check your email for verification.`, variant: 'destructive' });
       }
@@ -303,7 +294,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
     } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        // onAuthStateChange handles setUser(null), setLoading(false), and router.push('/')
     }
   };
 
@@ -332,7 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    if (!session) { // Check for the session from AuthContext state
+    if (!session) {
       toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
       return { error: new Error("No active password recovery session.") };
     }
@@ -346,7 +336,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
-        // Sign out the temporary recovery session. onAuthStateChange will handle redirect.
         supabase.auth.signOut().catch(signOutError => {
             console.error("Error during signOut after password update:", signOutError);
         });
@@ -455,5 +444,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
