@@ -98,6 +98,7 @@ export type Database = {
           predefined_amenities: string | null
           promotion_tiers: Json | null
           promotions_enabled: boolean | null
+          property_types: string[] | null
           site_name: string | null
           updated_at: string
         }
@@ -109,6 +110,7 @@ export type Database = {
           predefined_amenities?: string | null
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
+          property_types?: string[] | null
           site_name?: string | null
           updated_at?: string
         }
@@ -120,6 +122,7 @@ export type Database = {
           predefined_amenities?: string | null
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
+          property_types?: string[] | null
           site_name?: string | null
           updated_at?: string
         }
@@ -145,6 +148,7 @@ export type Database = {
           location_area_city: string
           price: number
           promoted_at: string | null
+          promotion_expires_at: string | null
           promotion_tier_id: string | null
           promotion_tier_name: string | null
           property_type: Database["public"]["Enums"]["property_type_enum"]
@@ -174,6 +178,7 @@ export type Database = {
           location_area_city: string
           price: number
           promoted_at?: string | null
+          promotion_expires_at?: string | null
           promotion_tier_id?: string | null
           promotion_tier_name?: string | null
           property_type: Database["public"]["Enums"]["property_type_enum"]
@@ -203,6 +208,7 @@ export type Database = {
           location_area_city?: string
           price?: number
           promoted_at?: string | null
+          promotion_expires_at?: string | null
           promotion_tier_id?: string | null
           promotion_tier_name?: string | null
           property_type?: Database["public"]["Enums"]["property_type_enum"]
