@@ -16,11 +16,11 @@ import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, Calen
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Agent, NigerianState, ListingType, PlatformSettings as PlatformSettingsType } from '@/lib/types';
-import { nigerianStates, listingTypes } from '@/lib/types'; // Removed propertyTypes from here
+import { nigerianStates, listingTypes } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
-import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide's Image
+import NextImage from 'next/image';
 import { uploadPropertyImages } from '@/actions/upload-images';
 
 function generatePropertySpecificId(): string {
@@ -33,7 +33,6 @@ function generatePropertySpecificId(): string {
   return `HLC-R${yearDigits}${n1}${a1}${n2}${a2}${a3}`;
 }
 
-// Property type validation is now just a string, as the Select component enforces valid options from platform_settings
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
@@ -45,21 +44,21 @@ const propertyFormSchema = z.object({
   bedrooms: z.coerce.number().min(0, { message: 'Bedrooms must be a non-negative number.' }).default(0),
   bathrooms: z.coerce.number().min(0, { message: 'Bathrooms must be a non-negative number.' }).default(0),
   areaSqFt: z.preprocess(
-    val => (val === "" || val === undefined ? undefined : val),
+    val => (val === "" || val === undefined ? undefined : String(val).trim() === "" ? undefined : val),
     z.coerce.number().positive({ message: 'Area must be a positive number if provided.' }).optional()
   ),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }).max(5000, {message: "Description must be less than 5000 characters."}),
   yearBuilt: z.preprocess(
-    val => (val === "" || val === undefined ? undefined : val),
+    val => (val === "" || val === undefined ? undefined : String(val).trim() === "" ? undefined : val),
     z.coerce.number().min(1000, {message: "Year built seems too old."}).max(new Date().getFullYear(), {message: "Year built cannot be in the future."}).optional()
   ),
   amenities: z.string().optional(),
   latitude: z.preprocess(
-    val => (val === "" || val === undefined ? undefined : val),
+    val => (val === "" || val === undefined ? undefined : String(val).trim() === "" ? undefined : val),
     z.coerce.number().min(-90).max(90).optional()
   ),
   longitude: z.preprocess(
-    val => (val === "" || val === undefined ? undefined : val),
+    val => (val === "" || val === undefined ? undefined : String(val).trim() === "" ? undefined : val),
     z.coerce.number().min(-180).max(180).optional()
   ),
 });
@@ -80,12 +79,12 @@ export default function AddPropertyPage() {
     setLoadingSettings(true);
     const { data, error } = await supabase
       .from('platform_settings')
-      .select('property_types, predefined_amenities') // Only select what's needed
+      .select('property_types, predefined_amenities')
       .eq('id', 1)
       .single();
 
-    if (error) {
-      toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults or placeholders.`, variant: 'destructive' });
+    if (error || !data) {
+      toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error?.message || 'Data not found'}. Using defaults or placeholders.`, variant: 'destructive' });
       setPlatformSettings({
         propertyTypes: ['House', 'Apartment', 'Land'], 
         predefinedAmenities: 'Pool,Garage,Gym', 
@@ -96,7 +95,7 @@ export default function AddPropertyPage() {
         maintenanceMode: false,
         notificationEmail: '',
       });
-    } else if (data) {
+    } else {
       setPlatformSettings({
         ...data,
         propertyTypes: data.property_types || ['House', 'Apartment', 'Land'],
@@ -119,15 +118,15 @@ export default function AddPropertyPage() {
       locationAreaCity: '',
       state: undefined,
       address: '',
-      price: '', // Changed from undefined
+      price: '' as any, // To satisfy controlled input initially
       bedrooms: 0,
       bathrooms: 0,
-      areaSqFt: '', // Changed from undefined
+      areaSqFt: '' as any,
       description: '',
-      yearBuilt: '', // Changed from undefined
+      yearBuilt: '' as any,
       amenities: '',
-      latitude: '', // Changed from undefined
-      longitude: '', // Changed from undefined
+      latitude: '' as any,
+      longitude: '' as any,
     },
   });
 
@@ -201,7 +200,7 @@ export default function AddPropertyPage() {
         title: values.title,
         human_readable_id: generatedHumanReadableId,
         description: values.description,
-        price: values.price, // This is z.coerce.number() so will handle string from form
+        price: Number(values.price),
         listing_type: values.listingType,
         location_area_city: values.locationAreaCity,
         state: values.state,
@@ -232,27 +231,33 @@ export default function AddPropertyPage() {
         console.error("Data that was attempted to be inserted:", JSON.stringify(propertyDataToInsert, null, 2));
         
         let detailedErrorMessage = `Could not save property.`;
-        if (typeof error === 'object' && error !== null && 'message' in error && 'code' in error) {
-            const pgError = error as { message: string; code: string; details?: string; hint?: string };
-            detailedErrorMessage += ` Supabase: ${pgError.message} (Code: ${pgError.code}).`;
-            if (pgError.details) detailedErrorMessage += ` Details: ${pgError.details}.`;
+        const supabaseError = error as any; // Type assertion for easier access
 
-            if (pgError.code === '23502' && pgError.message.includes("property_type")) { 
-                 detailedErrorMessage += ` The property type might be missing or invalid. Please ensure you select a valid property type.`;
-            } else if (pgError.message.includes("invalid input value for enum property_type_enum") || pgError.message.includes("property_type_enum")) {
-                 detailedErrorMessage += ` The selected property type '${values.propertyType}' is not valid according to the database. Ensure the admin has configured this type and it matches a valid database enum value.`;
-            } else if (pgError.code === '23505' && pgError.message.includes("properties_human_readable_id_key")) { 
+        if (supabaseError && supabaseError.message) {
+            detailedErrorMessage += ` Message: ${supabaseError.message}`;
+            if (supabaseError.code) detailedErrorMessage += ` (Code: ${supabaseError.code}).`;
+            if (supabaseError.details) detailedErrorMessage += ` Details: ${supabaseError.details}.`;
+            if (supabaseError.hint) detailedErrorMessage += ` Hint: ${supabaseError.hint}.`;
+
+            // Specific checks for common issues
+            if (supabaseError.message.includes("invalid input value for enum property_type_enum") || 
+                (supabaseError.details && supabaseError.details.includes("property_type_enum"))) {
+                 detailedErrorMessage += ` The selected property type '${values.propertyType}' is not a valid option in the database. Please ensure the admin has configured this type and it matches a valid database enum value.`;
+            } else if (supabaseError.code === '23505' && supabaseError.message.includes("properties_human_readable_id_key")) { 
                 detailedErrorMessage += ` A property with a similar ID (${generatedHumanReadableId}) might already exist. Please try submitting again.`;
+            } else if (supabaseError.code === '23502' && supabaseError.message.includes("null value in column")) {
+                const columnNameMatch = supabaseError.message.match(/null value in column "([^"]+)"/);
+                if (columnNameMatch && columnNameMatch[1]) {
+                    detailedErrorMessage += ` A required field ('${columnNameMatch[1]}') was missing.`;
+                }
             }
-        } else if (typeof error === 'object' && error !== null && 'message' in error) {
-             detailedErrorMessage += ` Message: ${(error as any).message}.`;
         } else if (typeof error === 'string') {
            detailedErrorMessage += ` Details: ${error}.`;
         } else {
-          detailedErrorMessage += ` An unknown error occurred. Check console for the full error object.`;
+          detailedErrorMessage += ` An unknown error occurred. Check the browser console for the full error object.`;
         }
 
-        toast({ title: 'Error Adding Property', description: detailedErrorMessage, variant: 'destructive', duration: 10000 });
+        toast({ title: 'Error Adding Property', description: detailedErrorMessage, variant: 'destructive', duration: 12000 });
         return;
       }
 
@@ -412,7 +417,7 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><span className="w-4 h-4 mr-1 text-muted-foreground font-bold">₦</span>Price</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 45000000" {...field} /></FormControl>
+                      <FormControl><Input type="number" placeholder="e.g., 45000000" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -445,7 +450,7 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Maximize className="w-4 h-4 mr-1 text-muted-foreground"/>Area (sq ft)</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 1800" {...field} /></FormControl>
+                      <FormControl><Input type="number" placeholder="e.g., 1800" {...field} value={field.value || ''} /></FormControl>
                        <FormDescription className="text-xs">Optional.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -457,7 +462,7 @@ export default function AddPropertyPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><CalendarDays className="w-4 h-4 mr-1 text-muted-foreground"/>Year Built</FormLabel>
-                      <FormControl><Input type="number" placeholder="e.g., 2005" {...field} /></FormControl>
+                      <FormControl><Input type="number" placeholder="e.g., 2005" {...field} value={field.value || ''} /></FormControl>
                        <FormDescription className="text-xs">Optional.</FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -470,7 +475,7 @@ export default function AddPropertyPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Latitude</FormLabel>
-                        <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} /></FormControl>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} value={field.value || ''} /></FormControl>
                         <FormDescription className="text-xs">Optional.</FormDescription>
                         <FormMessage />
                         </FormItem>
@@ -482,7 +487,7 @@ export default function AddPropertyPage() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Longitude</FormLabel>
-                        <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} /></FormControl>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} value={field.value || ''} /></FormControl>
                         <FormDescription className="text-xs">Optional.</FormDescription>
                         <FormMessage />
                         </FormItem>
@@ -537,7 +542,7 @@ export default function AddPropertyPage() {
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {imagePreviews.map((previewUrl, index) => (
                       <div key={index} className="relative group aspect-square">
-                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} fill objectFit="cover" className="rounded-md" />
                         <Button
                           type="button"
                           variant="destructive"
