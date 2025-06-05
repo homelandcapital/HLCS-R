@@ -53,7 +53,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userProfilesData || userProfilesData.length === 0) {
       console.warn('User profile not found in public.users for id:', supabaseUser.id);
-      toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
+      // Avoid showing toast if the user is signing out or if the session is being cleared.
+      // This check can be refined based on specific auth events if needed.
+      if (supabase.auth.getSession()) { // Check if there's an active session intent
+         toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
+      }
       return null;
     }
 
@@ -202,8 +206,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
-      if (isMountedRef.current) setLoading(false); 
+       if (isMountedRef.current) setLoading(false); 
     }
+    // setLoading(false) will be handled by onAuthStateChange or if an error occurs above
     return { error };
   };
 
@@ -242,9 +247,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error creating profile during signup. Hint:", pgError.hint);
         console.error("Error creating profile during signup. Code:", pgError.code);
         console.error("Full profileError object:", pgError);
-        toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
+
+        if (pgError.code === '23505' && pgError.message.includes('users_email_key')) {
+          toast({
+            title: 'Registration Failed',
+            description: 'This email address is already registered. Please try logging in.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
+        }
         
-        await supabase.auth.signOut(); 
+        if (signUpData.user?.id) {
+          console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out.`);
+          await supabase.auth.signOut();
+        }
         return { error: profileError as Error, data: null };
       }
       if (signUpData.user.identities && signUpData.user.identities.length === 0) {
@@ -272,7 +289,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
     } finally {
       if (isMountedRef.current) {
-        setLoading(false); 
+        // setLoading(false) will be handled by onAuthStateChange or if an error occurs in commonSignUp that prevents it
       }
     }
   };
@@ -290,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
     } finally {
       if (isMountedRef.current) {
-        setLoading(false);
+        // setLoading(false) will be handled by onAuthStateChange or if an error occurs in commonSignUp that prevents it
       }
     }
   };
@@ -300,7 +317,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
     } else {
+        if (isMountedRef.current) setUser(null); // Clear user state immediately
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        // Router push is handled by onAuthStateChange
     }
   };
 
@@ -391,5 +410,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
