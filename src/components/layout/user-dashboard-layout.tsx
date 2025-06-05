@@ -5,14 +5,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, LayoutDashboard, Bookmark, ListChecks, UserCircle } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
-import type { GeneralUser, Inquiry } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data'; 
+import type { GeneralUser } from '@/lib/types';
 import { Badge } from '@/components/ui/badge'; 
+import { supabase } from '@/lib/supabaseClient';
 
 interface UserDashboardLayoutProps {
   children: ReactNode;
@@ -30,6 +30,43 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const [unreadUserMessagesCount, setUnreadUserMessagesCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user || user.role !== 'user') return;
+
+    const { data: inquiries, error } = await supabase
+      .from('inquiries')
+      .select('id, conversation:inquiry_messages(sender_role, timestamp)')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error("Error fetching user's unread inquiries count:", error);
+      return;
+    }
+
+    let count = 0;
+    if (inquiries) {
+      inquiries.forEach(inq => {
+        if (inq.conversation && inq.conversation.length > 0) {
+          const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          if (sortedConversation[0]?.sender_role === 'platform_admin') {
+            count++;
+          }
+        }
+      });
+    }
+    setUnreadUserMessagesCount(count);
+  }, [user]);
+
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user && user.role === 'user') {
+      fetchUnreadCount();
+       // Consider Supabase real-time subscription here too.
+    }
+  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); // Re-fetch on pathname change
+
 
   useEffect(() => {
     if (!loading) {
@@ -56,17 +93,6 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   
   const currentUser = user as GeneralUser;
   
-  const unreadUserMessagesCount = mockInquiries.filter(inquiry => {
-    if (inquiry.inquirerEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
-      return false; 
-    }
-    if (inquiry.conversation && inquiry.conversation.length > 0) {
-      const lastMessage = inquiry.conversation[inquiry.conversation.length - 1];
-      return lastMessage.senderRole === 'platform_admin';
-    }
-    return false; // If no conversation, no unread admin message for the user
-  }).length;
-
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
       <aside className="w-full md:w-64 bg-card text-card-foreground p-4 md:border-r border-border space-y-6 md:sticky md:top-[calc(var(--header-height,68px)+1rem)] md:self-start md:max-h-[calc(100vh-var(--header-height,68px)-2rem)] md:overflow-y-auto">

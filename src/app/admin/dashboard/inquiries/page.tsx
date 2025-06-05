@@ -1,10 +1,8 @@
 
-// src/app/admin/dashboard/inquiries/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { mockInquiries } from '@/lib/mock-data';
-import type { Inquiry, InquiryStatus, Message, PlatformAdmin } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { Inquiry, InquiryStatus, PlatformAdmin, InquiryMessage as DbInquiryMessage } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +19,8 @@ import Link from 'next/link';
 import React from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function InquiryManagementPage() {
   const { user, loading: authLoading } = useAuth();
@@ -31,13 +31,44 @@ export default function InquiryManagementPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
+  const [pageLoading, setPageLoading] = useState(true);
   const { toast } = useToast();
 
+  const fetchInquiries = useCallback(async () => {
+    setPageLoading(true);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select(`
+        *,
+        conversation:inquiry_messages(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching inquiries:', error);
+      toast({ title: 'Error', description: 'Could not fetch inquiries.', variant: 'destructive' });
+      setAllInquiries([]);
+    } else {
+      const formattedInquiries = data.map(inq => ({
+        ...inq,
+        id: inq.id, // UUID ensure it's string
+        dateReceived: inq.created_at, // map db field
+        conversation: inq.conversation.map(msg => ({
+            ...msg,
+            id: msg.id, // UUID ensure it's string
+            inquiry_id: msg.inquiry_id, // UUID ensure it's string
+            sender_id: msg.sender_id, // UUID ensure it's string
+            timestamp: msg.timestamp,
+        })) as DbInquiryMessage[],
+      })) as Inquiry[];
+      setAllInquiries(formattedInquiries);
+    }
+    setPageLoading(false);
+  }, [toast]);
+
   useEffect(() => {
-    const sortedInquiries = [...mockInquiries].sort((a, b) => new Date(b.dateReceived).getTime() - new Date(a.dateReceived).getTime());
-    setAllInquiries(sortedInquiries);
-    setFilteredInquiries(sortedInquiries);
-  }, []);
+    fetchInquiries();
+  }, [fetchInquiries]);
 
   useEffect(() => {
     let inquiries = [...allInquiries];
@@ -47,10 +78,10 @@ export default function InquiryManagementPage() {
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       inquiries = inquiries.filter(inquiry =>
-        inquiry.propertyName.toLowerCase().includes(lowerSearchTerm) ||
-        inquiry.inquirerName.toLowerCase().includes(lowerSearchTerm) ||
-        inquiry.inquirerEmail.toLowerCase().includes(lowerSearchTerm) ||
-        inquiry.message.toLowerCase().includes(lowerSearchTerm)
+        inquiry.property_name.toLowerCase().includes(lowerSearchTerm) ||
+        inquiry.inquirer_name.toLowerCase().includes(lowerSearchTerm) ||
+        inquiry.inquirer_email.toLowerCase().includes(lowerSearchTerm) ||
+        inquiry.initial_message.toLowerCase().includes(lowerSearchTerm)
       );
     }
     setFilteredInquiries(inquiries);
@@ -71,56 +102,91 @@ export default function InquiryManagementPage() {
   const handleViewDetails = (inquiry: Inquiry) => {
     setSelectedInquiry(inquiry);
     setIsModalOpen(true);
-    setReplyMessage(''); // Clear reply field when opening
+    setReplyMessage('');
   };
 
-  const handleUpdateStatus = (inquiryId: string, newStatus: InquiryStatus) => {
-    const updatedMockInquiries = mockInquiries.map(inq =>
-      inq.id === inquiryId ? { ...inq, status: newStatus } : inq
-    );
-    mockInquiries.length = 0;
-    mockInquiries.push(...updatedMockInquiries);
+  const handleUpdateStatus = async (inquiryId: string, newStatus: InquiryStatus) => {
+    const { error } = await supabase
+      .from('inquiries')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', inquiryId);
 
-    const updatedAllInquiries = allInquiries.map(inq =>
-      inq.id === inquiryId ? { ...inq, status: newStatus } : inq
-    );
-    setAllInquiries(updatedAllInquiries);
+    if (error) {
+      toast({ title: 'Error Updating Status', description: error.message, variant: 'destructive' });
+      return;
+    }
+    
+    setAllInquiries(prev => prev.map(inq =>
+      inq.id === inquiryId ? { ...inq, status: newStatus, updated_at: new Date().toISOString() } : inq
+    ));
     
     if (selectedInquiry && selectedInquiry.id === inquiryId) {
-      setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+      setSelectedInquiry({ ...selectedInquiry, status: newStatus, updated_at: new Date().toISOString() });
     }
     toast({ title: 'Status Updated', description: `Inquiry status changed to "${newStatus}".` });
   };
 
-  const handleAdminReply = () => {
+  const handleAdminReply = async () => {
     if (!selectedInquiry || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
 
     const currentAdmin = user as PlatformAdmin;
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: currentAdmin.id,
-      senderRole: 'platform_admin',
-      senderName: currentAdmin.name,
+    const newMessageData = {
+      inquiry_id: selectedInquiry.id,
+      sender_id: currentAdmin.id,
+      sender_role: 'platform_admin' as UserRole,
+      sender_name: currentAdmin.name,
       content: replyMessage.trim(),
-      timestamp: new Date().toISOString(),
+      // timestamp is defaulted by DB
     };
 
-    const updatedConversation = [...(selectedInquiry.conversation || []), newMessage];
-    // Also mark as contacted if it was new
-    const newStatus = selectedInquiry.status === 'new' ? 'contacted' : selectedInquiry.status;
-    const updatedInquiry = { ...selectedInquiry, conversation: updatedConversation, status: newStatus };
+    const { data: savedMessage, error: messageError } = await supabase
+      .from('inquiry_messages')
+      .insert(newMessageData)
+      .select()
+      .single();
+
+    if (messageError) {
+      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+      return;
+    }
     
-    const inquiryIndexInMock = mockInquiries.findIndex(inq => inq.id === selectedInquiry.id);
-    if (inquiryIndexInMock !== -1) {
-      mockInquiries[inquiryIndexInMock] = updatedInquiry;
+    const newStatus = selectedInquiry.status === 'new' ? 'contacted' : selectedInquiry.status;
+    if (selectedInquiry.status === 'new') {
+       await handleUpdateStatus(selectedInquiry.id, 'contacted');
     }
 
+
+    const formattedSavedMessage: DbInquiryMessage = {
+        ...savedMessage,
+        id: savedMessage.id,
+        inquiry_id: savedMessage.inquiry_id,
+        sender_id: savedMessage.sender_id,
+        timestamp: savedMessage.timestamp,
+    };
+
+    const updatedConversation = [...(selectedInquiry.conversation || []), formattedSavedMessage];
+    const updatedInquiry = { ...selectedInquiry, conversation: updatedConversation, status: newStatus, updated_at: new Date().toISOString() };
+    
     setAllInquiries(prev => prev.map(inq => inq.id === selectedInquiry.id ? updatedInquiry : inq));
     setSelectedInquiry(updatedInquiry);
     setReplyMessage('');
     toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
   };
 
+  if (authLoading || pageLoading) {
+    return (
+        <div className="space-y-8">
+            <Skeleton className="h-12 w-1/2" />
+            <Skeleton className="h-8 w-3/4" />
+            <Card>
+                <CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader>
+                <CardContent className="space-y-2">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -171,11 +237,11 @@ export default function InquiryManagementPage() {
                 {filteredInquiries.map((inquiry) => (
                   <TableRow key={inquiry.id}>
                     <TableCell>
-                      <Link href={`/properties/${inquiry.propertyId}`} target="_blank" rel="noopener noreferrer" title={`View ${inquiry.propertyName}`} className="font-medium text-primary hover:underline">{inquiry.propertyName}</Link>
-                      <div className="text-xs text-muted-foreground">ID: {inquiry.propertyId}</div>
+                      <Link href={`/properties/${inquiry.property_id}`} target="_blank" rel="noopener noreferrer" title={`View ${inquiry.property_name}`} className="font-medium text-primary hover:underline">{inquiry.property_name}</Link>
+                      <div className="text-xs text-muted-foreground">ID: {inquiry.property_id}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center"><User className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{inquiry.inquirerName}</div><div className="text-xs text-muted-foreground">{inquiry.inquirerEmail}</div>{inquiry.inquirerPhone && <div className="text-xs text-muted-foreground">P: {inquiry.inquirerPhone}</div>}</div></div>
+                      <div className="flex items-center"><User className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{inquiry.inquirer_name}</div><div className="text-xs text-muted-foreground">{inquiry.inquirer_email}</div>{inquiry.inquirer_phone && <div className="text-xs text-muted-foreground">P: {inquiry.inquirer_phone}</div>}</div></div>
                     </TableCell>
                      <TableCell>
                         <div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(inquiry.dateReceived), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(inquiry.dateReceived), "p")}</div></div></div>
@@ -193,20 +259,20 @@ export default function InquiryManagementPage() {
 
       {selectedInquiry && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-2xl"> {/* Increased width for conversation */}
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="font-headline text-2xl flex items-center"><MailQuestion className="mr-2 h-6 w-6 text-primary" /> Inquiry Details</DialogTitle>
               <DialogDescription>
-                Full details for inquiry on: <Link href={`/properties/${selectedInquiry.propertyId}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">{selectedInquiry.propertyName}</Link>
+                Full details for inquiry on: <Link href={`/properties/${selectedInquiry.property_id}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">{selectedInquiry.property_name}</Link>
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-4 border-b pb-4">
-                    <InfoRow icon={<User />} label="Inquirer Name" value={selectedInquiry.inquirerName} />
-                    <InfoRow icon={<Mail />} label="Inquirer Email" value={selectedInquiry.inquirerEmail} />
-                    {selectedInquiry.inquirerPhone && <InfoRow icon={<Phone />} label="Inquirer Phone" value={selectedInquiry.inquirerPhone} className="md:col-span-1" />}
+                    <InfoRow icon={<User />} label="Inquirer Name" value={selectedInquiry.inquirer_name} />
+                    <InfoRow icon={<Mail />} label="Inquirer Email" value={selectedInquiry.inquirer_email} />
+                    {selectedInquiry.inquirer_phone && <InfoRow icon={<Phone />} label="Inquirer Phone" value={selectedInquiry.inquirer_phone} className="md:col-span-1" />}
                     <InfoRow icon={<CalendarDays />} label="Date Received" value={format(new Date(selectedInquiry.dateReceived), "PPP p")} />
-                    <InfoRow icon={<BuildingIcon />} label="Property ID" value={selectedInquiry.propertyId} />
+                    <InfoRow icon={<BuildingIcon />} label="Property ID" value={selectedInquiry.property_id} />
                     
                     <div className="space-y-1">
                         <Label className="text-sm font-medium text-muted-foreground flex items-center">Current Status:</Label>
@@ -221,23 +287,22 @@ export default function InquiryManagementPage() {
                     </div>
                 </div>
                 
-                <div><Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquareText className="w-4 h-4 mr-1.5"/> Initial Message</Label><p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedInquiry.message}</p></div>
+                <div><Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquareText className="w-4 h-4 mr-1.5"/> Initial Message</Label><p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedInquiry.initial_message}</p></div>
                 
-                {/* Conversation Thread */}
                 <div className="space-y-4 pt-4 border-t">
                     <h4 className="font-semibold text-lg">Conversation</h4>
                     {(selectedInquiry.conversation && selectedInquiry.conversation.length > 0) ? (
                         <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
                             {selectedInquiry.conversation.map(msg => (
-                                <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.senderRole === 'platform_admin' ? 'bg-primary/10 text-primary-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-secondary-foreground mr-auto w-4/5 text-left')}>
-                                    <p className="font-semibold">{msg.senderName} <span className="text-xs text-muted-foreground/80">({msg.senderRole.replace('_', ' ')})</span></p>
+                                <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
+                                    <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                     <p className="whitespace-pre-line">{msg.content}</p>
                                     <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
                                 </div>
                             ))}
                         </div>
                     ) : (<p className="text-sm text-muted-foreground">No conversation history yet.</p>)}
-                    {/* Admin Reply Form */}
+                    
                     {!authLoading && user && user.role === 'platform_admin' && (
                         <div className="pt-4 space-y-2">
                             <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
@@ -257,7 +322,7 @@ export default function InquiryManagementPage() {
   );
 }
 
-interface InfoRowProps { icon: React.ReactNode; label: string; value: string | undefined; className?: string; }
+interface InfoRowProps { icon: React.ReactNode; label: string; value: string | undefined | null; className?: string; }
 const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
     <div className={cn(className)}>
         <Label className="text-sm font-medium text-muted-foreground flex items-center">

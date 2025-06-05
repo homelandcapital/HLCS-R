@@ -2,7 +2,7 @@
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
-  id: string;
+  id: string; // Supabase user ID is UUID, comes as string
   name: string;
   email: string;
   avatarUrl?: string;
@@ -43,8 +43,8 @@ export type ListingType = 'For Sale' | 'For Rent' | 'For Lease';
 export interface PromotionTierConfig {
   id: string;
   name: string;
-  fee: number; // Store as number
-  duration: number; // Store as number (days)
+  fee: number;
+  duration: number;
   description: string;
 }
 
@@ -54,15 +54,15 @@ export interface Property {
   description: string;
   price: number;
   listingType: ListingType;
-  location: string; // Area/City
+  location: string;
   state: NigerianState;
   address: string;
   type: 'House' | 'Apartment' | 'Condo' | 'Townhouse' | 'Land';
   bedrooms: number;
   bathrooms: number;
-  areaSqFt?: number; // Made optional
+  areaSqFt?: number;
   images: string[];
-  agent: Agent;
+  agent: Agent; // In a DB, this would be agent_id and you'd join
   status: PropertyStatus;
   rejectionReason?: string;
   amenities?: string[];
@@ -75,34 +75,39 @@ export interface Property {
   promotionDetails?: {
     tierId: string;
     tierName: string;
-    promotedAt: string; // ISO date string
-    // We might add expiresAt later based on duration
+    promotedAt: string;
   };
 }
 
 export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
 
-export interface Message {
-  id: string;
-  senderId: string;
-  senderRole: UserRole;
-  senderName: string;
+// Matches the inquiry_messages table
+export interface InquiryMessage {
+  id: string; // UUID from DB
+  inquiry_id: string; // UUID from DB
+  sender_id: string | null; // UUID from DB (user who sent)
+  sender_role: UserRole;
+  sender_name: string; // Denormalized
   content: string;
-  timestamp: string;
+  timestamp: string; // ISO date string from DB
 }
 
+// Matches the inquiries table structure
 export interface Inquiry {
-  id: string;
-  propertyId: string;
-  propertyName: string;
-  inquirerName: string;
-  inquirerEmail: string;
-  inquirerPhone?: string;
-  message: string; // This is the initial message
-  dateReceived: string;
+  id: string; // UUID from DB
+  property_id: string;
+  property_name: string;
+  inquirer_name: string;
+  inquirer_email: string;
+  inquirer_phone?: string | null;
+  initial_message: string; // Renamed from 'message' to match DB
+  dateReceived: string; // created_at from DB
   status: InquiryStatus;
-  conversation?: Message[];
+  user_id?: string | null; // Link to auth.users if inquirer is registered
+  updated_at?: string; // updated_at from DB
+  conversation?: InquiryMessage[]; // This will be populated by fetching from inquiry_messages
 }
+
 
 // CMS Content Types
 export interface CmsLink {
@@ -111,7 +116,7 @@ export interface CmsLink {
 }
 
 export interface CmsFeatureItem {
-  iconName?: string; // To be mapped to a Lucide icon component
+  iconName?: string;
   title: string;
   description: string;
   link?: string;
@@ -160,7 +165,7 @@ export interface AboutPageContent {
   sections: Array<{
     title: string;
     description: string;
-    iconName?: string; // e.g., 'Info', 'Users', 'Building'
+    iconName?: string;
   }>;
   conclusionParagraph: string;
 }
@@ -168,7 +173,7 @@ export interface AboutPageContent {
 export interface ContactInfo {
   email: string;
   phone: string;
-  address: string; // Can be multi-line, use \n for breaks
+  address: string;
   officeHours: {
     weekdays: string;
     saturday: string;
@@ -188,7 +193,7 @@ export interface FooterLinkColumn {
 }
 
 export interface FooterContent {
-  logoText?: string; // Optional, if we want to make logo text configurable
+  logoText?: string;
   tagline: string;
   columns: FooterLinkColumn[];
   copyrightText: string;
@@ -198,12 +203,9 @@ export interface FooterContent {
 export interface PlatformSettings {
   promotionsEnabled: boolean;
   promotionTiers: PromotionTierConfig[];
-  // Add other settings like siteName, defaultCurrency if needed by agents
-  // For now, keeping it focused on promotions
   siteName: string;
   defaultCurrency: string;
   maintenanceMode: boolean;
   notificationEmail: string;
-  predefinedAmenities: string; // Comma-separated
-  // propertyTypes: string[]; // Let's assume this is managed elsewhere or hardcoded for now
+  predefinedAmenities: string;
 }

@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardTitle
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, User, Phone } from 'lucide-react';
-import { mockInquiries } from '@/lib/mock-data';
-import type { Inquiry } from '@/lib/types';
 import { useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/auth-context';
+import type { Inquiry } from '@/lib/types'; // Use the updated Inquiry type
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -42,6 +43,7 @@ const ContactForm = ({
   onFormSubmit 
 }: ContactFormProps) => {
   const { toast } = useToast();
+  const { user: authUser, session } = useAuth(); // Get session to access authUser.id
   
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(formSchema),
@@ -53,7 +55,6 @@ const ContactForm = ({
     },
   });
 
-  // Effect to reset form if initial values or property context changes
   useEffect(() => {
     form.reset({
       name: initialName || '',
@@ -63,43 +64,53 @@ const ContactForm = ({
     });
   }, [initialName, initialEmail, initialPhone, propertyTitle, form]);
 
-
-  function onSubmit(values: ContactFormValues) {
-    const newInquiry: Inquiry = {
-      id: `inq-${Date.now()}`,
-      propertyId,
-      propertyName: propertyTitle,
-      inquirerName: values.name,
-      inquirerEmail: values.email,
-      inquirerPhone: values.phone,
-      message: values.message,
-      dateReceived: new Date().toISOString(),
-      status: 'new',
+  async function onSubmit(values: ContactFormValues) {
+    const inquiryToInsert = {
+      property_id: propertyId,
+      property_name: propertyTitle,
+      inquirer_name: values.name,
+      inquirer_email: values.email,
+      inquirer_phone: values.phone || null,
+      initial_message: values.message,
+      status: 'new' as Inquiry['status'],
+      user_id: authUser?.id || null, // Link to logged-in user if available
     };
 
-    mockInquiries.push(newInquiry);
-    console.log('New inquiry added:', newInquiry);
-    console.log('All inquiries:', mockInquiries);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .insert(inquiryToInsert)
+      .select()
+      .single(); // Assuming you want the inserted row back
 
+    if (error) {
+      console.error('Error saving inquiry to database:', error);
+      toast({ 
+        title: 'Inquiry Submission Failed', 
+        description: `Could not send inquiry: ${error.message}. Please try again.`, 
+        variant: 'destructive' 
+      });
+      return;
+    }
 
+    console.log('New inquiry saved to DB:', data);
     toast({
       title: 'Inquiry Sent!',
       description: `Your message about ${propertyTitle} has been sent successfully. The platform admin will contact you shortly.`,
       variant: 'default',
     });
-    form.reset({ // Reset to initial default message after submission
-        name: initialName || '', // Persist prefilled if available
+    
+    form.reset({
+        name: initialName || '',
         email: initialEmail || '',
         phone: initialPhone || '',
         message: `I'm interested in ${propertyTitle}.`,
     });
-    onFormSubmit?.(); // Call callback to close dialog if provided
+    onFormSubmit?.();
   }
 
   return (
     <Card className="shadow-none border-none">
-      {/* Removed CardHeader and its CardTitle from here */}
-      <CardContent className="p-0"> {/* Adjust padding if needed, was p-0 */}
+      <CardContent className="p-0">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField

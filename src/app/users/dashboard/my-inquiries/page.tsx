@@ -1,10 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import type { Inquiry, GeneralUser, Message } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data';
+import type { Inquiry, GeneralUser, InquiryMessage as DbInquiryMessage, UserRole } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function MyInquiriesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -28,16 +28,47 @@ export default function MyInquiriesPage() {
   const [userReplyMessage, setUserReplyMessage] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!authLoading && user && user.role === 'user') {
-      const generalUser = user as GeneralUser;
-      const inquiries = mockInquiries.filter(
-        inq => inq.inquirerEmail.toLowerCase() === generalUser.email.toLowerCase()
-      ).sort((a,b) => new Date(b.dateReceived).getTime() - new Date(a.dateReceived).getTime());
-      setUserInquiries(inquiries);
+  const fetchUserInquiries = useCallback(async (currentUserId: string) => {
+    setPageLoading(true);
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select(`
+        *,
+        conversation:inquiry_messages(*)
+      `)
+      .eq('user_id', currentUserId) // Fetch only inquiries made by the logged-in user
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user inquiries:', error);
+      toast({ title: 'Error', description: 'Could not fetch your inquiries.', variant: 'destructive' });
+      setUserInquiries([]);
+    } else {
+       const formattedInquiries = data.map(inq => ({
+        ...inq,
+        id: inq.id, 
+        dateReceived: inq.created_at, 
+        conversation: inq.conversation.map(msg => ({
+            ...msg,
+            id: msg.id,
+            inquiry_id: msg.inquiry_id,
+            sender_id: msg.sender_id,
+            timestamp: msg.timestamp,
+        })) as DbInquiryMessage[],
+      })) as Inquiry[];
+      setUserInquiries(formattedInquiries);
     }
     setPageLoading(false);
-  }, [user, authLoading]);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!authLoading && user && user.role === 'user') {
+      fetchUserInquiries(user.id);
+    } else if (!authLoading) {
+      setPageLoading(false); // Not logged in or not a user
+    }
+  }, [user, authLoading, fetchUserInquiries]);
+
 
   const getStatusBadgeVariant = (status: Inquiry['status']): "default" | "secondary" | "destructive" | "outline" | null | undefined => {
     switch (status) {
@@ -55,25 +86,50 @@ export default function MyInquiriesPage() {
     setUserReplyMessage('');
   };
 
-  const handleUserReply = () => {
+  const handleUserReply = async () => {
     if (!selectedInquiryForDialog || !userReplyMessage.trim() || !user || user.role !== 'user') return;
 
     const currentUser = user as GeneralUser;
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: currentUser.id,
-      senderRole: 'user',
-      senderName: currentUser.name,
+    const newMessageData = {
+      inquiry_id: selectedInquiryForDialog.id,
+      sender_id: currentUser.id,
+      sender_role: 'user' as UserRole,
+      sender_name: currentUser.name,
       content: userReplyMessage.trim(),
-      timestamp: new Date().toISOString(),
+      // timestamp is defaulted by DB
     };
 
-    const updatedConversation = [...(selectedInquiryForDialog.conversation || []), newMessage];
-    const updatedInquiry = { ...selectedInquiryForDialog, conversation: updatedConversation };
+    const { data: savedMessage, error: messageError } = await supabase
+      .from('inquiry_messages')
+      .insert(newMessageData)
+      .select()
+      .single();
+
+    if (messageError) {
+      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+      return;
+    }
+
+    const formattedSavedMessage: DbInquiryMessage = {
+        ...savedMessage,
+        id: savedMessage.id,
+        inquiry_id: savedMessage.inquiry_id,
+        sender_id: savedMessage.sender_id,
+        timestamp: savedMessage.timestamp,
+    };
     
-    const inquiryIndexInMock = mockInquiries.findIndex(inq => inq.id === selectedInquiryForDialog.id);
-    if (inquiryIndexInMock !== -1) {
-      mockInquiries[inquiryIndexInMock] = updatedInquiry;
+    const updatedConversation = [...(selectedInquiryForDialog.conversation || []), formattedSavedMessage];
+    const updatedInquiry = { ...selectedInquiryForDialog, conversation: updatedConversation, updated_at: new Date().toISOString() };
+    
+    // Also update status to 'contacted' if it was 'new' from user's side
+    // This might be an admin action primarily, but user reply indicates continued interest
+    if (selectedInquiryForDialog.status === 'new') {
+        const { error: statusUpdateError } = await supabase
+            .from('inquiries')
+            .update({ status: 'contacted', updated_at: new Date().toISOString() })
+            .eq('id', selectedInquiryForDialog.id);
+        if (statusUpdateError) console.error("Error updating status on user reply:", statusUpdateError.message);
+        else updatedInquiry.status = 'contacted';
     }
 
     setUserInquiries(prev => prev.map(inq => inq.id === selectedInquiryForDialog.id ? updatedInquiry : inq));
@@ -113,10 +169,10 @@ export default function MyInquiriesPage() {
                 <TableBody>
                   {userInquiries.map((inquiry) => (
                     <TableRow key={inquiry.id}>
-                      <TableCell><Link href={`/properties/${inquiry.propertyId}`} className="font-medium text-primary hover:underline">{inquiry.propertyName}</Link></TableCell>
+                      <TableCell><Link href={`/properties/${inquiry.property_id}`} className="font-medium text-primary hover:underline">{inquiry.property_name}</Link></TableCell>
                       <TableCell><div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(inquiry.dateReceived), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(inquiry.dateReceived), "p")}</div></div></div></TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(inquiry.status)} className="capitalize text-xs px-2 py-0.5">{inquiry.status}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground truncate max-w-xs"><MessageSquare className="inline h-4 w-4 mr-1 align-middle" />{inquiry.message}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground truncate max-w-xs"><MessageSquare className="inline h-4 w-4 mr-1 align-middle" />{inquiry.initial_message}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => handleViewConversation(inquiry)}>
                           <Eye className="mr-1.5 h-4 w-4" /> View/Reply
@@ -135,19 +191,19 @@ export default function MyInquiriesPage() {
         <Dialog open={isConversationModalOpen} onOpenChange={setIsConversationModalOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="font-headline text-xl">Conversation: {selectedInquiryForDialog.propertyName}</DialogTitle>
+              <DialogTitle className="font-headline text-xl">Conversation: {selectedInquiryForDialog.property_name}</DialogTitle>
               <DialogDescription>Inquiry submitted on {format(new Date(selectedInquiryForDialog.dateReceived), "PPP")}.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="p-3 rounded-md bg-muted/30 border">
                     <p className="text-sm font-semibold text-muted-foreground">Your initial message:</p>
-                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.message}</p>
+                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.initial_message}</p>
                 </div>
                 {(selectedInquiryForDialog.conversation && selectedInquiryForDialog.conversation.length > 0) ? (
                     <div className="space-y-3">
                         {selectedInquiryForDialog.conversation.map(msg => (
-                            <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.senderRole === 'user' ? 'bg-primary/10 text-primary-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-secondary-foreground mr-auto w-4/5 text-left')}>
-                                <p className="font-semibold">{msg.senderName} <span className="text-xs text-muted-foreground/80">({msg.senderRole.replace('_', ' ')})</span></p>
+                            <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'user' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
+                                <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                 <p className="whitespace-pre-line">{msg.content}</p>
                                 <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
                             </div>
@@ -155,7 +211,6 @@ export default function MyInquiriesPage() {
                     </div>
                 ) : (<p className="text-sm text-muted-foreground text-center py-3">No replies yet.</p>)}
                 
-                {/* User Reply Form */}
                 {!authLoading && user && user.role === 'user' && (
                     <div className="pt-4 space-y-2 border-t mt-4">
                         <Label htmlFor="user-reply" className="font-medium">Your Reply</Label>
