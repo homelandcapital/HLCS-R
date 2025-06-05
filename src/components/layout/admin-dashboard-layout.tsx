@@ -29,7 +29,7 @@ const adminNavItems = [
 ];
 
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
-  const { isAuthenticated, user, loading, signOut } = useAuth(); // Changed logout to signOut
+  const { isAuthenticated, user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -43,7 +43,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
       .from('inquiries')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'new')
-      .is('conversation', null); // Using .is('conversation', null) might not work if conversation is an empty array. Better to check on client after fetching messages or adjust schema.
+      .is('conversation', null); 
 
     // A more robust way is to count inquiries where the last message is from a user.
     // This requires fetching messages, which might be heavy for a layout.
@@ -155,12 +155,12 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             );
           })}
         </nav>
-        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}> {/* Changed logout to signOut */}
+        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}>
           <LogOut className="h-5 w-5" />
           <span className="ml-2">Logout</span>
         </Button>
       </aside>
-      <main className="flex-1 p-4 md:p-8">
+      <main className="flex-1 p-4 md:p-8 min-w-0">
         {children}
       </main>
     </div>
