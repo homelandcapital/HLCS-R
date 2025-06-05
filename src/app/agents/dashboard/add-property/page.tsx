@@ -15,12 +15,12 @@ import { useState, useTransition, useEffect, useCallback } from 'react';
 import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { Agent, NigerianState, ListingType, PlatformSettings } from '@/lib/types';
-import { nigerianStates, listingTypes } from '@/lib/types';
+import type { Agent, NigerianState, ListingType, PlatformSettings as PlatformSettingsType } from '@/lib/types';
+import { nigerianStates, listingTypes } from '@/lib/types'; // Removed propertyTypes from here
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict with Lucide's Image
 import { uploadPropertyImages } from '@/actions/upload-images';
 
 function generatePropertySpecificId(): string {
@@ -33,6 +33,7 @@ function generatePropertySpecificId(): string {
   return `HLC-R${yearDigits}${n1}${a1}${n2}${a2}${a3}`;
 }
 
+// Property type validation is now just a string, as the Select component enforces valid options from platform_settings
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
@@ -70,7 +71,7 @@ export default function AddPropertyPage() {
   const [isSubmitting, startTransition] = useTransition();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettingsType | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -79,15 +80,17 @@ export default function AddPropertyPage() {
     setLoadingSettings(true);
     const { data, error } = await supabase
       .from('platform_settings')
-      .select('*')
+      .select('property_types, predefined_amenities') // Only select what's needed
       .eq('id', 1)
       .single();
 
     if (error) {
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults or placeholders.`, variant: 'destructive' });
+      // Fallback to some very basic defaults if absolutely necessary or handle error more gracefully
       setPlatformSettings({
-        propertyTypes: ['House', 'Apartment', 'Land'],
-        predefinedAmenities: 'Pool,Garage,Gym',
+        propertyTypes: ['House', 'Apartment', 'Land'], // Basic fallback
+        predefinedAmenities: 'Pool,Garage,Gym', // Basic fallback
+        // Other settings not directly used on this page can be omitted or given defaults
         promotionsEnabled: false,
         promotionTiers: [],
         siteName: 'Homeland Capital',
@@ -100,7 +103,7 @@ export default function AddPropertyPage() {
         ...data,
         propertyTypes: data.property_types || ['House', 'Apartment', 'Land'],
         predefinedAmenities: data.predefined_amenities || 'Pool,Garage,Gym',
-      });
+      } as PlatformSettingsType); // Cast assuming other necessary fields might be missing but are not critical here
     }
     setLoadingSettings(false);
   }, [toast]);
@@ -133,10 +136,10 @@ export default function AddPropertyPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const filesArray = Array.from(event.target.files);
-      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray]);
+      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray].slice(0, 10)); // Limit to 10 files
 
       const newPreviews = filesArray.map(file => URL.createObjectURL(file));
-      setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+      setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews].slice(0, 10));
     }
   };
 
@@ -144,7 +147,6 @@ export default function AddPropertyPage() {
     setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
     setImagePreviews(prevPreviews => {
       const newPreviews = prevPreviews.filter((_, index) => index !== indexToRemove);
-      // Revoke object URL for the removed preview to free up memory
       if (prevPreviews[indexToRemove]) {
         URL.revokeObjectURL(prevPreviews[indexToRemove]);
       }
@@ -153,7 +155,6 @@ export default function AddPropertyPage() {
   };
   
   useEffect(() => {
-    // Cleanup object URLs on component unmount
     return () => {
       imagePreviews.forEach(previewUrl => URL.revokeObjectURL(previewUrl));
     };
@@ -189,9 +190,9 @@ export default function AddPropertyPage() {
       
       if (selectedFiles.length > 0 && imageUrls.length === 0) {
         toast({ title: 'Image Processing Issue', description: 'Images were selected but no URLs were returned after upload. Using placeholders.', variant: 'default' });
-        imageUrls = ['https://placehold.co/600x400.png?text=Upload+Error', 'https://placehold.co/600x401.png?text=Upload+Error'];
+        imageUrls = ['https://placehold.co/600x400.png?text=Upload+Error1', 'https://placehold.co/600x401.png?text=Upload+Error2'];
       } else if (selectedFiles.length === 0) {
-        imageUrls = ['https://placehold.co/600x400.png?text=No+Image', 'https://placehold.co/600x401.png?text=No+Image'];
+        imageUrls = ['https://placehold.co/600x400.png?text=No+Image1', 'https://placehold.co/600x401.png?text=No+Image2'];
       }
 
 
@@ -207,7 +208,7 @@ export default function AddPropertyPage() {
         location_area_city: values.locationAreaCity,
         state: values.state,
         address: values.address,
-        property_type: values.propertyType as any,
+        property_type: values.propertyType as any, // This is a string; DB expects property_type_enum
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
         area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
@@ -220,6 +221,8 @@ export default function AddPropertyPage() {
         coordinates_lng: values.longitude ? Number(values.longitude) : null,
       };
 
+      console.log("Attempting to insert property data:", JSON.stringify(propertyDataToInsert, null, 2));
+
       const { data: newProperty, error } = await supabase
         .from('properties')
         .insert(propertyDataToInsert)
@@ -227,8 +230,32 @@ export default function AddPropertyPage() {
         .single();
 
       if (error) {
-        console.error("Error saving property to DB:", error);
-        toast({ title: 'Error Adding Property', description: `Could not save property: ${error.message}. This could be due to a duplicate generated Property ID or invalid property type. Please try submitting again.`, variant: 'destructive' });
+        console.error("Error saving property to DB. Raw error object:", error); 
+        console.error("Data that was attempted to be inserted:", JSON.stringify(propertyDataToInsert, null, 2));
+        
+        let detailedErrorMessage = `Could not save property.`;
+        // Type guard for Supabase PostgrestError
+        if (typeof error === 'object' && error !== null && 'message' in error && 'code' in error) {
+            const pgError = error as { message: string; code: string; details?: string; hint?: string };
+            detailedErrorMessage += ` Supabase: ${pgError.message} (Code: ${pgError.code}).`;
+            if (pgError.details) detailedErrorMessage += ` Details: ${pgError.details}.`;
+
+            if (pgError.code === '23502' && pgError.message.includes("property_type")) { // null value in not-null column
+                 detailedErrorMessage += ` The property type might be missing or invalid. Please ensure you select a valid property type.`;
+            } else if (pgError.message.includes("invalid input value for enum property_type_enum") || pgError.message.includes("property_type_enum")) {
+                 detailedErrorMessage += ` The selected property type '${values.propertyType}' is not valid according to the database. Please ensure the admin has configured this type correctly in the system and it matches the database enum.`;
+            } else if (pgError.code === '23505' && pgError.message.includes("properties_human_readable_id_key")) { // duplicate key
+                detailedErrorMessage += ` A property with a similar ID (${generatedHumanReadableId}) might already exist. Please try submitting again.`;
+            }
+        } else if (typeof error === 'object' && error !== null && 'message' in error) {
+             detailedErrorMessage += ` Message: ${(error as any).message}.`;
+        } else if (typeof error === 'string') {
+           detailedErrorMessage += ` Details: ${error}.`;
+        } else {
+          detailedErrorMessage += ` An unknown error occurred. Check console for the full error object.`;
+        }
+
+        toast({ title: 'Error Adding Property', description: detailedErrorMessage, variant: 'destructive', duration: 10000 });
         return;
       }
 
@@ -241,6 +268,10 @@ export default function AddPropertyPage() {
   }
   
   const dynamicPropertyTypes = platformSettings?.propertyTypes || [];
+  const dynamicAmenitiesHint = platformSettings?.predefinedAmenities 
+    ? `Admins have configured standard amenities like: ${platformSettings.predefinedAmenities.split(',').slice(0,3).join(', ')}...`
+    : "E.g., Pool, Gym, Borehole.";
+
 
   if (loadingSettings || authLoading) {
     return (
@@ -327,11 +358,11 @@ export default function AddPropertyPage() {
                               <SelectItem key={type} value={type}>{type}</SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="-" disabled>No types configured</SelectItem>
+                            <SelectItem value="-" disabled>Loading types or none configured</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
-                      {dynamicPropertyTypes.length === 0 && !loadingSettings && <FormDescription className="text-xs text-destructive">No property types configured by admin.</FormDescription>}
+                      {dynamicPropertyTypes.length === 0 && !loadingSettings && <FormDescription className="text-xs text-destructive">No property types configured by admin. Please contact them.</FormDescription>}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -486,8 +517,7 @@ export default function AddPropertyPage() {
                     <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Amenities</FormLabel>
                     <FormControl><Input placeholder="e.g., Pool, Gym, Borehole, Standby Generator" {...field} /></FormControl>
                     <FormDescription>
-                      Comma-separated list of amenities. Optional.
-                      {platformSettings?.predefinedAmenities && ` Admins have configured standard amenities like: ${platformSettings.predefinedAmenities.split(',').slice(0,3).join(', ')}...`}
+                      Comma-separated list of amenities. Optional. {dynamicAmenitiesHint}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -495,7 +525,7 @@ export default function AddPropertyPage() {
               />
 
               <FormItem>
-                <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1 text-muted-foreground"/>Property Images</FormLabel>
+                <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1 text-muted-foreground"/>Property Images (Max 10)</FormLabel>
                 <FormControl>
                   <Input 
                     type="file" 
@@ -510,12 +540,12 @@ export default function AddPropertyPage() {
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {imagePreviews.map((previewUrl, index) => (
                       <div key={index} className="relative group aspect-square">
-                        <Image src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
                         <Button
                           type="button"
                           variant="destructive"
                           size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                           onClick={() => removeImage(index)}
                           aria-label={`Remove image ${index + 1}`}
                         >
