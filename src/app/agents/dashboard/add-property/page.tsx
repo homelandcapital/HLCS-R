@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition } from 'react';
-import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag, Hash } from 'lucide-react';
+import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag } from 'lucide-react'; // Removed Hash
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Agent, NigerianState, ListingType, PropertyTypeEnum } from '@/lib/types';
@@ -20,21 +20,19 @@ import { nigerianStates, listingTypes, propertyTypes } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 
-// Helper function to generate random alphanumeric string
-function generateRandomAlphanumeric(length: number): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
+// Helper function to generate the specific property ID format: HLC-R<YY><N1><A1><N2><A2><A3>
+function generatePropertySpecificId(): string {
+  const yearDigits = new Date().getFullYear().toString().slice(-2);
+  const n1 = Math.floor(Math.random() * 10).toString();
+  const a1 = String.fromCharCode(65 + Math.floor(Math.random() * 26)); // Uppercase A-Z
+  const n2 = Math.floor(Math.random() * 10).toString();
+  const a2 = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  const a3 = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  return `HLC-R${yearDigits}${n1}${a1}${n2}${a2}${a3}`;
 }
 
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
-  humanReadableId: z.string().optional().refine(val => !val || /^[a-zA-Z0-9-]*$/.test(val), {
-    message: 'Custom ID can only contain letters, numbers, and hyphens.',
-  }),
   listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
   propertyType: z.enum(propertyTypes, { required_error: "Property type is required."}),
   locationAreaCity: z.string().min(3, { message: 'Location (Area/City) is required.' }),
@@ -75,7 +73,6 @@ export default function AddPropertyPage() {
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
       title: '',
-      humanReadableId: '',
       listingType: undefined,
       propertyType: undefined,
       locationAreaCity: '',
@@ -105,16 +102,11 @@ export default function AddPropertyPage() {
       }
 
       const currentAgent = user as Agent;
-
-      let finalHumanReadableId = values.humanReadableId?.trim() || null;
-      if (!finalHumanReadableId) {
-        const randomSuffix = generateRandomAlphanumeric(7);
-        finalHumanReadableId = `HLC-${randomSuffix}`;
-      }
+      const generatedHumanReadableId = generatePropertySpecificId();
 
       const propertyDataToInsert: TablesInsert<'properties'> = {
         title: values.title,
-        human_readable_id: finalHumanReadableId,
+        human_readable_id: generatedHumanReadableId,
         description: values.description,
         price: values.price,
         listing_type: values.listingType,
@@ -126,7 +118,7 @@ export default function AddPropertyPage() {
         bathrooms: values.bathrooms,
         area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
         images: [
-          'https://placehold.co/600x400.png', // Using simpler placeholders now that width/height are in URL
+          'https://placehold.co/600x400.png',
           'https://placehold.co/600x401.png'
         ],
         agent_id: currentAgent.id,
@@ -147,7 +139,7 @@ export default function AddPropertyPage() {
         console.error("Error saving property to DB:", error);
         toast({
           title: 'Error Adding Property',
-          description: `Could not save property: ${error.message}. This could be due to a duplicate Custom Property ID if one was provided or generated. Please try again or contact support.`,
+          description: `Could not save property: ${error.message}. This could be due to a duplicate generated Property ID. Please try submitting again.`,
           variant: 'destructive',
         });
         return;
@@ -155,7 +147,7 @@ export default function AddPropertyPage() {
 
       toast({
         title: 'Property Submitted for Review!',
-        description: `${values.title} (ID: ${finalHumanReadableId}) has been submitted. It will be reviewed by an admin.`,
+        description: `${values.title} (ID: ${generatedHumanReadableId}) has been submitted. It will be reviewed by an admin.`,
       });
       form.reset();
       router.push('/agents/dashboard/my-listings');
@@ -168,7 +160,7 @@ export default function AddPropertyPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Property
         </h1>
-        <p className="text-muted-foreground">Fill in the details for your new listing. It will be reviewed by an admin before publishing.</p>
+        <p className="text-muted-foreground">Fill in the details for your new listing. It will be reviewed by an admin before publishing. A unique Property ID will be generated automatically.</p>
       </div>
 
       <Card className="shadow-xl">
@@ -186,21 +178,9 @@ export default function AddPropertyPage() {
                   control={form.control}
                   name="title"
                   render={({ field }) => (
-                    <FormItem className="lg:col-span-2">
+                    <FormItem className="lg:col-span-3">
                       <FormLabel className="flex items-center"><Home className="w-4 h-4 mr-1 text-muted-foreground"/>Property Title</FormLabel>
                       <FormControl><Input placeholder="e.g., Beautiful 3-Bedroom Duplex" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="humanReadableId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><Hash className="w-4 h-4 mr-1 text-muted-foreground"/>Custom Property ID (Optional)</FormLabel>
-                      <FormControl><Input placeholder="e.g., IKEJA-DUPLEX-001" {...field} /></FormControl>
-                      <FormDescription className="text-xs">Leave blank for auto-generation (e.g., HLC-XXXXXXX).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
