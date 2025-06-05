@@ -37,22 +37,42 @@ export default function MyListingsPage() {
   const { toast } = useToast();
 
   const fetchPlatformSettings = useCallback(async () => {
-    // In a real app, fetch this from Supabase 'platform_settings' table
-    const mockSettings: PlatformSettings = {
-        promotionsEnabled: true,
-        promotionTiers: [
-            { id: 'basic', name: 'Basic Boost', fee: 5000, duration: 7, description: 'Standard visibility boost for 7 days.' },
-            { id: 'premium', name: 'Premium Spotlight', fee: 12000, duration: 14, description: 'Enhanced visibility and higher placement for 14 days.' },
-            { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
-        ],
-        siteName: 'Homeland Capital',
-        defaultCurrency: 'NGN',
-        maintenanceMode: false,
-        notificationEmail: 'admin@homelandcapital.com',
-        predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
-        propertyTypes: ['House', 'Apartment', 'Land'],
-    };
-    setPlatformSettings(mockSettings);
+    const { data: dbSettings, error: settingsError } = await supabase
+      .from('platform_settings')
+      .select('*')
+      .eq('id', 1) 
+      .single();
+
+    if (settingsError || !dbSettings) {
+      console.warn("Error fetching platform settings or no settings found, using mock:", settingsError?.message);
+      const mockSettings: PlatformSettings = {
+          promotionsEnabled: true,
+          promotionTiers: [
+              { id: 'basic', name: 'Basic Boost', fee: 5000, duration: 7, description: 'Standard visibility boost for 7 days.' },
+              { id: 'premium', name: 'Premium Spotlight', fee: 12000, duration: 14, description: 'Enhanced visibility and higher placement for 14 days.' },
+              { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
+          ],
+          siteName: 'Homeland Capital',
+          defaultCurrency: 'NGN',
+          maintenanceMode: false,
+          notificationEmail: 'admin@homelandcapital.com',
+          predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
+          propertyTypes: ['House', 'Apartment', 'Land', 'Shortlet'],
+      };
+      setPlatformSettings(mockSettings);
+    } else {
+        const promotionTiersFromDb = Array.isArray(dbSettings.promotion_tiers) 
+            ? dbSettings.promotion_tiers as PromotionTierConfig[]
+            : [];
+
+        setPlatformSettings({
+            ...dbSettings,
+            promotionsEnabled: dbSettings.promotions_enabled ?? true,
+            promotionTiers: promotionTiersFromDb,
+            predefinedAmenities: dbSettings.predefined_amenities || "Pool,Garage,Gym",
+            propertyTypes: dbSettings.property_types || ['House', 'Apartment', 'Land', 'Shortlet'],
+        } as PlatformSettings);
+    }
   }, []);
 
 
@@ -60,11 +80,11 @@ export default function MyListingsPage() {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
-      .select(`
+      .select(\`
         *,
         promotion_expires_at,
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      `)
+      \`)
       .eq('agent_id', agentId)
       .order('status', { ascending: true })
       .order('created_at', { ascending: false });
@@ -125,7 +145,7 @@ export default function MyListingsPage() {
     if (error) {
       toast({ title: "Error Deleting Listing", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Listing Deleted", description: `${propertyToDelete.title} has been removed.` });
+      toast({ title: "Listing Deleted", description: \`\${propertyToDelete.title} has been removed.\` });
       fetchAgentProperties((user as Agent).id);
     }
     setIsDeleteDialogOpen(false);
@@ -172,7 +192,7 @@ export default function MyListingsPage() {
     if (error) {
       toast({ title: "Error Promoting Listing", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Listing Promoted!", description: `${propertyToPromote.title} promoted with ${selectedTier.name}.` });
+      toast({ title: "Listing Promoted!", description: \`\${propertyToPromote.title} promoted with \${selectedTier.name}.\` });
       fetchAgentProperties((user as Agent).id);
     }
     setIsPromoteDialogOpen(false);
@@ -236,7 +256,7 @@ export default function MyListingsPage() {
         </div>
       </div>
 
-      {!platformSettings.promotionsEnabled && (
+      {platformSettings && !platformSettings.promotionsEnabled && (
         <Card className="bg-yellow-50 border-yellow-300 p-4">
             <CardContent className="flex items-center gap-3 p-0"> <AlertTriangle className="h-6 w-6 text-yellow-600" /> <div> <CardTitle className="text-yellow-700 text-base font-semibold">Property Promotions Disabled</CardTitle> <CardDescription className="text-yellow-600 text-sm">The platform administrator has currently disabled property promotions.</CardDescription> </div> </CardContent>
         </Card>
@@ -269,22 +289,70 @@ export default function MyListingsPage() {
           )}
         </div>
       )}
-       {propertyToPromote && ( <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}> <DialogContent className="sm:max-w-lg"> <DialogHeader> 
-       <DialogTitle className="font-headline text-xl">
-         <span className="flex items-center">
-           <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier
-         </span>
-        </DialogTitle> 
-        <DialogDescription>
-          <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span>
-        </DialogDescription> 
-        </DialogHeader> <div className="py-4 space-y-4"> <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId}> {platformSettings.promotionTiers.map((tier) => ( <Label key={tier.id} htmlFor={tier.id} className={cn( "flex flex-col p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary" )}> <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> <RadioGroupItem value={tier.id} id={tier.id} className="shrink-0"/> </div> <p className="text-sm text-muted-foreground mt-1">{tier.description}</p> <div className="mt-2 text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div> </Label> ))} </RadioGroup> {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )} </div> <DialogFooter> <DialogClose asChild> <Button variant="outline">Cancel</Button> </DialogClose> <Button onClick={handleConfirmPromotion} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0}> {selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier'} </Button> </DialogFooter> </DialogContent> </Dialog> )}
-       {propertyToDelete && ( <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}> <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle className="font-headline">Confirm Deletion</DialogTitle> 
-       <DialogDescription>
-        <span>Are you sure you want to delete the listing "<strong>{propertyToDelete.title}</strong>"? This action cannot be undone.</span>
-       </DialogDescription> 
-       </DialogHeader> <DialogFooter> <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose> <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button> </DialogFooter> </DialogContent> </Dialog> )}
+       {propertyToPromote && platformSettings && (
+         <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+           <DialogContent className="sm:max-w-lg">
+             <DialogHeader>
+               <DialogTitle className="font-headline text-xl">
+                 Choose Promotion Tier
+               </DialogTitle>
+               <DialogDescription>
+                 Select a promotion package for "{propertyToPromote.title}".
+               </DialogDescription>
+             </DialogHeader>
+             {/* Temporarily commenting out the body for testing */}
+             <div className="py-4 space-y-4">
+                <p className="text-center text-muted-foreground">Promotion selection UI (RadioGroup) is temporarily hidden for debugging.</p>
+             {/*
+               <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId}>
+                 {(platformSettings.promotionTiers || []).map((tier) => (
+                   <Label key={tier.id} htmlFor={tier.id} className={cn( "flex flex-col p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary" )}>
+                     <div className="flex items-center justify-between">
+                       <span className="font-semibold text-foreground">{tier.name}</span>
+                       <RadioGroupItem value={tier.id} id={tier.id} className="shrink-0"/>
+                     </div>
+                     <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
+                     <div className="mt-2 text-sm">
+                       <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span>
+                       <span className="text-muted-foreground mx-1">|</span>
+                       <span className="text-muted-foreground">Duration: {tier.duration} days</span>
+                     </div>
+                   </Label>
+                 ))}
+               </RadioGroup>
+               {(platformSettings.promotionTiers || []).length === 0 && (
+                 <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p>
+               )}
+                */}
+             </div>
+             <DialogFooter>
+               <DialogClose asChild>
+                 <Button variant="outline">Cancel</Button>
+               </DialogClose>
+               <Button onClick={handleConfirmPromotion} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={true /*!selectedTierId || (platformSettings.promotionTiers || []).length === 0*/}>
+                 {/* {selectedTierId ? \`Promote (NGN \${getSelectedTierFee().toLocaleString()})\` : 'Select a Tier'} */}
+                 Promote (Test)
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+       )}
+       {propertyToDelete && (
+         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+           <DialogContent className="sm:max-w-md">
+             <DialogHeader>
+               <DialogTitle className="font-headline">Confirm Deletion</DialogTitle>
+               <DialogDescription>
+                 <span>Are you sure you want to delete the listing "<strong>{propertyToDelete.title}</strong>"? This action cannot be undone.</span>
+               </DialogDescription>
+             </DialogHeader>
+             <DialogFooter>
+               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+               <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+       )}
     </div>
   );
 }
-
