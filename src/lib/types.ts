@@ -42,10 +42,9 @@ export const nigerianStates = [
 export type ListingType = Database['public']['Enums']['listing_type_enum'];
 export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
-// This 'propertyTypes' const is still used by PropertySearchFilter and AddPropertyPage (initially).
-// It will be replaced by DB values in AddPropertyPage in a subsequent step.
-export type PropertyTypeEnum = Database['public']['Enums']['property_type_enum'];
-export const propertyTypes: PropertyTypeEnum[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land'];
+// This 'propertyTypes' const is used as a fallback if platform settings fail to load.
+// And also by PropertySearchFilter. The canonical list is now in platform_settings.
+export const propertyTypes: string[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land', 'Shortlet', 'Office Space', 'Warehouse'];
 
 
 export interface PromotionTierConfig {
@@ -73,7 +72,7 @@ export interface Property {
   location_area_city: string;
   state: NigerianState;
   address: string;
-  property_type: PropertyTypeEnum; // This will be validated against the dynamic list from DB in AddPropertyPage
+  property_type: string; // Changed from PropertyTypeEnum to string
   bedrooms: number; // INT
   bathrooms: number; // INT
   area_sq_ft?: number | null; // NUMERIC

@@ -151,7 +151,7 @@ export type Database = {
           promotion_expires_at: string | null
           promotion_tier_id: string | null
           promotion_tier_name: string | null
-          property_type: Database["public"]["Enums"]["property_type_enum"]
+          property_type: string
           rejection_reason: string | null
           state: Database["public"]["Enums"]["nigerian_state_enum"]
           status: Database["public"]["Enums"]["property_status_enum"]
@@ -181,7 +181,7 @@ export type Database = {
           promotion_expires_at?: string | null
           promotion_tier_id?: string | null
           promotion_tier_name?: string | null
-          property_type: Database["public"]["Enums"]["property_type_enum"]
+          property_type: string
           rejection_reason?: string | null
           state: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["property_status_enum"]
@@ -211,7 +211,7 @@ export type Database = {
           promotion_expires_at?: string | null
           promotion_tier_id?: string | null
           promotion_tier_name?: string | null
-          property_type?: Database["public"]["Enums"]["property_type_enum"]
+          property_type?: string
           rejection_reason?: string | null
           state?: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["property_status_enum"]

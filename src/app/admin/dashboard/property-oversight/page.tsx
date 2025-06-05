@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Agent, PropertyTypeEnum } from '@/lib/types';
+import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Agent } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,10 +22,10 @@ import { convertToCSV, downloadCSV } from '@/lib/export-utils';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { propertyTypes as propertyTypesEnum, propertyStatuses as propertyStatusesList, listingTypes as listingTypesList } from '@/lib/types';
+import { propertyStatuses as propertyStatusesList, listingTypes as listingTypesList } from '@/lib/types';
 
 
-type PropertyTypeFilter = Property['property_type'] | 'all';
+type PropertyTypeFilter = string | 'all'; // Changed from Property['property_type'] to string
 type StatusFilter = PropertyStatus | 'all';
 type ListingTypeFilter = ListingType | 'all';
 
@@ -68,6 +68,7 @@ export default function PropertyOversightPage() {
         } as Agent : undefined, 
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
+        property_type: p.property_type as string, // Ensure property_type is string
       })) as Property[];
       setAllProperties(formattedProperties);
     }
@@ -112,7 +113,7 @@ export default function PropertyOversightPage() {
 
   const availablePropertyTypes = useMemo(() => {
     const uniqueTypes = new Set(allProperties.map(p => p.property_type));
-    return Array.from(uniqueTypes).filter(Boolean) as PropertyTypeEnum[];
+    return Array.from(uniqueTypes).filter(Boolean) as string[]; // Changed from PropertyTypeEnum[]
   }, [allProperties]);
 
 
