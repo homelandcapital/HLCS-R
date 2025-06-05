@@ -270,10 +270,10 @@ export default function MyListingsPage() {
         </div>
       )}
        {propertyToPromote && ( <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}> <DialogContent className="sm:max-w-lg"> <DialogHeader> 
-       <DialogTitle className="font-headline text-xl flex items-center">
-        <span> 
-          <Star className="h-5 w-5 mr-2 text-yellow-500 inline-block" /> Choose Promotion Tier
-        </span>
+       <DialogTitle className="font-headline text-xl">
+         <span className="flex items-center">
+           <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier
+         </span>
         </DialogTitle> 
         <DialogDescription>
           <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span>
