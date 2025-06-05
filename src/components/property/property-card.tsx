@@ -99,7 +99,9 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
       </CardContent>
       <CardFooter className="p-4 border-t mt-auto">
         <Button asChild className="w-full" variant="default">
-          <Link href={`/properties/${property.id}`}>View Details</Link>
+          <Link href={`/properties/${property.id}`}>
+            <span>View Details</span>
+          </Link>
         </Button>
       </CardFooter>
     </Card>
