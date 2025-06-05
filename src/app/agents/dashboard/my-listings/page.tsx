@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/lib/supabaseClient';
-import PropertyCard from '@/components/property/property-card'; // For Grid View
+import AgentPropertyGridItem from '@/components/property/agent-property-grid-item'; // For Grid View
 import AgentPropertyListItem from '@/components/property/agent-property-list-item'; // For List View
 
 
@@ -47,7 +47,7 @@ export default function MyListingsPage() {
         defaultCurrency: 'NGN',
         maintenanceMode: false,
         notificationEmail: 'admin@homelandcapital.com',
-        predefinedAmenities: "Pool, Garage, Gym",
+        predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
     };
     setPlatformSettings(mockSettings);
   }, []);
@@ -241,9 +241,12 @@ export default function MyListingsPage() {
         )}>
           {agentProperties.map(property =>
             viewMode === 'grid' ? (
-              <PropertyCard
+              <AgentPropertyGridItem
                 key={property.id}
                 property={property}
+                onOpenDeleteDialog={openDeleteDialog}
+                onOpenPromoteDialog={handleOpenPromoteDialog}
+                platformSettings={platformSettings}
               />
             ) : (
               <AgentPropertyListItem
@@ -262,6 +265,5 @@ export default function MyListingsPage() {
     </div>
   );
 }
-
 
     
