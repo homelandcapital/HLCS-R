@@ -8,7 +8,7 @@ const Logo = () => {
   // IMPORTANT: Replace 'your_logo_public_id' with the actual Public ID of your logo
   // from your Cloudinary account.
   // Also, ensure NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is set in your .env.local file.
-  const logoPublicId = 'YOUR_LOGO_PUBLIC_ID_HERE'; // <<< REPLACE THIS
+  const logoPublicId = 'https://res.cloudinary.com/douzsh9ui/image/upload/v1749088331/main-inverted-logo-no-bg_o987qt.png'; // <<< REPLACE THIS
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 

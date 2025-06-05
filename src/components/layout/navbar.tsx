@@ -101,10 +101,10 @@ const Navbar = () => {
 
     return (
       <div className={`flex gap-2 ${isMobile ? 'flex-col pt-4 border-t border-border' : 'items-center'}`}>
-        <Button variant={isMobile ? "outline" : "ghost"} asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start" : ""}>
+        <Button variant={isMobile ? "outline" : "ghost"} asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
           <Link href="/agents/login">Login</Link>
         </Button>
-        <Button asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start" : ""}>
+        <Button asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
           <Link href="/agents/register">Register</Link>
         </Button>
       </div>
@@ -118,7 +118,7 @@ const Navbar = () => {
         <Logo />
         <nav className="hidden md:flex items-center space-x-1">
           {navLinks.map(link => (
-            <Button key={link.href} variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-medium group px-3">
+            <Button key={link.href} variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
               <Link href={link.href} className="flex items-center">
                 {React.cloneElement(link.icon, { className: "mr-1.5 h-4 w-4 text-primary group-hover:text-accent transition-colors" })}
                 {link.label}
@@ -141,13 +141,12 @@ const Navbar = () => {
             <SheetContent side="right" className="w-[280px] bg-background p-6 flex flex-col">
               <SheetHeader className="mb-6 text-left">
                 <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle> 
-                {/* Visually hidden title for accessibility */}
                 <Logo />
               </SheetHeader>
               <nav className="flex flex-col space-y-1 mb-auto">
                {navLinks.map(link => (
                   <Button key={link.href} variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
-                    <Link href={link.href} className="text-lg text-foreground hover:text-primary transition-colors py-2 flex items-center group">
+                    <Link href={link.href} className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
                        {React.cloneElement(link.icon, { className: "mr-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" })}
                         {link.label}
                     </Link>
