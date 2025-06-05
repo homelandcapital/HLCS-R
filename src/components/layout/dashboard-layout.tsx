@@ -67,17 +67,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
         <nav className="flex flex-col space-y-2">
           {navItems.map((item) => (
-            <Button
-              key={item.href}
-              variant={pathname.startsWith(item.href) && (item.href !== '/agents/dashboard' || pathname === item.href) ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              asChild
-            >
-              <Link href={item.href}>
-                {item.icon}
-                <span className="ml-2">{item.label}</span>
-              </Link>
-            </Button>
+            <Link key={item.href} href={item.href} passHref legacyBehavior>
+              <Button
+                variant={pathname.startsWith(item.href) && (item.href !== '/agents/dashboard' || pathname === item.href) ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                asChild
+              >
+                <a> {/* Ensure 'a' tag for legacyBehavior */}
+                  {item.icon}
+                  <span className="ml-2">{item.label}</span>
+                </a>
+              </Button>
+            </Link>
           ))}
         </nav>
         <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}> {/* Changed logout to signOut */}

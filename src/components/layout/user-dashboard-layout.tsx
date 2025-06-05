@@ -50,7 +50,13 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
       inquiries.forEach(inq => {
         if (inq.conversation && inq.conversation.length > 0) {
           const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          // Check if the latest message in the conversation is from 'platform_admin'
+          // This logic assumes we only count if the *last* message is from admin.
+          // A more sophisticated approach might track read receipts or last_read_timestamp.
           if (sortedConversation[0]?.sender_role === 'platform_admin') {
+            // This simple check might increment count even if user has seen it.
+            // For a true unread count, a more complex system is needed (e.g., tracking last read message per inquiry).
+            // For now, this indicates an admin has replied.
             count++;
           }
         }
@@ -115,26 +121,27 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
             const isMyInquiriesItem = item.href === '/users/dashboard/my-inquiries';
             
             return (
-            <Button
-              key={item.href}
-              variant={isActive ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              asChild
-            >
-              <Link href={item.href} className="flex items-center justify-between w-full">
-                <>
-                  <div className="flex items-center">
-                      {item.icon}
-                      <span className="ml-2">{item.label}</span>
-                  </div>
-                  {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                        {unreadUserMessagesCount}
-                      </Badge>
-                  )}
-                </>
+              <Link key={item.href} href={item.href} passHref legacyBehavior>
+                <Button
+                  variant={isActive ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  asChild
+                >
+                  <a className="flex items-center justify-between w-full"> {/* Ensure 'a' tag for legacyBehavior */}
+                    <>
+                      <div className="flex items-center">
+                          {item.icon}
+                          <span className="ml-2">{item.label}</span>
+                      </div>
+                      {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
+                          <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
+                            {unreadUserMessagesCount}
+                          </Badge>
+                      )}
+                    </>
+                  </a>
+                </Button>
               </Link>
-            </Button>
             );
           })}
         </nav>

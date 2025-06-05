@@ -115,26 +115,27 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             const isMailItem = item.href === '/admin/dashboard/inquiries';
 
             return (
-              <Button
-                key={item.href}
-                variant={isActive ? 'default' : 'ghost'}
-                className="w-full justify-start" 
-                asChild
-              >
-                <Link href={item.href} className="flex items-center justify-between w-full"> 
-                  <>
-                    <div className="flex items-center"> 
-                      {item.icon}
-                      <span className="ml-2">{item.label}</span>
-                    </div>
-                    {isMailItem && unreadAdminMessagesCount > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                        {unreadAdminMessagesCount}
-                      </Badge>
-                    )}
-                  </>
-                </Link>
-              </Button>
+              <Link key={item.href} href={item.href} passHref legacyBehavior>
+                <Button
+                  variant={isActive ? 'default' : 'ghost'}
+                  className="w-full justify-start" 
+                  asChild
+                >
+                  <a className="flex items-center justify-between w-full"> {/* Ensure 'a' tag for legacyBehavior */}
+                    <>
+                      <div className="flex items-center"> 
+                        {item.icon}
+                        <span className="ml-2">{item.label}</span>
+                      </div>
+                      {isMailItem && unreadAdminMessagesCount > 0 && (
+                        <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
+                          {unreadAdminMessagesCount}
+                        </Badge>
+                      )}
+                    </>
+                  </a>
+                </Button>
+              </Link>
             );
           })}
         </nav>

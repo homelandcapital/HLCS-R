@@ -77,14 +77,37 @@ export default function SavedPropertiesPage() {
   }
   
   if (!user || user.role !== 'user') {
-     return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">You need to be logged in as a user to view this page.</p> <Button asChild className="mt-4"> <Link href="/"><span>Go to Homepage</span></Link> </Button> </div> );
+     return (
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-headline">Access Denied</h1>
+          <p className="text-muted-foreground">You need to be logged in as a user to view this page.</p>
+          <Link href="/" passHref legacyBehavior>
+            <Button asChild className="mt-4">
+              <a><span>Go to Homepage</span></a>
+            </Button>
+          </Link>
+        </div>
+     );
   }
 
   return (
     <div className="space-y-6">
       <div> <h1 className="text-3xl font-headline flex items-center"> <Bookmark className="mr-3 h-8 w-8 text-primary" /> Saved Properties </h1> <p className="text-muted-foreground"> Here are the properties you&apos;ve saved for later. </p> </div>
       {savedPropertiesDetails.length === 0 ? (
-        <Card className="text-center py-12 shadow-lg"> <CardHeader> <SearchX className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> <CardTitle className="font-headline text-2xl">No Saved Properties Yet</CardTitle> <CardDescription>You haven&apos;t saved any properties. Start exploring and save your favorites!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/properties"><span>Find Properties</span></Link> </Button> </CardContent> </Card>
+        <Card className="text-center py-12 shadow-lg">
+          <CardHeader>
+            <SearchX className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <CardTitle className="font-headline text-2xl">No Saved Properties Yet</CardTitle>
+            <CardDescription>You haven&apos;t saved any properties. Start exploring and save your favorites!</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/properties" passHref legacyBehavior>
+              <Button asChild size="lg">
+                <a>Find Properties</a>
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedPropertiesDetails.map(property => ( <PropertyCard key={property.id} property={property} /> ))}
