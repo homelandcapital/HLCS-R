@@ -86,11 +86,9 @@ export default function AddPropertyPage() {
 
     if (error) {
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults or placeholders.`, variant: 'destructive' });
-      // Fallback to some very basic defaults if absolutely necessary or handle error more gracefully
       setPlatformSettings({
-        propertyTypes: ['House', 'Apartment', 'Land'], // Basic fallback
-        predefinedAmenities: 'Pool,Garage,Gym', // Basic fallback
-        // Other settings not directly used on this page can be omitted or given defaults
+        propertyTypes: ['House', 'Apartment', 'Land'], 
+        predefinedAmenities: 'Pool,Garage,Gym', 
         promotionsEnabled: false,
         promotionTiers: [],
         siteName: 'Homeland Capital',
@@ -103,7 +101,7 @@ export default function AddPropertyPage() {
         ...data,
         propertyTypes: data.property_types || ['House', 'Apartment', 'Land'],
         predefinedAmenities: data.predefined_amenities || 'Pool,Garage,Gym',
-      } as PlatformSettingsType); // Cast assuming other necessary fields might be missing but are not critical here
+      } as PlatformSettingsType); 
     }
     setLoadingSettings(false);
   }, [toast]);
@@ -121,22 +119,22 @@ export default function AddPropertyPage() {
       locationAreaCity: '',
       state: undefined,
       address: '',
-      price: undefined,
+      price: '', // Changed from undefined
       bedrooms: 0,
       bathrooms: 0,
-      areaSqFt: undefined,
+      areaSqFt: '', // Changed from undefined
       description: '',
-      yearBuilt: undefined,
+      yearBuilt: '', // Changed from undefined
       amenities: '',
-      latitude: undefined,
-      longitude: undefined,
+      latitude: '', // Changed from undefined
+      longitude: '', // Changed from undefined
     },
   });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const filesArray = Array.from(event.target.files);
-      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray].slice(0, 10)); // Limit to 10 files
+      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray].slice(0, 10)); 
 
       const newPreviews = filesArray.map(file => URL.createObjectURL(file));
       setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews].slice(0, 10));
@@ -203,12 +201,12 @@ export default function AddPropertyPage() {
         title: values.title,
         human_readable_id: generatedHumanReadableId,
         description: values.description,
-        price: values.price,
+        price: values.price, // This is z.coerce.number() so will handle string from form
         listing_type: values.listingType,
         location_area_city: values.locationAreaCity,
         state: values.state,
         address: values.address,
-        property_type: values.propertyType as any, // This is a string; DB expects property_type_enum
+        property_type: values.propertyType as any, 
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
         area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
@@ -234,17 +232,16 @@ export default function AddPropertyPage() {
         console.error("Data that was attempted to be inserted:", JSON.stringify(propertyDataToInsert, null, 2));
         
         let detailedErrorMessage = `Could not save property.`;
-        // Type guard for Supabase PostgrestError
         if (typeof error === 'object' && error !== null && 'message' in error && 'code' in error) {
             const pgError = error as { message: string; code: string; details?: string; hint?: string };
             detailedErrorMessage += ` Supabase: ${pgError.message} (Code: ${pgError.code}).`;
             if (pgError.details) detailedErrorMessage += ` Details: ${pgError.details}.`;
 
-            if (pgError.code === '23502' && pgError.message.includes("property_type")) { // null value in not-null column
+            if (pgError.code === '23502' && pgError.message.includes("property_type")) { 
                  detailedErrorMessage += ` The property type might be missing or invalid. Please ensure you select a valid property type.`;
             } else if (pgError.message.includes("invalid input value for enum property_type_enum") || pgError.message.includes("property_type_enum")) {
-                 detailedErrorMessage += ` The selected property type '${values.propertyType}' is not valid according to the database. Please ensure the admin has configured this type correctly in the system and it matches the database enum.`;
-            } else if (pgError.code === '23505' && pgError.message.includes("properties_human_readable_id_key")) { // duplicate key
+                 detailedErrorMessage += ` The selected property type '${values.propertyType}' is not valid according to the database. Ensure the admin has configured this type and it matches a valid database enum value.`;
+            } else if (pgError.code === '23505' && pgError.message.includes("properties_human_readable_id_key")) { 
                 detailedErrorMessage += ` A property with a similar ID (${generatedHumanReadableId}) might already exist. Please try submitting again.`;
             }
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
