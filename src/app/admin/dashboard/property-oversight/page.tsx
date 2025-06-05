@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Agent } from '@/lib/types';
+import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Agent, PropertyTypeEnum } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,8 @@ import { convertToCSV, downloadCSV } from '@/lib/export-utils';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
+import { propertyTypes as propertyTypesEnum, propertyStatuses as propertyStatusesList, listingTypes as listingTypesList } from '@/lib/types';
+
 
 type PropertyTypeFilter = Property['property_type'] | 'all';
 type StatusFilter = PropertyStatus | 'all';
@@ -108,12 +110,11 @@ export default function PropertyOversightPage() {
     setFilteredProperties(properties);
   }, [searchTerm, typeFilter, statusFilter, listingTypeFilter, allProperties]);
 
-  const propertyTypes = useMemo(() => {
+  const availablePropertyTypes = useMemo(() => {
     const uniqueTypes = new Set(allProperties.map(p => p.property_type));
     return Array.from(uniqueTypes).filter(Boolean) as PropertyTypeEnum[];
   }, [allProperties]);
-  const propertyStatusesList: PropertyStatus[] = ['pending', 'approved', 'rejected'];
-  const listingTypesList: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
+
 
   const getStatusBadgeVariant = (status: PropertyStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -248,7 +249,7 @@ export default function PropertyOversightPage() {
             </Select>
             <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as PropertyTypeFilter)}>
               <SelectTrigger><SelectValue placeholder="Filter by Prop. Type" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Prop. Types</SelectItem>{propertyTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Prop. Types</SelectItem>{availablePropertyTypes.map(type => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
               <SelectTrigger><SelectValue placeholder="Filter by status" /></SelectTrigger>
@@ -310,7 +311,7 @@ export default function PropertyOversightPage() {
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="icon" asChild title="View Public Listing (if approved)">
-                        <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer"> <Eye className="h-4 w-4" /> </Link>
+                        <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer"><span><Eye className="h-4 w-4" /></span></Link>
                       </Button>
                       {property.status === 'pending' && (
                         <>
@@ -356,3 +357,4 @@ export default function PropertyOversightPage() {
     </div>
   );
 }
+

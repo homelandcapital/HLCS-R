@@ -137,6 +137,7 @@ export type Database = {
           coordinates_lng: number | null
           created_at: string
           description: string
+          human_readable_id: string | null
           id: string
           images: Json | null
           is_promoted: boolean | null
@@ -165,6 +166,7 @@ export type Database = {
           coordinates_lng?: number | null
           created_at?: string
           description: string
+          human_readable_id?: string | null
           id?: string
           images?: Json | null
           is_promoted?: boolean | null
@@ -193,6 +195,7 @@ export type Database = {
           coordinates_lng?: number | null
           created_at?: string
           description?: string
+          human_readable_id?: string | null
           id?: string
           images?: Json | null
           is_promoted?: boolean | null

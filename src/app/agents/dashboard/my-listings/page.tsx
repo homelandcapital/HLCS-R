@@ -3,8 +3,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { mockPlatformSettings } from '@/lib/mock-data';
-import type { Property, Agent, PropertyStatus, PromotionTierConfig, UserRole } from '@/lib/types';
+// import { mockPlatformSettings } from '@/lib/mock-data'; // To be replaced by DB fetch
+import type { Property, Agent, PropertyStatus, PromotionTierConfig, UserRole, PlatformSettings } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,9 +29,33 @@ export default function MyListingsPage() {
   const [propertyToPromote, setPropertyToPromote] = useState<Property | null>(null);
   const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const { toast } = useToast();
 
-  const platformSettings = mockPlatformSettings; // This will need to be fetched from DB later
+  const fetchPlatformSettings = useCallback(async () => {
+    // In a real app, fetch from DB. For now, using a direct import for simplicity.
+    // This would look like:
+    // const { data, error } = await supabase.from('platform_settings').select('*').single();
+    // if (error) console.error("Error fetching platform settings:", error);
+    // else setPlatformSettings(data as PlatformSettings);
+    // For now, let's use a placeholder if we decide to remove mockPlatformSettings directly.
+    // Simulating fetched settings or using a temporary mock.
+    const mockSettings: PlatformSettings = {
+        promotionsEnabled: true,
+        promotionTiers: [
+            { id: 'basic', name: 'Basic Boost', fee: 5000, duration: 7, description: 'Standard visibility boost for 7 days.' },
+            { id: 'premium', name: 'Premium Spotlight', fee: 12000, duration: 14, description: 'Enhanced visibility and higher placement for 14 days.' },
+            { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
+        ],
+        siteName: 'Homeland Capital',
+        defaultCurrency: 'NGN',
+        maintenanceMode: false,
+        notificationEmail: 'admin@homelandcapital.com',
+        predefinedAmenities: "Pool, Garage, Gym",
+    };
+    setPlatformSettings(mockSettings);
+  }, []);
+
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
     setPageLoading(true);
@@ -62,13 +86,14 @@ export default function MyListingsPage() {
   }, [toast]);
 
   useEffect(() => {
+    fetchPlatformSettings();
     if (!authLoading && user && user.role === 'agent') {
       const currentAgent = user as Agent;
       fetchAgentProperties(currentAgent.id);
     } else if (!authLoading) {
       setPageLoading(false);
     }
-  }, [user, authLoading, fetchAgentProperties]);
+  }, [user, authLoading, fetchAgentProperties, fetchPlatformSettings]);
 
   const openDeleteDialog = (property: Property) => {
     setPropertyToDelete(property);
@@ -77,7 +102,6 @@ export default function MyListingsPage() {
 
   const handleConfirmDelete = async () => {
     if (!propertyToDelete || !user || user.role !== 'agent') return;
-    // Ensure the agent owns this property before deleting
     if (propertyToDelete.agent_id !== user.id) {
         toast({ title: "Unauthorized", description: "You can only delete your own listings.", variant: "destructive" });
         setIsDeleteDialogOpen(false);
@@ -107,7 +131,7 @@ export default function MyListingsPage() {
   };
 
   const handleConfirmPromotion = async () => {
-    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent') return;
+    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings) return;
      if (propertyToPromote.agent_id !== user.id) {
         toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" });
         setIsPromoteDialogOpen(false);
@@ -163,7 +187,7 @@ export default function MyListingsPage() {
     }
   };
 
-  if (pageLoading || authLoading) {
+  if (pageLoading || authLoading || !platformSettings) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center"> <Skeleton className="h-10 w-1/3" /> <Skeleton className="h-10 w-36" /> </div>
@@ -181,7 +205,7 @@ export default function MyListingsPage() {
   }
 
   const getSelectedTierFee = () => {
-    if (!selectedTierId) return 0;
+    if (!selectedTierId || !platformSettings) return 0;
     const tier = platformSettings.promotionTiers.find(t => t.id === selectedTierId);
     return tier ? tier.fee : 0;
   };
@@ -247,3 +271,4 @@ export default function MyListingsPage() {
     </div>
   );
 }
+
