@@ -2,7 +2,7 @@
 "use client";
 
 import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole } from '@/lib/types';
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
@@ -32,6 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const isMountedRef = useRef(true);
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
     const { data: userProfilesData, error: profileQueryError } = await supabase
@@ -52,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userProfilesData || userProfilesData.length === 0) {
       console.warn('User profile not found in public.users for id:', supabaseUser.id);
-      toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted. Please contact support or try re-registering.', variant: 'destructive'});
+      toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
       return null;
     }
 
@@ -74,7 +75,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (savedPropsError) {
         console.error('Error fetching saved properties:', savedPropsError.message);
-        // Non-critical, proceed with empty saved properties
       }
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
       
@@ -106,39 +106,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
     const initializeAuth = async () => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
       setLoading(true);
       try {
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
           console.error("Error getting initial session:", sessionError);
-          if (isMounted) {
+          if (isMountedRef.current) {
             setUser(null);
             setSession(null);
           }
           return;
         }
 
-        if (isMounted) setSession(initialSession);
+        if (isMountedRef.current) setSession(initialSession);
 
         if (initialSession?.user) {
           const profile = await fetchUserProfileAndRelatedData(initialSession.user);
-          if (isMounted) setUser(profile);
+          if (isMountedRef.current) setUser(profile);
         } else {
-          if (isMounted) setUser(null);
+          if (isMountedRef.current) setUser(null);
         }
       } catch (error) {
         console.error("Unhandled error during auth initialization:", error);
-        if (isMounted) {
+        if (isMountedRef.current) {
           setUser(null);
           setSession(null);
         }
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMountedRef.current) setLoading(false);
       }
     };
 
@@ -146,15 +146,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
 
         setSession(currentSession);
 
         if (event === 'SIGNED_IN' && currentSession?.user) {
+          if (!isMountedRef.current) return; 
           setLoading(true);
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-            if (isMounted) setUser(profile);
+            if (isMountedRef.current) setUser(profile);
             if (profile) {
               if (profile.role === 'agent') router.push('/agents/dashboard');
               else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
@@ -164,47 +165,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } catch (e) { 
             console.error("Error on SIGNED_IN profile fetch:", e); 
-            if (isMounted) setUser(null); 
+            if (isMountedRef.current) setUser(null); 
           } finally { 
-            if (isMounted) setLoading(false); 
+            if (isMountedRef.current) setLoading(false); 
           }
         } else if (event === 'SIGNED_OUT') {
-          if (isMounted) {
+          if (isMountedRef.current) {
             setUser(null);
             router.push('/');
-            // No explicit setLoading for SIGNED_OUT as UI usually just updates to logged-out state
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
+          if (!isMountedRef.current) return;
           setLoading(true);
           try {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-            if (isMounted) setUser(profile);
+            if (isMountedRef.current) setUser(profile);
           } catch (e) { 
             console.error("Error on USER_UPDATED profile fetch:", e); 
-            // Potentially keep old profile or set to null based on error type
-            // For now, just log. setUser(null) might be too drastic.
           } finally { 
-            if (isMounted) setLoading(false); 
+            if (isMountedRef.current) setLoading(false); 
           }
         }
       }
     );
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, router]); // Removed 'user' from dependency array
+  }, [fetchUserProfileAndRelatedData, router, toast]);
 
 
   const signInWithPassword = async (email: string, password: string) => {
+    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
-      setLoading(false); 
+      if (isMountedRef.current) setLoading(false); 
     }
-    // If no error, onAuthStateChange 'SIGNED_IN' event will handle further state and loading
     return { error };
   };
 
@@ -234,7 +233,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name: profileSpecificData.name,
           phone: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).phone : null,
           agency: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).agency : null,
-          // avatar_url is not set here, can be updated later by user
         });
 
       if (profileError) {
@@ -246,22 +244,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Full profileError object:", pgError);
         toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
         
-        console.warn("Orphaned auth user might exist due to profile creation failure. ID:", signUpData.user.id);
-        // Important: Attempt to clean up the auth user if profile creation fails
-        // This requires admin privileges and is complex to do from client-side securely.
-        // Best to log and advise manual cleanup or retry.
-        // For now, signing out the partially created user.
         await supabase.auth.signOut(); 
-        return { error: profileError, data: null };
+        return { error: profileError as Error, data: null };
       }
       if (signUpData.user.identities && signUpData.user.identities.length === 0) {
-        // This case indicates a potential issue like user already exists but is unconfirmed
         toast({ title: 'Registration Incomplete', description: `There was an issue. If you've registered before, try logging in or check your email for verification.`, variant: 'destructive' });
       } else {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.` });
       }
     } else {
-      // This case (no user data after successful signUp call) should be rare.
       toast({ title: 'Registration Issue', description: 'Could not complete registration. Please try again.', variant: 'destructive' });
       return { error: new Error("User data not returned from signup"), data: null };
     }
@@ -269,25 +260,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signUpUser = async (name: string, email: string, password: string) => {
+    if (!isMountedRef.current) return { error: new Error("Component unmounted"), data: null };
     setLoading(true);
-    const result = await commonSignUp(email, password, 'user', { name });
-    if(result.error) setLoading(false); // Ensure loading is false if signUp process fails early
-    return result;
+    try {
+      const result = await commonSignUp(email, password, 'user', { name });
+      return result;
+    } catch (e) {
+      if (isMountedRef.current) {
+        toast({ title: "Registration Error", description: "An unexpected error occurred during user signup.", variant: "destructive" });
+      }
+      return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false); 
+      }
+    }
   };
 
   const signUpAgent = async (name: string, email: string, password: string, phone: string, agency?: string) => {
+    if (!isMountedRef.current) return { error: new Error("Component unmounted"), data: null };
     setLoading(true);
-    const result = await commonSignUp(email, password, 'agent', { name, phone, agency });
-    if(result.error) setLoading(false); // Ensure loading is false if signUp process fails early
-    return result;
+    try {
+      const result = await commonSignUp(email, password, 'agent', { name, phone, agency });
+      return result;
+    } catch (e) {
+      if (isMountedRef.current) {
+        toast({ title: "Registration Error", description: "An unexpected error occurred during agent signup.", variant: "destructive" });
+      }
+      return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
   };
 
   const signOut = async () => {
-    // setLoading(true); // Not strictly needed for signOut itself for Navbar UI
     const { error } = await supabase.auth.signOut();
     if (error) {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
-        // setLoading(false); // Only if set true above
     } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
     }
@@ -320,9 +331,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let updatedSavedIds: string[];
     let toastMessage = "";
 
-    // No global setLoading(true/false) here, this is a specific action, not auth loading.
-    // Individual components can show their own loading state for this action if needed.
-
     if (currentlySaved) {
       const { error } = await supabase
         .from('saved_properties')
@@ -351,7 +359,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     const updatedUser: GeneralUser = { ...generalUser, savedPropertyIds: updatedSavedIds };
-    setUser(updatedUser); // Update local user state immediately
+    if(isMountedRef.current) setUser(updatedUser); 
     
     toast({ title: toastMessage });
 
@@ -383,3 +391,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
