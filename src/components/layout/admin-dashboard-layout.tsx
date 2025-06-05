@@ -29,7 +29,7 @@ const adminNavItems = [
 ];
 
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
-  const { isAuthenticated, user, loading, logout } = useAuth();
+  const { isAuthenticated, user, loading, signOut } = useAuth(); // Changed logout to signOut
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -155,7 +155,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             );
           })}
         </nav>
-        <Button variant="outline" className="w-full mt-auto justify-start" onClick={logout}>
+        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}> {/* Changed logout to signOut */}
           <LogOut className="h-5 w-5" />
           <span className="ml-2">Logout</span>
         </Button>
