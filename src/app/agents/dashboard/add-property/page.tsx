@@ -12,14 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
-import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag } from 'lucide-react';
+import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { Agent, NigerianState, ListingType, PlatformSettings } from '@/lib/types';
-import { nigerianStates, listingTypes } from '@/lib/types'; // Removed static propertyTypes import
+import { nigerianStates, listingTypes } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
+import { uploadPropertyImages } from '@/actions/upload-images';
 
 function generatePropertySpecificId(): string {
   const yearDigits = new Date().getFullYear().toString().slice(-2);
@@ -34,7 +36,7 @@ function generatePropertySpecificId(): string {
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
-  propertyType: z.string({ required_error: "Property type is required." }).min(1, { message: "Property type is required."}), // Changed from enum
+  propertyType: z.string({ required_error: "Property type is required." }).min(1, { message: "Property type is required."}),
   locationAreaCity: z.string().min(3, { message: 'Location (Area/City) is required.' }),
   state: z.enum(nigerianStates, { required_error: "State is required."}),
   address: z.string().min(5, { message: 'Full Address is required.' }),
@@ -70,20 +72,21 @@ export default function AddPropertyPage() {
   const { user, loading: authLoading } = useAuth();
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const fetchPlatformSettings = useCallback(async () => {
     setLoadingSettings(true);
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
-      .eq('id', 1) // Assuming settings are stored in a single row with id=1
+      .eq('id', 1)
       .single();
 
     if (error) {
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults or placeholders.`, variant: 'destructive' });
-      // Set some fallback or indicate error in UI for property types
-      setPlatformSettings({ // Minimal fallback
-        propertyTypes: ['House', 'Apartment', 'Land'], // Basic fallback
+      setPlatformSettings({
+        propertyTypes: ['House', 'Apartment', 'Land'],
         predefinedAmenities: 'Pool,Garage,Gym',
         promotionsEnabled: false,
         promotionTiers: [],
@@ -95,7 +98,7 @@ export default function AddPropertyPage() {
     } else if (data) {
       setPlatformSettings({
         ...data,
-        propertyTypes: data.property_types || ['House', 'Apartment', 'Land'], // Ensure it's an array
+        propertyTypes: data.property_types || ['House', 'Apartment', 'Land'],
         predefinedAmenities: data.predefined_amenities || 'Pool,Garage,Gym',
       });
     }
@@ -127,16 +130,70 @@ export default function AddPropertyPage() {
     },
   });
 
-  function onSubmit(values: PropertyFormValues) {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const filesArray = Array.from(event.target.files);
+      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray]);
+
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews]);
+    }
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+    setImagePreviews(prevPreviews => {
+      const newPreviews = prevPreviews.filter((_, index) => index !== indexToRemove);
+      // Revoke object URL for the removed preview to free up memory
+      if (prevPreviews[indexToRemove]) {
+        URL.revokeObjectURL(prevPreviews[indexToRemove]);
+      }
+      return newPreviews;
+    });
+  };
+  
+  useEffect(() => {
+    // Cleanup object URLs on component unmount
+    return () => {
+      imagePreviews.forEach(previewUrl => URL.revokeObjectURL(previewUrl));
+    };
+  }, [imagePreviews]);
+
+
+  async function onSubmit(values: PropertyFormValues) {
     startTransition(async () => {
       if (authLoading || !user || user.role !== 'agent') {
-        toast({
-          title: 'Authentication Error',
-          description: 'You must be logged in as an agent to add a property.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Authentication Error', description: 'You must be logged in as an agent to add a property.', variant: 'destructive' });
         return;
       }
+
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+
+        try {
+          const result = await uploadPropertyImages(formData);
+          if (result.error) {
+            toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
+            return;
+          }
+          imageUrls = result.urls || [];
+        } catch (e: any) {
+          toast({ title: 'Image Upload Error', description: `An unexpected error occurred during image upload: ${e.message}`, variant: 'destructive' });
+          return;
+        }
+      }
+      
+      if (selectedFiles.length > 0 && imageUrls.length === 0) {
+        toast({ title: 'Image Processing Issue', description: 'Images were selected but no URLs were returned after upload. Using placeholders.', variant: 'default' });
+        imageUrls = ['https://placehold.co/600x400.png?text=Upload+Error', 'https://placehold.co/600x401.png?text=Upload+Error'];
+      } else if (selectedFiles.length === 0) {
+        imageUrls = ['https://placehold.co/600x400.png?text=No+Image', 'https://placehold.co/600x401.png?text=No+Image'];
+      }
+
 
       const currentAgent = user as Agent;
       const generatedHumanReadableId = generatePropertySpecificId();
@@ -150,14 +207,11 @@ export default function AddPropertyPage() {
         location_area_city: values.locationAreaCity,
         state: values.state,
         address: values.address,
-        property_type: values.propertyType as any, // Cast as any since DB enum will handle it
+        property_type: values.propertyType as any,
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
         area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
-        images: [
-          'https://placehold.co/600x400.png',
-          'https://placehold.co/600x401.png'
-        ],
+        images: imageUrls,
         agent_id: currentAgent.id,
         status: 'pending',
         amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : null,
@@ -174,19 +228,14 @@ export default function AddPropertyPage() {
 
       if (error) {
         console.error("Error saving property to DB:", error);
-        toast({
-          title: 'Error Adding Property',
-          description: `Could not save property: ${error.message}. This could be due to a duplicate generated Property ID or invalid property type. Please try submitting again.`,
-          variant: 'destructive',
-        });
+        toast({ title: 'Error Adding Property', description: `Could not save property: ${error.message}. This could be due to a duplicate generated Property ID or invalid property type. Please try submitting again.`, variant: 'destructive' });
         return;
       }
 
-      toast({
-        title: 'Property Submitted for Review!',
-        description: `${values.title} (ID: ${generatedHumanReadableId}) has been submitted. It will be reviewed by an admin.`,
-      });
+      toast({ title: 'Property Submitted for Review!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been submitted. It will be reviewed by an admin.` });
       form.reset();
+      setSelectedFiles([]);
+      setImagePreviews([]);
       router.push('/agents/dashboard/my-listings');
     });
   }
@@ -219,15 +268,13 @@ export default function AddPropertyPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Property
         </h1>
-        <p className="text-muted-foreground">Fill in the details for your new listing. It will be reviewed by an admin before publishing. A unique Property ID will be generated automatically.</p>
+        <p className="text-muted-foreground">Fill in the details for your new listing. A unique Property ID will be generated automatically.</p>
       </div>
 
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">Property Information</CardTitle>
-          <CardDescription>
-            Enter the specific details for the property.
-          </CardDescription>
+          <CardDescription>Enter the specific details for the property.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -425,9 +472,7 @@ export default function AddPropertyPage() {
                     <FormControl>
                       <Textarea placeholder="Detailed property description..." {...field} rows={8} />
                     </FormControl>
-                    <FormDescription>
-                      Provide a captivating description for the property.
-                    </FormDescription>
+                    <FormDescription>Provide a captivating description for the property.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -452,9 +497,34 @@ export default function AddPropertyPage() {
               <FormItem>
                 <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1 text-muted-foreground"/>Property Images</FormLabel>
                 <FormControl>
-                  <Input type="file" multiple disabled />
+                  <Input 
+                    type="file" 
+                    multiple 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
                 </FormControl>
-                <FormDescription>Select one or more images for the property. (Backend file upload not implemented; default images will be used.)</FormDescription>
+                <FormDescription>Select one or more images for the property (Max 5MB per image, common formats like JPG, PNG).</FormDescription>
+                {imagePreviews.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {imagePreviews.map((previewUrl, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <Image src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImage(index)}
+                          aria-label={`Remove image ${index + 1}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </FormItem>
 
 
