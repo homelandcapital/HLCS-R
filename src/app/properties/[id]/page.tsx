@@ -23,14 +23,18 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 
+// Basic UUID regex for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function PropertyDetailsPage() {
   const params = useParams();
-  const id = params.id as string;
+  const idFromUrl = params.id as string;
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isValidId, setIsValidId] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isInquiryDialogOpen, setIsInquiryDialogOpen] = useState(false);
-  const { user: authContextUser, isAuthenticated, loading: authLoading } = useAuth(); // Renamed to avoid conflict
+  const { user: authContextUser, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -43,7 +47,8 @@ export default function PropertyDetailsPage() {
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
       `)
       .eq('id', propertyId)
-      .maybeSingle(); // Use maybeSingle as it might return null if not found
+      .eq('status', 'approved') // Only fetch approved properties
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching property details:', error);
@@ -53,22 +58,30 @@ export default function PropertyDetailsPage() {
       const formattedProperty = {
         ...data,
         agent: data.agent ? { ...(data.agent as any), role: 'agent' as UserRole, id: data.agent.id! } as Agent : undefined,
-        images: data.images ? (Array.isArray(data.images) ? data.images : [String(data.images)]) : [],
-        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : [String(data.amenities)]) : [],
+        images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [], // Ensure images are parsed if stored as JSON string
+        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : JSON.parse(String(data.amenities))) : [], // Ensure amenities are parsed
       } as Property;
       setProperty(formattedProperty);
     } else {
-      setProperty(null); // Property not found
+      setProperty(null); // Property not found or not approved
     }
     setLoading(false);
     setCurrentImageIndex(0);
   }, [toast]);
 
   useEffect(() => {
-    if (id) {
-      fetchPropertyDetails(id);
+    if (idFromUrl) {
+      if (UUID_REGEX.test(idFromUrl)) {
+        setIsValidId(true);
+        fetchPropertyDetails(idFromUrl);
+      } else {
+        setIsValidId(false);
+        setProperty(null);
+        setLoading(false);
+        toast({ title: 'Invalid Property ID', description: 'The property ID in the URL is not valid.', variant: 'destructive' });
+      }
     }
-  }, [id, fetchPropertyDetails]);
+  }, [idFromUrl, fetchPropertyDetails, toast]);
 
   const handleInquireClick = () => {
     if (authLoading) return;
@@ -89,11 +102,12 @@ export default function PropertyDetailsPage() {
     return <PropertyDetailsSkeleton />;
   }
 
-  if (!property) {
+  if (!isValidId) {
     return (
        <div className="text-center py-20">
-        <h1 className="text-4xl font-headline mb-4">Property Not Found</h1>
-        <p className="text-muted-foreground mb-6">The property you are looking for does not exist or may have been removed.</p>
+        <ShieldAlert className="mx-auto h-16 w-16 text-destructive mb-4" />
+        <h1 className="text-4xl font-headline mb-4">Invalid Property Link</h1>
+        <p className="text-muted-foreground mb-6">The link you followed seems to be invalid or uses an outdated format.</p>
         <Button asChild>
           <Link href="/properties">Back to Listings</Link>
         </Button>
@@ -101,24 +115,23 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  if (property.status !== 'approved') {
+  if (!property) {
     return (
-      <div className="text-center py-20">
-        <ShieldAlert className="mx-auto h-16 w-16 text-amber-500 mb-4" />
-        <h1 className="text-3xl font-headline mb-3">Property Not Currently Available</h1>
-        <p className="text-muted-foreground mb-2">
-          This property listing is currently '{property.status}'.
-        </p>
-        {property.status === 'pending' && <p className="text-muted-foreground mb-6">It is under review and will be available once approved.</p>}
-        {property.status === 'rejected' && <p className="text-muted-foreground mb-6">This listing has been reviewed and is not currently active.</p>}
+       <div className="text-center py-20">
+        <EyeOff className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+        <h1 className="text-4xl font-headline mb-4">Property Not Found</h1>
+        <p className="text-muted-foreground mb-6">The property you are looking for does not exist, is not approved, or may have been removed.</p>
         <Button asChild>
-          <Link href="/properties">Explore Other Listings</Link>
+          <Link href="/properties">Back to Listings</Link>
         </Button>
       </div>
     );
   }
 
-  const { agent } = property; // Agent should now be populated from the Supabase query
+  // Property is valid and fetched, status check already done in query
+  // No need for: if (property.status !== 'approved') { ... }
+
+  const { agent } = property;
   const images = property.images || [];
 
   const prevImage = () => {
@@ -137,11 +150,11 @@ export default function PropertyDetailsPage() {
   if (authContextUser) {
     contactFormInitialData.name = authContextUser.name;
     contactFormInitialData.email = authContextUser.email;
-    if (authContextUser.role === 'agent') { 
-      contactFormInitialData.phone = (authContextUser as Agent).phone;
+    if (authContextUser.role === 'agent' || authContextUser.role === 'user') { // Users might also have phone in future
+      contactFormInitialData.phone = (authContextUser as Agent | GeneralUser).phone || undefined;
     }
   }
-  const defaultImage = 'https://placehold.co/1200x800.png?text=No+Image';
+  const defaultImage = 'https://placehold.co/1200x800.png';
   const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
 
   return (
@@ -179,7 +192,7 @@ export default function PropertyDetailsPage() {
           </DialogHeader>
           <ContactForm
             propertyTitle={property.title}
-            propertyId={property.id}
+            propertyId={property.id} // This ID is now guaranteed to be a valid UUID from a successfully fetched property
             initialName={contactFormInitialData.name}
             initialEmail={contactFormInitialData.email}
             initialPhone={contactFormInitialData.phone}
@@ -196,8 +209,9 @@ export default function PropertyDetailsPage() {
                 <Image
                   src={mainDisplayImage}
                   alt={`${property.title} - Image ${currentImageIndex + 1}`}
-                  layout="fill"
-                  objectFit="cover"
+                  fill // Changed from layout="fill"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Added sizes for responsiveness with fill
+                  style={{objectFit:"cover"}} // Changed from objectFit="cover"
                   className="transition-opacity duration-300 ease-in-out"
                   data-ai-hint="property interior detail"
                   priority={true}
@@ -211,8 +225,8 @@ export default function PropertyDetailsPage() {
               </>
             ) : (
               <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
-                <EyeOff className="w-12 h-12 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No images available</p>
+                <Image src={defaultImage} alt="No image available" fill style={{objectFit:"contain"}} data-ai-hint="placeholder image"/>
+                <p className="absolute bottom-4 text-muted-foreground">No images available</p>
               </div>
             )}
           </div>
@@ -228,7 +242,7 @@ export default function PropertyDetailsPage() {
                       className={cn( "block rounded-md overflow-hidden w-20 h-14 md:w-24 md:h-16 relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-background", currentImageIndex === index ? "ring-2 ring-primary ring-offset-2" : "hover:opacity-75 transition-opacity" )}
                       aria-label={`View image ${index + 1}`}
                     >
-                      <Image src={img} alt={`Thumbnail ${property.title} ${index + 1}`} layout="fill" objectFit="cover" />
+                      <Image src={img} alt={`Thumbnail ${property.title} ${index + 1}`} fill style={{objectFit:"cover"}} />
                     </button>
                   ))}
                 </div>
@@ -276,8 +290,8 @@ export default function PropertyDetailsPage() {
               <CardHeader> <CardTitle className="font-headline">Listed By</CardTitle> </CardHeader>
               <CardContent className="flex flex-col items-center text-center space-y-3">
                 <Avatar className="w-24 h-24 border-2 border-primary">
-                  <AvatarImage src={agent.avatar_url || `https://placehold.co/100x100.png`} alt={agent.name} data-ai-hint="professional portrait" />
-                  <AvatarFallback>{agent.name.substring(0,2).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={agent.avatar_url || `https://placehold.co/100x100.png`} alt={agent.name || 'Agent'} data-ai-hint="professional portrait" />
+                  <AvatarFallback>{agent.name ? agent.name.substring(0,2).toUpperCase() : 'AG'}</AvatarFallback>
                 </Avatar>
                 <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
                 {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
@@ -315,3 +329,5 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
+
+    
