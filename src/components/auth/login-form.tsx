@@ -9,28 +9,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/auth-context';
-// useRouter is not directly used here anymore for redirection after login, it's handled in AuthContext
-// import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-// mockAgents, mockGeneralUsers, mockPlatformAdmins are no longer needed for login
 import { LogIn, Mail, KeyRound, UserCircle, Building, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from 'react';
-import type { UserRole } from '@/lib/types'; // UserRole is still useful for UI
+import type { UserRole } from '@/lib/types';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }), // Supabase handles min length server-side if needed
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 type LoginFormValues = z.infer<typeof formSchema>;
 
 const LoginForm = () => {
   const { signInWithPassword, loading: authLoading } = useAuth();
-  // const router = useRouter(); // Not needed for redirection here
-  const { toast } = useToast(); // Still useful for local form errors if any
-  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user'); // Still used for UI hint
+  const { toast } = useToast();
+  const [activeRoleTab, setActiveRoleTab] = useState<UserRole>('user');
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
@@ -42,10 +38,9 @@ const LoginForm = () => {
 
   async function onSubmit(values: LoginFormValues) {
     const { error } = await signInWithPassword(values.email, values.password);
-    // Error handling and success messages are now managed within signInWithPassword and AuthContext
     if (error) {
       form.setError("email", { type: "manual", message: "Invalid email or password." });
-      form.setError("password", { type: "manual", message: " " }); // Clear specific message for password
+      form.setError("password", { type: "manual", message: " " }); 
     }
   }
 
@@ -58,7 +53,6 @@ const LoginForm = () => {
           <CardDescription>Select your intended role and access your Homeland Capital account.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Tabs can remain for user experience, but Supabase login won't use this role directly */}
           <Tabs value={activeRoleTab} onValueChange={(value) => setActiveRoleTab(value as UserRole)} className="w-full mb-6">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="user" className="flex items-center gap-2">
@@ -74,7 +68,7 @@ const LoginForm = () => {
           </Tabs>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4"> {/* Reduced space-y for tighter layout */}
               <FormField
                 control={form.control}
                 name="email"
@@ -107,6 +101,11 @@ const LoginForm = () => {
                   </FormItem>
                 )}
               />
+              <div className="text-sm text-right -mt-2 mb-2"> {/* Adjust margins for link placement */}
+                <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || authLoading}>
                 {(form.formState.isSubmitting || authLoading) ? 'Logging in...' : `Login`}
               </Button>

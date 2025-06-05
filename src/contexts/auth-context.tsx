@@ -21,6 +21,8 @@ interface AuthContextType {
   signUpUser: (name: string, email: string, password: string) => Promise<{ error: Error | null; data: { user: SupabaseAuthUser | null; } | null }>;
   signUpAgent: (name: string, email: string, password: string, phone: string, agency?: string) => Promise<{ error: Error | null; data: { user: SupabaseAuthUser | null; } | null }>;
   signOut: () => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<{ error: Error | null }>;
+  updateUserPassword: (newPassword: string) => Promise<{ error: Error | null }>;
   getSupabaseSession: () => Session | null;
 }
 
@@ -60,7 +62,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userProfilesData || userProfilesData.length === 0) {
       console.warn('User profile not found in public.users for id:', supabaseUser.id);
-      // Avoid showing toast if the user is signing out or if the session is being cleared.
       const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
       if (currentAuthSession) { 
          toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
@@ -181,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
             setUser(null);
-            setLoading(false); // Ensure loading is reset on sign out
+            setLoading(false); 
             router.push('/');
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
@@ -194,6 +195,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.error("Error on USER_UPDATED profile fetch:", e); 
           } finally { 
             if (isMountedRef.current) setLoading(false); 
+          }
+        } else if (event === 'PASSWORD_RECOVERY' && currentSession) {
+          if (isMountedRef.current) {
+            console.log("PASSWORD_RECOVERY event detected. Session (temporary for password update):", currentSession);
+            // This session is temporary, specifically for updating the password.
+            // We set it so updateUserPassword can use it.
+            setSession(currentSession); 
+            setLoading(false); // Ensure loading indicator is off
+            router.push('/update-password'); // Redirect to the page where the user can set a new password
           }
         } else if (event === 'INITIAL_SESSION') {
             // setLoading(false) is handled by initializeAuth's finally block
@@ -215,7 +225,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
        if (isMountedRef.current) setLoading(false); 
     }
-    // Successful login will trigger onAuthStateChange which handles setLoading(false) after profile fetch
     return { error };
   };
 
@@ -225,7 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userRole: UserRole, 
     profileSpecificData: Partial<Omit<UserProfile, 'id' | 'email' | 'role' | 'avatar_url' | 'created_at' | 'updated_at' | 'name'> & { name: string }>
   ) => {
-    // setLoading(true) is handled by the calling functions (signUpUser, signUpAgent)
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -246,7 +254,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name: profileSpecificData.name,
           phone: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).phone : null,
           agency: userRole === 'agent' ? (profileSpecificData as Partial<Agent>).agency : null,
-          // avatar_url is not set here, user can update later.
         });
 
       if (profileError) {
@@ -259,7 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (pgError.code === '23505' && pgError.message.includes('users_email_key')) {
           toast({
-            title: 'Registration Failed',
+            title: 'Email Already Registered',
             description: 'This email address is already registered. Please try logging in.',
             variant: 'destructive',
           });
@@ -267,11 +274,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           toast({ title: 'Profile Creation Failed', description: `Profile creation failed: ${pgError.message || 'Unknown error, see console.'}. Please contact support.`, variant: 'destructive' });
         }
         
-        // Important: Attempt to clean up the auth user if profile creation fails
         if (signUpData.user?.id) {
           console.warn(`Profile creation failed for auth user: ${signUpData.user.id}. Signing out user from auth table to attempt cleanup.`);
-          // Don't await this, let it happen in the background.
-          // The onAuthStateChange SIGNED_OUT handler will manage UI.
           supabase.auth.signOut().catch(signOutError => {
             console.error("Error during cleanup signOut:", signOutError);
           });
@@ -279,23 +283,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: profileError as Error, data: null };
       }
 
-      // Handle case where user is created but email confirmation is pending
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.` });
       } else if (signUpData.session) {
-         // This case might happen if auto-confirm is on or for OAuth (though not used here)
         toast({ title: 'Registration Successful!', description: `Welcome, ${profileSpecificData.name}! You are now logged in.`});
       } else {
-        // Fallback for unexpected state from Supabase signUp
         toast({ title: 'Registration Incomplete', description: `There was an issue. If you've registered before, try logging in or check your email for verification.`, variant: 'destructive' });
       }
     } else {
-      // This case should ideally not be reached if signUpError is null.
       toast({ title: 'Registration Issue', description: 'Could not complete registration. User data not returned. Please try again.', variant: 'destructive' });
       return { error: new Error("User data not returned from signup"), data: null };
     }
-    // If successful, onAuthStateChange will handle SIGNED_IN and subsequent loading/routing.
-    // The calling function's finally block will handle its setLoading(false).
     return { error: null, data: signUpData };
   };
 
@@ -311,12 +309,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { error: e instanceof Error ? e : new Error("Unknown registration error"), data: null };
     } finally {
-      // If commonSignUp results in an error that doesn't trigger SIGNED_IN/SIGNED_OUT or if those handlers don't reset loading,
-      // this ensures the loading state initiated by signUpUser itself is reset.
-      // However, if SIGNED_IN occurs, its handler will manage loading for profile fetch.
-      // This might cause a brief flicker if this setLoading(false) runs before SIGNED_IN's setLoading(true).
-      // Deferring this specific setLoading(false) might be better handled by onAuthStateChange.
-      // For now, keep it to ensure this specific operation's loading flag is cleared.
       if (isMountedRef.current) {
         setLoading(false);
       }
@@ -343,17 +335,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     if (!isMountedRef.current) return;
-    setLoading(true); // Indicate an operation is in progress
+    setLoading(true); 
     const { error } = await supabase.auth.signOut();
     if (error) {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
-        if (isMountedRef.current) setLoading(false); // Reset loading on error
+        if (isMountedRef.current) setLoading(false); 
     } else {
-        // setUser(null) and router.push('/') will be handled by onAuthStateChange SIGNED_OUT
-        // which now also handles setLoading(false)
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
     }
   };
+
+  const sendPasswordResetEmail = async (email: string) => {
+    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
+    setLoading(true);
+    // The redirectTo URL should be where your app can handle the password update.
+    // Supabase appends a hash fragment with the recovery token.
+    const redirectTo = `${window.location.origin}/update-password`; 
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    
+    if (isMountedRef.current) setLoading(false);
+
+    if (error) {
+      toast({ title: 'Password Reset Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ 
+        title: 'Password Reset Email Sent', 
+        description: 'If an account exists for this email, a reset link has been sent. Please check your inbox (and spam folder).',
+        duration: 9000 
+      });
+    }
+    return { error };
+  };
+
+  const updateUserPassword = async (newPassword: string) => {
+    if (!isMountedRef.current) return { error: new Error("Component unmounted") };
+    if (!session) { // Check if there's a recovery session
+      toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
+      return { error: new Error("No active password recovery session.") };
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (isMountedRef.current) setLoading(false);
+    if (error) {
+      toast({ title: 'Password Update Failed', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
+      // Sign out the temporary recovery session and redirect to login
+      await supabase.auth.signOut(); // This will trigger onAuthStateChange SIGNED_OUT
+      router.push('/agents/login');
+    }
+    return { error };
+  };
+
 
   const getSupabaseSession = () => {
     return session;
@@ -382,7 +415,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let updatedSavedIds: string[];
     let toastMessage = "";
 
-    setLoading(true); // Indicate operation start
+    if (!isMountedRef.current) return;
+    setLoading(true); 
     try {
       if (currentlySaved) {
         const { error } = await supabase
@@ -419,7 +453,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error in toggleSaveProperty:", e);
       toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive"});
     } finally {
-      if(isMountedRef.current) setLoading(false); // Indicate operation end
+      if(isMountedRef.current) setLoading(false); 
     }
   }, [session, user, router, toast]);
 
@@ -435,6 +469,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUpUser,
       signUpAgent,
       signOut,
+      sendPasswordResetEmail,
+      updateUserPassword,
       getSupabaseSession
     }}>
       {children}
@@ -449,5 +485,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
