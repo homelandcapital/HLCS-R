@@ -28,10 +28,9 @@ export default function SavedPropertiesPage() {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
-      .select(\`
-        *,
-        agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      \`)
+      .select(
+        '*, agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)'
+      )
       .in('id', savedIds)
       .eq('status', 'approved'); // Only show approved saved properties
 
