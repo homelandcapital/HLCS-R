@@ -17,7 +17,7 @@ export interface Agent extends BaseUser {
 
 export interface GeneralUser extends BaseUser {
   role: 'user';
-  savedPropertyIds?: string[];
+  savedPropertyIds?: string[]; // These would be property UUIDs from the DB
 }
 
 export interface PlatformAdmin extends BaseUser {
@@ -26,7 +26,9 @@ export interface PlatformAdmin extends BaseUser {
 
 export type AuthenticatedUser = Agent | GeneralUser | PlatformAdmin;
 
+// ENUM types matching the database
 export type PropertyStatus = 'pending' | 'approved' | 'rejected';
+export const propertyStatuses: PropertyStatus[] = ['pending', 'approved', 'rejected'];
 
 export const nigerianStates = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -35,10 +37,14 @@ export const nigerianStates = [
   "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ] as const;
-
 export type NigerianState = typeof nigerianStates[number];
 
 export type ListingType = 'For Sale' | 'For Rent' | 'For Lease';
+export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
+
+export type PropertyTypeEnum = 'House' | 'Apartment' | 'Condo' | 'Townhouse' | 'Land';
+export const propertyTypes: PropertyTypeEnum[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land'];
+
 
 export interface PromotionTierConfig {
   id: string;
@@ -48,64 +54,68 @@ export interface PromotionTierConfig {
   description: string;
 }
 
+// Updated Property interface to align with the new database schema
 export interface Property {
-  id: string;
+  id: string; // UUID from DB
   title: string;
   description: string;
   price: number;
-  listingType: ListingType;
-  location: string;
+  listing_type: ListingType; // Column name: listing_type
+  location_area_city: string; // Column name: location_area_city
   state: NigerianState;
   address: string;
-  type: 'House' | 'Apartment' | 'Condo' | 'Townhouse' | 'Land';
+  property_type: PropertyTypeEnum; // Column name: property_type
   bedrooms: number;
   bathrooms: number;
-  areaSqFt?: number;
-  images: string[];
-  agent: Agent; // In a DB, this would be agent_id and you'd join
+  area_sq_ft?: number | null; // Nullable in DB
+  images?: string[] | null; // JSONB, maps to string[] or null
+  amenities?: string[] | null; // JSONB, maps to string[] or null
+  year_built?: number | null; // Nullable in DB
+  coordinates_lat?: number | null; // Nullable in DB
+  coordinates_lng?: number | null; // Nullable in DB
+  
+  agent_id: string; // UUID of the agent from users table
+  agent?: Agent; // Optional: To be populated by client-side join/fetch if needed
+
   status: PropertyStatus;
-  rejectionReason?: string;
-  amenities?: string[];
-  yearBuilt?: number;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
-  isPromoted?: boolean;
-  promotionDetails?: {
-    tierId: string;
-    tierName: string;
-    promotedAt: string;
-  };
+  rejection_reason?: string | null; // Nullable in DB
+
+  is_promoted?: boolean | null; // Nullable in DB
+  promotion_tier_id?: string | null; // Nullable in DB
+  promotion_tier_name?: string | null; // Nullable in DB
+  promoted_at?: string | null; // TIMESTAMPTZ, maps to string or null
+
+  created_at: string; // TIMESTAMPTZ from DB
+  updated_at: string; // TIMESTAMPTZ from DB
 }
+
 
 export type InquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
+export const inquiryStatuses: InquiryStatus[] = ['new', 'contacted', 'resolved', 'archived'];
 
-// Matches the inquiry_messages table
 export interface InquiryMessage {
-  id: string; // UUID from DB
-  inquiry_id: string; // UUID from DB
-  sender_id: string | null; // UUID from DB (user who sent)
+  id: string; 
+  inquiry_id: string; 
+  sender_id: string | null; 
   sender_role: UserRole;
-  sender_name: string; // Denormalized
+  sender_name: string; 
   content: string;
-  timestamp: string; // ISO date string from DB
+  timestamp: string; 
 }
 
-// Matches the inquiries table structure
 export interface Inquiry {
-  id: string; // UUID from DB
-  property_id: string;
+  id: string; 
+  property_id: string; // This should now be a UUID from the properties table
   property_name: string;
   inquirer_name: string;
   inquirer_email: string;
   inquirer_phone?: string | null;
-  initial_message: string; // Renamed from 'message' to match DB
-  dateReceived: string; // created_at from DB
+  initial_message: string; 
+  created_at: string; // Mapped from dateReceived
+  updated_at?: string; 
   status: InquiryStatus;
-  user_id?: string | null; // Link to auth.users if inquirer is registered
-  updated_at?: string; // updated_at from DB
-  conversation?: InquiryMessage[]; // This will be populated by fetching from inquiry_messages
+  user_id?: string | null; 
+  conversation?: InquiryMessage[];
 }
 
 

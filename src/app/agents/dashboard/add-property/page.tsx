@@ -15,55 +15,43 @@ import { useState, useTransition } from 'react';
 import { PlusCircle, UploadCloud, Home, MapPin, BedDouble, Bath, Maximize, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Building2, Tag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { mockProperties } from '@/lib/mock-data';
-import type { Property, Agent, NigerianState, ListingType } from '@/lib/types';
-import { nigerianStates } from '@/lib/types'; // Import states constant
+import type { Agent, NigerianState, ListingType, PropertyTypeEnum } from '@/lib/types';
+import { nigerianStates, listingTypes, propertyTypes } from '@/lib/types'; 
+import { supabase } from '@/lib/supabaseClient';
+import type { TablesInsert } from '@/lib/database.types';
 
-const listingTypes = ['For Sale', 'For Rent', 'For Lease'] as const;
-
+// Schema matches the form fields, will be mapped to DB schema on submit
 const propertyFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   listingType: z.enum(listingTypes, { required_error: "Listing type is required."}),
-  propertyType: z.enum(['House', 'Apartment', 'Condo', 'Townhouse', 'Land'], { required_error: "Property type is required."}),
-  location: z.string().min(3, { message: 'Location (Area/City) is required.' }),
+  propertyType: z.enum(propertyTypes, { required_error: "Property type is required."}),
+  locationAreaCity: z.string().min(3, { message: 'Location (Area/City) is required.' }), // Renamed from location
   state: z.enum(nigerianStates, { required_error: "State is required."}),
   address: z.string().min(5, { message: 'Full Address is required.' }),
   price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
-  bedrooms: z.coerce.number().min(0, { message: 'Bedrooms must be a non-negative number.' }),
-  bathrooms: z.coerce.number().min(0, { message: 'Bathrooms must be a non-negative number.' }),
+  bedrooms: z.coerce.number().min(0, { message: 'Bedrooms must be a non-negative number.' }).default(0),
+  bathrooms: z.coerce.number().min(0, { message: 'Bathrooms must be a non-negative number.' }).default(0),
   areaSqFt: z.preprocess(
     val => (val === "" || val === undefined ? undefined : val),
     z.coerce.number().positive({ message: 'Area must be a positive number if provided.' }).optional()
   ),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }).max(5000, {message: "Description must be less than 5000 characters."}),
-  yearBuilt: z.coerce.number().min(1000, {message: "Year built seems too old."}).max(new Date().getFullYear(), {message: "Year built cannot be in the future."}).optional().or(z.literal('')),
+  yearBuilt: z.preprocess(
+    val => (val === "" || val === undefined ? undefined : val),
+    z.coerce.number().min(1000, {message: "Year built seems too old."}).max(new Date().getFullYear(), {message: "Year built cannot be in the future."}).optional()
+  ),
   amenities: z.string().optional(),
-  latitude: z.coerce.number().min(-90).max(90).optional().or(z.literal('')),
-  longitude: z.coerce.number().min(-180).max(180).optional().or(z.literal('')),
+  latitude: z.preprocess(
+    val => (val === "" || val === undefined ? undefined : val),
+    z.coerce.number().min(-90).max(90).optional()
+  ),
+  longitude: z.preprocess(
+    val => (val === "" || val === undefined ? undefined : val),
+    z.coerce.number().min(-180).max(180).optional()
+  ),
 });
 
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
-
-function generateRandomDigit(): string {
-  return Math.floor(Math.random() * 10).toString();
-}
-
-function generateRandomLetter(): string {
-  return String.fromCharCode(65 + Math.floor(Math.random() * 26)); // A-Z
-}
-
-function generatePropertyId(): string {
-  const prefix = "HLCS-R";
-  const currentYear = new Date().getFullYear();
-  const yearSuffix = String(currentYear).slice(-2);
-
-  const part1 = generateRandomDigit();
-  const part2 = generateRandomLetter();
-  const part3 = generateRandomDigit();
-  const part4 = generateRandomLetter();
-  
-  return `${prefix}${yearSuffix}${part1}${part2}${part3}${part4}`;
-}
 
 export default function AddPropertyPage() {
   const { toast } = useToast();
@@ -77,10 +65,10 @@ export default function AddPropertyPage() {
       title: '',
       listingType: undefined,
       propertyType: undefined,
-      location: '',
+      locationAreaCity: '',
       state: undefined,
       address: '',
-      price: 0,
+      price: undefined, // Changed from 0
       bedrooms: 0,
       bathrooms: 0,
       areaSqFt: undefined,
@@ -105,34 +93,46 @@ export default function AddPropertyPage() {
 
       const currentAgent = user as Agent;
 
-      const newProperty: Property = {
-        id: generatePropertyId(),
+      const propertyDataToInsert: TablesInsert<'properties'> = {
         title: values.title,
-        listingType: values.listingType,
         description: values.description,
         price: values.price,
-        location: values.location,
+        listing_type: values.listingType,
+        location_area_city: values.locationAreaCity,
         state: values.state,
         address: values.address,
-        type: values.propertyType,
+        property_type: values.propertyType,
         bedrooms: values.bedrooms,
         bathrooms: values.bathrooms,
-        areaSqFt: values.areaSqFt ? Number(values.areaSqFt) : undefined,
-        images: [
-          'https://placehold.co/600x400.png',
-          'https://placehold.co/600x400.png'
+        area_sq_ft: values.areaSqFt ? Number(values.areaSqFt) : null,
+        images: [ // Placeholder images
+          'https://placehold.co/600x400.png?width=600&height=400',
+          'https://placehold.co/600x400.png?width=600&height=401'
         ],
-        agent: currentAgent,
-        status: 'pending',
-        amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : [],
-        yearBuilt: values.yearBuilt && values.yearBuilt !== '' ? Number(values.yearBuilt) : undefined,
-        coordinates: {
-          lat: values.latitude && values.latitude !== '' ? Number(values.latitude) : 6.5244, // Default to Lagos
-          lng: values.longitude && values.longitude !== '' ? Number(values.longitude) : 3.3792, // Default to Lagos
-        },
+        agent_id: currentAgent.id,
+        status: 'pending', // Default status
+        amenities: values.amenities ? values.amenities.split(',').map(a => a.trim()).filter(Boolean) : null,
+        year_built: values.yearBuilt ? Number(values.yearBuilt) : null,
+        coordinates_lat: values.latitude ? Number(values.latitude) : null,
+        coordinates_lng: values.longitude ? Number(values.longitude) : null,
+        // id will be generated by DB, created_at & updated_at by DB
       };
+      
+      const { data: newProperty, error } = await supabase
+        .from('properties')
+        .insert(propertyDataToInsert)
+        .select()
+        .single();
 
-      mockProperties.unshift(newProperty);
+      if (error) {
+        console.error("Error saving property to DB:", error);
+        toast({
+          title: 'Error Adding Property',
+          description: `Could not save property: ${error.message}. Please try again.`,
+          variant: 'destructive',
+        });
+        return;
+      }
       
       toast({
         title: 'Property Submitted for Review!',
@@ -205,11 +205,9 @@ export default function AddPropertyPage() {
                           <SelectTrigger><SelectValue placeholder="Select property type" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="House">House</SelectItem>
-                          <SelectItem value="Apartment">Apartment</SelectItem>
-                          <SelectItem value="Condo">Condo</SelectItem>
-                          <SelectItem value="Townhouse">Townhouse</SelectItem>
-                          <SelectItem value="Land">Land</SelectItem>
+                          {propertyTypes.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -218,7 +216,7 @@ export default function AddPropertyPage() {
                 />
                  <FormField
                   control={form.control}
-                  name="location"
+                  name="locationAreaCity" // Updated name
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Location (Area/City)</FormLabel>
@@ -296,8 +294,9 @@ export default function AddPropertyPage() {
                   name="areaSqFt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><Maximize className="w-4 h-4 mr-1 text-muted-foreground"/>Area (sq ft) (Optional)</FormLabel>
+                      <FormLabel className="flex items-center"><Maximize className="w-4 h-4 mr-1 text-muted-foreground"/>Area (sq ft)</FormLabel>
                       <FormControl><Input type="number" placeholder="e.g., 1800" {...field} /></FormControl>
+                       <FormDescription className="text-xs">Optional.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -307,8 +306,9 @@ export default function AddPropertyPage() {
                   name="yearBuilt"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><CalendarDays className="w-4 h-4 mr-1 text-muted-foreground"/>Year Built (Optional)</FormLabel>
+                      <FormLabel className="flex items-center"><CalendarDays className="w-4 h-4 mr-1 text-muted-foreground"/>Year Built</FormLabel>
                       <FormControl><Input type="number" placeholder="e.g., 2005" {...field} /></FormControl>
+                       <FormDescription className="text-xs">Optional.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -321,7 +321,7 @@ export default function AddPropertyPage() {
                         <FormItem>
                         <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Latitude</FormLabel>
                         <FormControl><Input type="number" step="any" placeholder="e.g., 6.5244" {...field} /></FormControl>
-                        <FormDescription className="text-xs">Optional. Defaults to Lagos if blank.</FormDescription>
+                        <FormDescription className="text-xs">Optional.</FormDescription>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -333,7 +333,7 @@ export default function AddPropertyPage() {
                         <FormItem>
                         <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1 text-muted-foreground"/>Longitude</FormLabel>
                         <FormControl><Input type="number" step="any" placeholder="e.g., 3.3792" {...field} /></FormControl>
-                        <FormDescription className="text-xs">Optional. Defaults to Lagos if blank.</FormDescription>
+                        <FormDescription className="text-xs">Optional.</FormDescription>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -363,9 +363,9 @@ export default function AddPropertyPage() {
                 name="amenities"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Amenities (Optional)</FormLabel>
+                    <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Amenities</FormLabel>
                     <FormControl><Input placeholder="e.g., Pool, Gym, Borehole, Standby Generator" {...field} /></FormControl>
-                    <FormDescription>Comma-separated list of amenities.</FormDescription>
+                    <FormDescription>Comma-separated list of amenities. Optional.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
