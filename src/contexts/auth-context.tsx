@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (isMountedRef.current) {
             setUser(null);
             setLoading(false);
-            router.push('/');
+            // Navigation to home is handled by the signOut function's finally block now
           }
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
           if (isMountedRef.current) setLoading(true);
@@ -288,29 +288,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      return await commonSignUp(email, password, 'agent', { name, phone, agency });
   };
 
-  const signOut = async () => {
-    if (!isMountedRef.current) return;
+  const signOut = async (): Promise<void> => {
+    if (!isMountedRef.current) return Promise.resolve();
     setLoading(true);
 
-    const { error } = await supabase.auth.signOut();
+    try {
+      const { error: signOutServiceError } = await supabase.auth.signOut();
 
-    if (isMountedRef.current) {
-      setUser(null); 
-      setSession(null);
-
-      if (error) {
-        console.error("Supabase signOut error:", error);
-        // Treat "Auth session missing" or "No active session" as effectively logged out.
-        if (error.message.toLowerCase().includes("auth session missing") || error.message.toLowerCase().includes("no active session")) {
-            toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        } else {
-            toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
+      if (signOutServiceError) {
+        // This branch handles errors returned as a property of the result object.
+        console.error("Supabase signOut service error:", signOutServiceError);
+        if (isMountedRef.current) {
+            if (signOutServiceError.message.toLowerCase().includes("auth session missing") || 
+                signOutServiceError.message.toLowerCase().includes("no active session")) {
+              toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+            } else {
+              toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
+            }
         }
       } else {
-        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        // No error property returned, successful signOut from Supabase.
+        if (isMountedRef.current) {
+          toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        }
       }
-      router.push('/'); 
-      setLoading(false);
+    } catch (thrownError: any) {
+      // This branch handles errors THROWN by supabase.auth.signOut().
+      console.error("Exception during Supabase signOut:", thrownError);
+      if (isMountedRef.current) {
+          if (thrownError.name === 'AuthSessionMissingError' || 
+              (thrownError.message && (thrownError.message.toLowerCase().includes("auth session missing") || thrownError.message.toLowerCase().includes("no active session")))) {
+            toast({ title: 'Logged Out', description: 'You have been successfully logged out (session was already clear).' });
+          } else {
+            toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred during logout.', variant: 'destructive' });
+          }
+      }
+    } finally {
+      // This block will always execute.
+      if (isMountedRef.current) {
+        setUser(null);
+        setSession(null);
+        router.push('/'); // Ensure navigation happens here.
+        setLoading(false);
+      }
     }
   };
 
@@ -353,6 +373,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
+        // Sign out after successful password update in recovery flow
+        // The onAuthStateChange listener will handle redirection to login/home on SIGNED_OUT.
         supabase.auth.signOut().catch(signOutError => {
             console.error("Error during signOut after password update:", signOutError);
         });
