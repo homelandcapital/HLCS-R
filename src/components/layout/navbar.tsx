@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +22,7 @@ import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
 const Navbar = () => {
-  const { isAuthenticated, user, signOut, loading } = useAuth(); // Changed logout to signOut
+  const { isAuthenticated, user, signOut, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -90,7 +90,7 @@ const Navbar = () => {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { signOut(); closeMobileMenu(); }} className="cursor-pointer"> {/* Changed logout to signOut */}
+            <DropdownMenuItem onClick={() => { signOut(); closeMobileMenu(); }} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </DropdownMenuItem>
@@ -139,9 +139,11 @@ const Navbar = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] bg-background p-6 flex flex-col">
-              <div className="mb-6">
+              <SheetHeader className="mb-6 text-left">
+                <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle> 
+                {/* Visually hidden title for accessibility */}
                 <Logo />
-              </div>
+              </SheetHeader>
               <nav className="flex flex-col space-y-1 mb-auto">
                {navLinks.map(link => (
                   <Button key={link.href} variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
