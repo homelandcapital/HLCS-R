@@ -40,6 +40,8 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
     }
   };
 
+  const isPromotionActive = property.is_promoted && property.promotion_expires_at && new Date(property.promotion_expires_at) > new Date();
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full group">
       <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-start">
@@ -58,7 +60,7 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
             <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize flex items-center text-xs px-2 py-0.5 w-fit">
               {getStatusIcon(property.status)} {property.status}
             </Badge>
-            {property.is_promoted && property.promotion_tier_name && (
+            {isPromotionActive && property.promotion_tier_name && (
               <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 capitalize flex items-center text-xs px-2 py-0.5 w-fit">
                 <Star className="h-3 w-3 mr-1" /> {property.promotion_tier_name}
               </Badge>
@@ -115,14 +117,14 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-             {!property.is_promoted && (
+             {!isPromotionActive && (
               <Button
                 variant="outline"
                 size="sm"
                 className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                 onClick={() => onOpenPromoteDialog(property)}
                 disabled={property.status !== 'approved' || !platformSettings?.promotionsEnabled}
-                title={!platformSettings?.promotionsEnabled ? "Promotions are currently disabled" : "Promote this listing"}
+                title={!platformSettings?.promotionsEnabled ? "Promotions are currently disabled" : (property.status !== 'approved' ? "Only approved listings can be promoted" : "Promote this listing")}
               >
                 <Star className="h-4 w-4 mr-1.5" /> Promote
               </Button>

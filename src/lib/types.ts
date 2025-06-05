@@ -91,6 +91,7 @@ export interface Property {
   promotion_tier_id?: string | null; // TEXT
   promotion_tier_name?: string | null; // TEXT
   promoted_at?: string | null; // TIMESTAMPTZ (ISO string)
+  promotion_expires_at?: string | null; // TIMESTAMPTZ (ISO string)
   
   created_at: string; // TIMESTAMPTZ (ISO string)
   updated_at: string; // TIMESTAMPTZ (ISO string)

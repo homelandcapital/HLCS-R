@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/lib/supabaseClient';
 import AgentPropertyGridItem from '@/components/property/agent-property-grid-item'; // For Grid View
 import AgentPropertyListItem from '@/components/property/agent-property-list-item'; // For List View
+import { addDays, formatISO } from 'date-fns';
 
 
 export default function MyListingsPage() {
@@ -36,6 +37,7 @@ export default function MyListingsPage() {
   const { toast } = useToast();
 
   const fetchPlatformSettings = useCallback(async () => {
+    // In a real app, fetch this from Supabase 'platform_settings' table
     const mockSettings: PlatformSettings = {
         promotionsEnabled: true,
         promotionTiers: [
@@ -59,6 +61,7 @@ export default function MyListingsPage() {
       .from('properties')
       .select(`
         *,
+        promotion_expires_at,
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
       `)
       .eq('agent_id', agentId)
@@ -76,6 +79,7 @@ export default function MyListingsPage() {
         agent: p.agent ? { ...(p.agent as any), role: 'agent' as UserRole, id: p.agent.id! } as Agent : undefined,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
+        promotion_expires_at: p.promotion_expires_at,
       })) as Property[];
       setAgentProperties(formattedProperties);
     }
@@ -149,13 +153,17 @@ export default function MyListingsPage() {
         return;
     }
 
+    const promotedAtDate = new Date();
+    const expiresAtDate = addDays(promotedAtDate, selectedTier.duration);
+
     const { error } = await supabase
       .from('properties')
       .update({
         is_promoted: true,
         promotion_tier_id: selectedTier.id,
         promotion_tier_name: selectedTier.name,
-        promoted_at: new Date().toISOString(),
+        promoted_at: promotedAtDate.toISOString(),
+        promotion_expires_at: expiresAtDate.toISOString(),
         updated_at: new Date().toISOString()
       })
       .eq('id', propertyToPromote.id);
@@ -265,5 +273,3 @@ export default function MyListingsPage() {
     </div>
   );
 }
-
-    

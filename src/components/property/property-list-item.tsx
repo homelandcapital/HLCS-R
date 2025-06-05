@@ -29,6 +29,8 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
 
   const defaultImage = 'https://placehold.co/600x400.png?text=No+Image';
   const displayImage = property.images && property.images.length > 0 ? property.images[0] : defaultImage;
+  
+  const isPromotionActive = property.is_promoted && property.promotion_expires_at && new Date(property.promotion_expires_at) > new Date();
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full group">
@@ -46,7 +48,7 @@ const PropertyListItem = ({ property }: PropertyListItemProps) => {
           </Link>
           <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
             <Badge variant="secondary" className="text-xs">{property.listing_type}</Badge>
-            {property.is_promoted && (
+            {isPromotionActive && (
                 <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 text-xs flex items-center">
                     <Star className="h-3 w-3 mr-1"/> 
                     {property.promotion_tier_name || 'Promoted'}
