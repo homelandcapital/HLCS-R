@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Home, ListChecks, PlusCircle, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
+import { Home, ListChecks, PlusCircle, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import type { Agent, Property } from '@/lib/types';
 import { useEffect, useState, useCallback } from 'react';
@@ -16,13 +16,13 @@ export default function AgentDashboardPage() {
   const [agentPropertiesCount, setAgentPropertiesCount] = useState(0);
   const [activeListingsCount, setActiveListingsCount] = useState(0);
   const [pendingListingsCount, setPendingListingsCount] = useState(0);
-  const [recentProperties, setRecentProperties] = useState<Property[]>([]); // Property type
+  const [recentProperties, setRecentProperties] = useState<Property[]>([]);
   const { toast } = useToast();
 
   const fetchAgentDashboardStats = useCallback(async (agentId: string) => {
     const { data: properties, error } = await supabase
       .from('properties')
-      .select('id, status, title, created_at, price') // Only select needed fields for dashboard
+      .select('id, status, title, created_at, price', { count: 'exact' })
       .eq('agent_id', agentId);
 
     if (error) {
@@ -38,7 +38,7 @@ export default function AgentDashboardPage() {
       const sortedRecent = [...properties]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 3);
-      setRecentProperties(sortedRecent as Property[]); // Cast needed if select is partial
+      setRecentProperties(sortedRecent as Property[]);
     }
   }, [toast]);
 
@@ -59,7 +59,10 @@ export default function AgentDashboardPage() {
           <h1 className="text-2xl font-headline">Access Denied</h1>
           <p className="text-muted-foreground">This dashboard is for agents only.</p>
           <Button asChild className="mt-4">
-            <Link href="/">Go to Homepage</Link>
+            <Link href="/">
+              {/* Ensure Link has a single child for consistency, though text usually works */}
+              <span>Go to Homepage</span>
+            </Link>
           </Button>
         </div>
       );
@@ -71,7 +74,9 @@ export default function AgentDashboardPage() {
         <h1 className="text-3xl font-headline">Agent Dashboard</h1>
         <Button asChild>
           <Link href="/agents/dashboard/add-property">
-            <PlusCircle className="mr-2 h-5 w-5" /> Add New Property
+            <span className="inline-flex items-center"> {/* Wrapper span */}
+              <PlusCircle className="mr-2 h-5 w-5" /> Add New Property
+            </span>
           </Link>
         </Button>
       </div>
@@ -86,8 +91,20 @@ export default function AgentDashboardPage() {
         <Card className="shadow-lg">
           <CardHeader> <CardTitle className="font-headline">Quick Actions</CardTitle> </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start" asChild> <Link href="/agents/dashboard/my-listings"><ListChecks className="mr-2 h-4 w-4" /> View My Listings</Link> </Button>
-            <Button variant="outline" className="w-full justify-start" asChild> <Link href="/agents/dashboard/add-property"><PlusCircle className="mr-2 h-4 w-4" /> Add a New Property</Link> </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href="/agents/dashboard/my-listings">
+                <span className="inline-flex items-center"> {/* Wrapper span */}
+                  <ListChecks className="mr-2 h-4 w-4" /> View My Listings
+                </span>
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href="/agents/dashboard/add-property">
+                <span className="inline-flex items-center"> {/* Wrapper span */}
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add a New Property
+                </span>
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 
