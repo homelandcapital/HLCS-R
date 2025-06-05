@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import Logo from '@/components/common/logo';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"; // Added SheetHeader, SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, Home as HomeIcon, Briefcase, Info, Mail as MailIcon, Building, UserCircle } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, UserCircle } from "lucide-react"; // Removed HomeIcon, Briefcase, Info, MailIcon, Building
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
@@ -26,11 +26,11 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: '/', label: 'Home', icon: <HomeIcon className="mr-1.5 h-4 w-4" /> },
-    { href: '/properties', label: 'Properties', icon: <Building className="mr-1.5 h-4 w-4" /> },
-    { href: '/services', label: 'Services', icon: <Briefcase className="mr-1.5 h-4 w-4" /> },
-    { href: '/about', label: 'About', icon: <Info className="mr-1.5 h-4 w-4" /> },
-    { href: '/contact', label: 'Contact', icon: <MailIcon className="mr-1.5 h-4 w-4" /> },
+    { href: '/', label: 'Home' },
+    { href: '/properties', label: 'Properties' },
+    { href: '/services', label: 'Services' },
+    { href: '/about', label: 'About' },
+    { href: '/contact', label: 'Contact' },
   ];
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -120,7 +120,6 @@ const Navbar = () => {
           {navLinks.map(link => (
             <Button key={link.href} variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
               <Link href={link.href} className="flex items-center">
-                {React.cloneElement(link.icon, { className: "mr-1.5 h-4 w-4 text-primary group-hover:text-accent transition-colors" })}
                 {link.label}
               </Link>
             </Button>
@@ -147,7 +146,6 @@ const Navbar = () => {
                {navLinks.map(link => (
                   <Button key={link.href} variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
                     <Link href={link.href} className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
-                       {React.cloneElement(link.icon, { className: "mr-2 h-5 w-5 text-primary group-hover:text-accent transition-colors" })}
                         {link.label}
                     </Link>
                   </Button>
