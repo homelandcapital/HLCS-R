@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Users, Home, ShieldCheck, Settings, BarChart3, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
+import { Users, Home, ShieldCheck, Settings, BarChart3, AlertTriangle, CheckCircle, CheckSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import type { PlatformAdmin } from '@/lib/types';
 import { useEffect, useState, useCallback } from 'react';
@@ -102,7 +102,7 @@ export default function AdminDashboardPage() {
               <Link href="/admin/dashboard/user-management"><Users className="mr-2 h-4 w-4" /> Manage Users & Agents</Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
-              <Link href="/admin/dashboard/property-oversight"><Eye className="mr-2 h-4 w-4" /> View All Properties</Link>
+              <Link href="/admin/dashboard/property-oversight"><CheckSquare className="mr-2 h-4 w-4" /> Listing Approval</Link>
             </Button>
              <Button variant="outline" className="w-full justify-start" asChild>
               <Link href="/admin/dashboard/analytics"><BarChart3 className="mr-2 h-4 w-4" /> View Platform Analytics</Link>

@@ -7,11 +7,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper } from 'lucide-react';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
-import { Badge } from '@/components/ui/badge'; 
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabaseClient';
 
 interface AdminDashboardLayoutProps {
@@ -21,7 +21,7 @@ interface AdminDashboardLayoutProps {
 const adminNavItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
-  { href: '/admin/dashboard/property-oversight', label: 'Property Oversight', icon: <Eye className="h-5 w-5" /> },
+  { href: '/admin/dashboard/property-oversight', label: 'Listing Approval', icon: <CheckSquare className="h-5 w-5" /> },
   { href: '/admin/dashboard/inquiries', label: 'Inquiry Management', icon: <MailQuestion className="h-5 w-5" /> },
   { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
@@ -118,10 +118,10 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
               <Link key={item.href} href={item.href} passHref legacyBehavior>
                 <Button
                   variant={isActive ? 'default' : 'ghost'}
-                  className="w-full justify-start" 
+                  className="w-full justify-start"
                   asChild
                 >
-                  <a className="flex items-center justify-between w-full"> {/* Ensure 'a' tag for legacyBehavior */}
+                  <a> {/* Ensure 'a' tag for legacyBehavior */}
                     <>
                       <div className="flex items-center"> 
                         {item.icon}

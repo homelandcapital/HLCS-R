@@ -7,7 +7,7 @@ import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Ag
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Home as HomeIcon, Edit2, CheckCircle, XCircle, MessageSquare, Tag, Download, Hash } from 'lucide-react';
+import { Eye, Search, Home as HomeIcon, Edit2, CheckCircle, XCircle, MessageSquare, Tag, Download, Hash, CheckSquare as CheckSquareIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -47,10 +47,7 @@ export default function PropertyOversightPage() {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
-      .select(`
-        *,
-        agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      `)
+      .select('*, agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)')
       .order('status', { ascending: true }) 
       .order('created_at', { ascending: false });
 
@@ -218,9 +215,9 @@ export default function PropertyOversightPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-headline flex items-center">
-          <HomeIcon className="mr-3 h-8 w-8 text-primary" /> Property Oversight
+          <CheckSquareIcon className="mr-3 h-8 w-8 text-primary" /> Listing Approval
         </h1>
-        <p className="text-muted-foreground">Review, approve, or reject property listings.</p>
+        <p className="text-muted-foreground">Review, approve, or reject property listings submitted by agents.</p>
       </div>
 
       <Card className="shadow-xl">
@@ -228,7 +225,7 @@ export default function PropertyOversightPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className="font-headline text-2xl">All Platform Properties</CardTitle>
-              <CardDescription>Manage all properties listed on the platform.</CardDescription>
+              <CardDescription>Manage all properties listed on the platform and their approval status.</CardDescription>
             </div>
             <Button onClick={handleExportProperties} variant="outline">
               <Download className="mr-2 h-4 w-4" /> Export Properties
@@ -358,4 +355,3 @@ export default function PropertyOversightPage() {
     </div>
   );
 }
-
