@@ -63,6 +63,7 @@ export interface PromotionDetails {
 // Interface for Property aligning with Supabase 'properties' table
 export interface Property {
   id: string; // UUID
+  human_readable_id?: string | null; // New user-friendly ID
   title: string;
   description: string;
   price: number; // NUMERIC
@@ -117,7 +118,7 @@ export interface InquiryMessage {
 
 export interface Inquiry {
   id: string; 
-  property_id: string; 
+  property_id: string; // This is the UUID of the property
   property_name: string;
   inquirer_name: string;
   inquirer_email: string;

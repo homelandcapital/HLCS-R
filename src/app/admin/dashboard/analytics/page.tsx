@@ -3,11 +3,11 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star, Link as LinkIcon, Download } from 'lucide-react';
+import { BarChart3, Users, Home, Activity, Zap, CreditCard, Star, Link as LinkIcon, Download, Hash } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Bar, BarChart as RechartsBarChart } from 'recharts';
-import { mockProperties, mockPlatformSettings } from '@/lib/mock-data';
-import type { Property } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { mockPlatformSettings } from '@/lib/mock-data'; // Assuming platform settings for promotions still comes from mock
+import type { Property, Agent, UserRole } from '@/lib/types';
+import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
@@ -15,8 +15,10 @@ import { Button } from '@/components/ui/button';
 import { convertToCSV, downloadCSV } from '@/lib/export-utils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Mock data for charts (remains the same)
+// Mock data for charts (remains the same for now, could be replaced with DB data later)
 const mockUserSignupsData = [
   { name: 'Jan', users: 30 }, { name: 'Feb', users: 45 }, { name: 'Mar', users: 60 },
   { name: 'Apr', users: 50 }, { name: 'May', users: 70 }, { name: 'Jun', users: 85 },
@@ -28,48 +30,95 @@ const mockPropertyListingsData = [
 ];
 
 export default function PlatformAnalyticsPage() {
-  const totalUsers = 1250;
-  const totalSalesVolume = 150000000;
-  const siteEngagementRate = 65.5;
-
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
+  const [totalPropertiesCount, setTotalPropertiesCount] = useState(0);
   const [promotedListingsCount, setPromotedListingsCount] = useState(0);
   const [totalPromotionRevenue, setTotalPromotionRevenue] = useState(0);
   const [promotedPropertiesList, setPromotedPropertiesList] = useState<Property[]>([]);
+  const [pageLoading, setPageLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const promotedProps = mockProperties.filter(p => p.isPromoted && p.promotionDetails);
-    setPromotedPropertiesList(promotedProps);
-    setPromotedListingsCount(promotedProps.length);
+  const totalSalesVolume = 150000000; // Example value, not from DB
+  const siteEngagementRate = 65.5; // Example value, not from DB
 
-    let revenue = 0;
-    promotedProps.forEach(p => {
-      const tierId = p.promotionDetails!.tierId;
-      const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === tierId);
-      if (tierConfig) {
-        revenue += tierConfig.fee;
-      }
-    });
-    setTotalPromotionRevenue(revenue);
-  }, []);
+  const fetchAnalyticsData = useCallback(async () => {
+    setPageLoading(true);
+    try {
+      // Fetch total users (agents + general users)
+      const { count: usersCount, error: usersError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true });
+      if (usersError) throw usersError;
+      setTotalUsersCount(usersCount || 0);
+
+      // Fetch properties for promotion details and total count
+      const { data: propertiesData, error: propertiesError } = await supabase
+        .from('properties')
+        .select('id, title, is_promoted, promotion_tier_id, promotion_tier_name, promoted_at, human_readable_id')
+        .eq('status', 'approved'); // Consider only approved for some stats
+      
+      if (propertiesError) throw propertiesError;
+      setTotalPropertiesCount(propertiesData?.length || 0);
+
+      const promotedProps = propertiesData?.filter(p => p.is_promoted && p.promotion_tier_id) || [];
+      setPromotedPropertiesList(promotedProps as Property[]);
+      setPromotedListingsCount(promotedProps.length);
+
+      let revenue = 0;
+      promotedProps.forEach(p => {
+        const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === p.promotion_tier_id);
+        if (tierConfig) {
+          revenue += tierConfig.fee;
+        }
+      });
+      setTotalPromotionRevenue(revenue);
+
+    } catch (error: any) {
+      console.error("Error fetching analytics data:", error);
+      toast({ title: 'Error Fetching Analytics', description: error.message, variant: 'destructive' });
+    } finally {
+      setPageLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
+
 
   const handleExportPromotedListings = () => {
     const dataToExport = promotedPropertiesList.map(p => {
-      const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === p.promotionDetails?.tierId);
+      const tierConfig = mockPlatformSettings.promotionTiers.find(t => t.id === p.promotion_tier_id);
       return {
-        propertyId: p.id,
+        propertyUuid: p.id,
+        propertyHumanId: p.human_readable_id || 'N/A',
         propertyTitle: p.title,
-        tierName: p.promotionDetails?.tierName || 'N/A',
-        promotedDate: p.promotionDetails?.promotedAt ? format(new Date(p.promotionDetails.promotedAt), 'yyyy-MM-dd') : 'N/A',
+        tierName: p.promotion_tier_name || 'N/A',
+        promotedDate: p.promoted_at ? format(new Date(p.promoted_at), 'yyyy-MM-dd') : 'N/A',
         tierFee: tierConfig?.fee || 0,
         tierDurationDays: tierConfig?.duration || 0,
       };
     });
-    const headers = ['propertyId', 'propertyTitle', 'tierName', 'promotedDate', 'tierFee', 'tierDurationDays'];
+    const headers = ['propertyUuid', 'propertyHumanId', 'propertyTitle', 'tierName', 'promotedDate', 'tierFee', 'tierDurationDays'];
     const csvString = convertToCSV(dataToExport, headers);
     downloadCSV(csvString, 'homeland-capital-promoted-listings.csv');
     toast({ title: 'Export Started', description: 'Promoted listings CSV download has started.' });
   };
+
+  if (pageLoading) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-12 w-1/2" /> <Skeleton className="h-8 w-3/4" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-80 w-full" /> <Skeleton className="h-80 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -83,10 +132,10 @@ export default function PlatformAnalyticsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="Total Users" value={totalUsers.toLocaleString()} icon={<Users />} description="Registered users and agents." />
-        <StatCard title="Total Properties" value={mockProperties.length.toLocaleString()} icon={<Home />} description="Active listings on platform." />
-        <StatCard title="Total Sales Volume" value={`₦${totalSalesVolume.toLocaleString()}`} icon={<span className="font-bold text-xl">₦</span>} description="Completed transactions value." />
-        <StatCard title="Engagement Rate" value={`${siteEngagementRate}%`} icon={<Activity />} description="Average user activity." />
+        <StatCard title="Total Users" value={totalUsersCount.toLocaleString()} icon={<Users />} description="Registered users and agents." />
+        <StatCard title="Total Properties" value={totalPropertiesCount.toLocaleString()} icon={<Home />} description="Active listings on platform." />
+        <StatCard title="Total Sales Volume" value={`₦${totalSalesVolume.toLocaleString()}`} icon={<span className="font-bold text-xl">₦</span>} description="Completed transactions value (mock)." />
+        <StatCard title="Engagement Rate" value={`${siteEngagementRate}%`} icon={<Activity />} description="Average user activity (mock)." />
         <StatCard title="Active Promoted Listings" value={promotedListingsCount.toLocaleString()} icon={<Zap />} description="Currently boosted listings." />
         <StatCard title="Total Promotion Revenue" value={`₦${totalPromotionRevenue.toLocaleString()}`} icon={<CreditCard />} description="Revenue from listing promotions." />
       </div>
@@ -95,7 +144,7 @@ export default function PlatformAnalyticsPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">User Signups Over Time</CardTitle>
-            <CardDescription>Monthly trend of new user registrations.</CardDescription>
+            <CardDescription>Monthly trend of new user registrations (mock data).</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pt-6">
             <ResponsiveContainer width="100%" height="100%">
@@ -114,7 +163,7 @@ export default function PlatformAnalyticsPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">Property Listings Over Time</CardTitle>
-            <CardDescription>Monthly trend of new property listings.</CardDescription>
+            <CardDescription>Monthly trend of new property listings (mock data).</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] pt-6">
              <ResponsiveContainer width="100%" height="100%">
@@ -158,11 +207,15 @@ export default function PlatformAnalyticsPage() {
                 <TableBody>
                   {promotedPropertiesList.map(property => (
                     <TableRow key={property.id}>
-                      <TableCell className="font-mono text-xs">{property.id}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <div className="flex items-center">
+                            <Hash className="w-3 h-3 mr-1" /> {property.human_readable_id || property.id.substring(0,8) + '...'}
+                        </div>
+                      </TableCell>
                       <TableCell className="font-medium">{property.title}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                           {property.promotionDetails?.tierName || 'N/A'}
+                           {property.promotion_tier_name || 'N/A'}
                         </Badge>
                       </TableCell>
                        <TableCell className="text-right">

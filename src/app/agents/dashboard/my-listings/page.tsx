@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, CheckCircle, XCircle, MessageSquare, Star } from 'lucide-react';
+import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, CheckCircle, XCircle, MessageSquare, Star, Hash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
@@ -31,7 +31,7 @@ export default function MyListingsPage() {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const platformSettings = mockPlatformSettings;
+  const platformSettings = mockPlatformSettings; // This will need to be fetched from DB later
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
     setPageLoading(true);
@@ -53,8 +53,8 @@ export default function MyListingsPage() {
        const formattedProperties = data.map(p => ({
         ...p,
         agent: p.agent ? { ...(p.agent as any), role: 'agent' as UserRole, id: p.agent.id! } as Agent : undefined,
-        images: p.images ? (Array.isArray(p.images) ? p.images : [String(p.images)]) : [],
-        amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : [String(p.amenities)]) : [],
+        images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
+        amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
       })) as Property[];
       setAgentProperties(formattedProperties);
     }
@@ -76,7 +76,15 @@ export default function MyListingsPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!propertyToDelete) return;
+    if (!propertyToDelete || !user || user.role !== 'agent') return;
+    // Ensure the agent owns this property before deleting
+    if (propertyToDelete.agent_id !== user.id) {
+        toast({ title: "Unauthorized", description: "You can only delete your own listings.", variant: "destructive" });
+        setIsDeleteDialogOpen(false);
+        setPropertyToDelete(null);
+        return;
+    }
+
     const { error } = await supabase
       .from('properties')
       .delete()
@@ -99,7 +107,14 @@ export default function MyListingsPage() {
   };
 
   const handleConfirmPromotion = async () => {
-    if (!propertyToPromote || !selectedTierId) return;
+    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent') return;
+     if (propertyToPromote.agent_id !== user.id) {
+        toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" });
+        setIsPromoteDialogOpen(false);
+        setPropertyToPromote(null);
+        setSelectedTierId(null);
+        return;
+    }
 
     const selectedTier = platformSettings.promotionTiers.find(t => t.id === selectedTierId);
     if (!selectedTier) {
@@ -201,7 +216,17 @@ export default function MyListingsPage() {
                     {property.is_promoted && property.promotion_tier_name && ( <Badge variant="default" className="bg-yellow-500 text-black hover:bg-yellow-600 capitalize flex items-center text-xs px-2 py-0.5 w-fit"> <Star className="h-3 w-3 mr-1" /> {property.promotion_tier_name} </Badge> )}
                 </div>
               </div>
-              <CardHeader> <CardTitle className="font-headline text-xl line-clamp-1">{property.title}</CardTitle> <CardDescription className="text-sm">₦{property.price.toLocaleString()} - {property.location_area_city}</CardDescription> {property.status === 'rejected' && property.rejection_reason && ( <p className="text-xs text-destructive mt-1 flex items-start" title={property.rejection_reason}> <MessageSquare className="h-3 w-3 mr-1 mt-0.5 shrink-0"/> <span className="truncate">Rejection: {property.rejection_reason}</span> </p> )} </CardHeader>
+              <CardHeader>
+                <CardTitle className="font-headline text-xl line-clamp-1">{property.title}</CardTitle>
+                <div className="flex items-center text-xs text-muted-foreground">
+                    <Hash className="w-3 h-3 mr-1" /> {property.human_readable_id || property.id.substring(0,8) + '...'}
+                    <span className="mx-1.5">·</span>
+                    <span>₦{property.price.toLocaleString()}</span>
+                    <span className="mx-1.5">·</span>
+                    <span>{property.location_area_city}</span>
+                </div>
+                {property.status === 'rejected' && property.rejection_reason && ( <p className="text-xs text-destructive mt-1 flex items-start" title={property.rejection_reason}> <MessageSquare className="h-3 w-3 mr-1 mt-0.5 shrink-0"/> <span className="truncate">Rejection: {property.rejection_reason}</span> </p> )}
+              </CardHeader>
               <CardContent className="flex-grow"> <p className="text-sm text-muted-foreground line-clamp-3">{property.description}</p> </CardContent>
               <CardFooter className="grid grid-cols-3 gap-2 border-t pt-4">
                 <Button variant="outline" size="sm" asChild title="View Listing" disabled={property.status !== 'approved'}>

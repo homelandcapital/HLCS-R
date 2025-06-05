@@ -7,7 +7,7 @@ import type { Property, PropertyStatus, ListingType, NigerianState, UserRole, Ag
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Search, Home as HomeIcon, Edit2, CheckCircle, XCircle, MessageSquare, Tag, Download } from 'lucide-react';
+import { Eye, Search, Home as HomeIcon, Edit2, CheckCircle, XCircle, MessageSquare, Tag, Download, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -49,7 +49,7 @@ export default function PropertyOversightPage() {
         *,
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
       `)
-      .order('status', { ascending: true }) // Pending first
+      .order('status', { ascending: true }) 
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -59,14 +59,13 @@ export default function PropertyOversightPage() {
     } else if (data) {
       const formattedProperties = data.map(p => ({
         ...p,
-        // Ensure agent is correctly typed or null
         agent: p.agent ? {
-            ...(p.agent as any), // Cast to any to allow role overwrite if needed by Agent type
-            role: 'agent' as UserRole, // Explicitly set role for Agent type if not already
-            id: p.agent.id!, // Assert id is non-null if fetched
-        } as Agent : undefined, // Or handle null agent more gracefully
-        images: p.images ? (Array.isArray(p.images) ? p.images : [String(p.images)]) : [],
-        amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : [String(p.amenities)]) : [],
+            ...(p.agent as any), 
+            role: 'agent' as UserRole, 
+            id: p.agent.id!, 
+        } as Agent : undefined, 
+        images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
+        amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
       })) as Property[];
       setAllProperties(formattedProperties);
     }
@@ -98,6 +97,8 @@ export default function PropertyOversightPage() {
       const lowerSearchTerm = searchTerm.toLowerCase();
       properties = properties.filter(property =>
         property.title.toLowerCase().includes(lowerSearchTerm) ||
+        (property.human_readable_id && property.human_readable_id.toLowerCase().includes(lowerSearchTerm)) ||
+        property.id.toLowerCase().includes(lowerSearchTerm) ||
         property.location_area_city.toLowerCase().includes(lowerSearchTerm) ||
         property.state.toLowerCase().includes(lowerSearchTerm) ||
         property.address.toLowerCase().includes(lowerSearchTerm) ||
@@ -107,7 +108,10 @@ export default function PropertyOversightPage() {
     setFilteredProperties(properties);
   }, [searchTerm, typeFilter, statusFilter, listingTypeFilter, allProperties]);
 
-  const propertyTypes = useMemo(() => Array.from(new Set(allProperties.map(p => p.property_type))), [allProperties]);
+  const propertyTypes = useMemo(() => {
+    const uniqueTypes = new Set(allProperties.map(p => p.property_type));
+    return Array.from(uniqueTypes).filter(Boolean) as PropertyTypeEnum[];
+  }, [allProperties]);
   const propertyStatusesList: PropertyStatus[] = ['pending', 'approved', 'rejected'];
   const listingTypesList: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
@@ -131,7 +135,7 @@ export default function PropertyOversightPage() {
       return false;
     }
     toast({ title: `Property ${newStatus}`, description: `The property listing status has been updated.` });
-    fetchProperties(); // Re-fetch to update the list
+    fetchProperties(); 
     return true;
   };
 
@@ -159,7 +163,8 @@ export default function PropertyOversightPage() {
 
   const handleExportProperties = () => {
     const dataToExport = filteredProperties.map(p => ({
-      id: p.id,
+      uuid: p.id,
+      humanReadableId: p.human_readable_id || 'N/A',
       title: p.title,
       price: p.price,
       listingType: p.listing_type,
@@ -178,7 +183,7 @@ export default function PropertyOversightPage() {
       rejectionReason: p.rejection_reason || '',
       yearBuilt: p.year_built || '',
     }));
-    const headers = ['id', 'title', 'price', 'listingType', 'propertyType', 'location', 'state', 'address', 'bedrooms', 'bathrooms', 'areaSqFt', 'status', 'agentName', 'agentEmail', 'isPromoted', 'promotionTierName', 'rejectionReason', 'yearBuilt'];
+    const headers = ['uuid', 'humanReadableId', 'title', 'price', 'listingType', 'propertyType', 'location', 'state', 'address', 'bedrooms', 'bathrooms', 'areaSqFt', 'status', 'agentName', 'agentEmail', 'isPromoted', 'promotionTierName', 'rejectionReason', 'yearBuilt'];
     const csvString = convertToCSV(dataToExport, headers);
     downloadCSV(csvString, 'homeland-capital-properties.csv');
     toast({ title: 'Export Started', description: 'Property data CSV download has started.' });
@@ -231,7 +236,7 @@ export default function PropertyOversightPage() {
             <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search by title, location, agent..."
+                placeholder="Search by ID, title, location, agent..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -262,7 +267,8 @@ export default function PropertyOversightPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[80px]">Image</TableHead>
-                  <TableHead>Title & Location</TableHead>
+                  <TableHead>Title & ID</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Listing Type</TableHead>
                   <TableHead>Status</TableHead>
@@ -278,8 +284,13 @@ export default function PropertyOversightPage() {
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{property.title}</div>
-                      <div className="text-xs text-muted-foreground">{property.location_area_city}, {property.state}</div>
-                      <div className="text-xs text-muted-foreground">ID: {property.id}</div>
+                      <div className="text-xs text-muted-foreground flex items-center">
+                        <Hash className="w-3 h-3 mr-1" /> {property.human_readable_id || property.id.substring(0,8) + '...'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{property.location_area_city}</div>
+                      <div className="text-xs text-muted-foreground">{property.state}</div>
                     </TableCell>
                     <TableCell> <Badge variant="secondary" className="text-base"> ₦{property.price.toLocaleString()} </Badge> </TableCell>
                     <TableCell><Badge variant="outline" className="text-xs"><Tag className="h-3 w-3 mr-1"/>{property.listing_type}</Badge></TableCell>
@@ -345,4 +356,3 @@ export default function PropertyOversightPage() {
     </div>
   );
 }
-

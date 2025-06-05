@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { Property, Agent, UserRole } from '@/lib/types';
+import type { Property, Agent, UserRole, GeneralUser } from '@/lib/types';
 import PropertyMap from '@/components/property/property-map';
 import ContactForm from '@/components/property/contact-form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Hash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,7 @@ export default function PropertyDetailsPage() {
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
       `)
       .eq('id', propertyId)
-      .eq('status', 'approved') // Only fetch approved properties
+      .eq('status', 'approved') 
       .maybeSingle();
 
     if (error) {
@@ -58,12 +58,12 @@ export default function PropertyDetailsPage() {
       const formattedProperty = {
         ...data,
         agent: data.agent ? { ...(data.agent as any), role: 'agent' as UserRole, id: data.agent.id! } as Agent : undefined,
-        images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [], // Ensure images are parsed if stored as JSON string
-        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : JSON.parse(String(data.amenities))) : [], // Ensure amenities are parsed
+        images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [], 
+        amenities: data.amenities ? (Array.isArray(data.amenities) ? data.amenities : JSON.parse(String(data.amenities))) : [], 
       } as Property;
       setProperty(formattedProperty);
     } else {
-      setProperty(null); // Property not found or not approved
+      setProperty(null); 
     }
     setLoading(false);
     setCurrentImageIndex(0);
@@ -78,10 +78,9 @@ export default function PropertyDetailsPage() {
         setIsValidId(false);
         setProperty(null);
         setLoading(false);
-        toast({ title: 'Invalid Property ID', description: 'The property ID in the URL is not valid.', variant: 'destructive' });
       }
     }
-  }, [idFromUrl, fetchPropertyDetails, toast]);
+  }, [idFromUrl, fetchPropertyDetails]);
 
   const handleInquireClick = () => {
     if (authLoading) return;
@@ -107,7 +106,7 @@ export default function PropertyDetailsPage() {
        <div className="text-center py-20">
         <ShieldAlert className="mx-auto h-16 w-16 text-destructive mb-4" />
         <h1 className="text-4xl font-headline mb-4">Invalid Property Link</h1>
-        <p className="text-muted-foreground mb-6">The link you followed seems to be invalid or uses an outdated format.</p>
+        <p className="text-muted-foreground mb-6">The link you followed seems to be invalid or uses an outdated format for the property ID.</p>
         <Button asChild>
           <Link href="/properties">Back to Listings</Link>
         </Button>
@@ -128,8 +127,6 @@ export default function PropertyDetailsPage() {
     );
   }
 
-  // Property is valid and fetched, status check already done in query
-  // No need for: if (property.status !== 'approved') { ... }
 
   const { agent } = property;
   const images = property.images || [];
@@ -150,7 +147,7 @@ export default function PropertyDetailsPage() {
   if (authContextUser) {
     contactFormInitialData.name = authContextUser.name;
     contactFormInitialData.email = authContextUser.email;
-    if (authContextUser.role === 'agent' || authContextUser.role === 'user') { // Users might also have phone in future
+    if (authContextUser.role === 'agent' || authContextUser.role === 'user') { 
       contactFormInitialData.phone = (authContextUser as Agent | GeneralUser).phone || undefined;
     }
   }
@@ -164,6 +161,11 @@ export default function PropertyDetailsPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-headline text-primary mb-1">{property.title}</h1>
+              {property.human_readable_id && (
+                <div className="text-sm text-muted-foreground mb-1 flex items-center">
+                  <Hash className="w-4 h-4 mr-1" /> ID: {property.human_readable_id}
+                </div>
+              )}
               <div className="flex items-center text-muted-foreground text-sm mb-2">
                 <Badge variant="outline" className="mr-2">{property.listing_type}</Badge>
                 <MapPin className="w-4 h-4 mr-1" />
@@ -192,7 +194,7 @@ export default function PropertyDetailsPage() {
           </DialogHeader>
           <ContactForm
             propertyTitle={property.title}
-            propertyId={property.id} // This ID is now guaranteed to be a valid UUID from a successfully fetched property
+            propertyId={property.id} 
             initialName={contactFormInitialData.name}
             initialEmail={contactFormInitialData.email}
             initialPhone={contactFormInitialData.phone}
@@ -209,9 +211,9 @@ export default function PropertyDetailsPage() {
                 <Image
                   src={mainDisplayImage}
                   alt={`${property.title} - Image ${currentImageIndex + 1}`}
-                  fill // Changed from layout="fill"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Added sizes for responsiveness with fill
-                  style={{objectFit:"cover"}} // Changed from objectFit="cover"
+                  fill 
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
+                  style={{objectFit:"cover"}} 
                   className="transition-opacity duration-300 ease-in-out"
                   data-ai-hint="property interior detail"
                   priority={true}
@@ -329,5 +331,3 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
-
-    
