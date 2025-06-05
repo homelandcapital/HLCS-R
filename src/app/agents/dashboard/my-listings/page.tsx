@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { mockPlatformSettings } from '@/lib/mock-data'; 
+import { mockPlatformSettings } from '@/lib/mock-data';
 import type { Property, Agent, PropertyStatus, PromotionTierConfig, UserRole } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,18 +31,18 @@ export default function MyListingsPage() {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const platformSettings = mockPlatformSettings; 
+  const platformSettings = mockPlatformSettings;
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
-      .select(\`
+      .select(`
         *,
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      \`)
+      `)
       .eq('agent_id', agentId)
-      .order('status', { ascending: true }) 
+      .order('status', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -85,16 +85,16 @@ export default function MyListingsPage() {
     if (error) {
       toast({ title: "Error Deleting Listing", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Listing Deleted", description: \`\${propertyToDelete.title} has been removed.\` });
-      fetchAgentProperties((user as Agent).id); 
+      toast({ title: "Listing Deleted", description: `${propertyToDelete.title} has been removed.` });
+      fetchAgentProperties((user as Agent).id);
     }
     setIsDeleteDialogOpen(false);
     setPropertyToDelete(null);
   };
-  
+
   const handleOpenPromoteDialog = (property: Property) => {
     setPropertyToPromote(property);
-    setSelectedTierId(null); 
+    setSelectedTierId(null);
     setIsPromoteDialogOpen(true);
   };
 
@@ -109,8 +109,8 @@ export default function MyListingsPage() {
 
     const { error } = await supabase
       .from('properties')
-      .update({ 
-        is_promoted: true, 
+      .update({
+        is_promoted: true,
         promotion_tier_id: selectedTier.id,
         promotion_tier_name: selectedTier.name,
         promoted_at: new Date().toISOString(),
@@ -121,8 +121,8 @@ export default function MyListingsPage() {
     if (error) {
       toast({ title: "Error Promoting Listing", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Listing Promoted!", description: \`\${propertyToPromote.title} promoted with \${selectedTier.name}.\` });
-      fetchAgentProperties((user as Agent).id); 
+      toast({ title: "Listing Promoted!", description: `${propertyToPromote.title} promoted with ${selectedTier.name}.` });
+      fetchAgentProperties((user as Agent).id);
     }
     setIsPromoteDialogOpen(false);
     setPropertyToPromote(null);
@@ -133,7 +133,7 @@ export default function MyListingsPage() {
   const getStatusBadgeVariant = (status: PropertyStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'pending': return 'default';
-      case 'approved': return 'secondary'; 
+      case 'approved': return 'secondary';
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -147,7 +147,7 @@ export default function MyListingsPage() {
       default: return null;
     }
   };
-  
+
   if (pageLoading || authLoading) {
     return (
       <div className="space-y-6">
@@ -175,10 +175,10 @@ export default function MyListingsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div> <h1 className="text-3xl font-headline flex items-center"> <ListChecks className="mr-3 h-8 w-8 text-primary" /> My Listings </h1> <p className="text-muted-foreground">Manage your properties listed on Homeland Capital.</p> </div>
-        <Button asChild> 
-          <Link href="/agents/dashboard/add-property"> 
-            <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span> 
-          </Link> 
+        <Button asChild>
+          <Link href="/agents/dashboard/add-property">
+            <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span>
+          </Link>
         </Button>
       </div>
 
@@ -204,10 +204,10 @@ export default function MyListingsPage() {
               <CardHeader> <CardTitle className="font-headline text-xl line-clamp-1">{property.title}</CardTitle> <CardDescription className="text-sm">₦{property.price.toLocaleString()} - {property.location_area_city}</CardDescription> {property.status === 'rejected' && property.rejection_reason && ( <p className="text-xs text-destructive mt-1 flex items-start" title={property.rejection_reason}> <MessageSquare className="h-3 w-3 mr-1 mt-0.5 shrink-0"/> <span className="truncate">Rejection: {property.rejection_reason}</span> </p> )} </CardHeader>
               <CardContent className="flex-grow"> <p className="text-sm text-muted-foreground line-clamp-3">{property.description}</p> </CardContent>
               <CardFooter className="grid grid-cols-3 gap-2 border-t pt-4">
-                <Button variant="outline" size="sm" asChild title="View Listing" disabled={property.status !== 'approved'}> 
-                  <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer"> 
-                    <span className="inline-flex items-center"><Eye className="h-4 w-4" /></span> 
-                  </Link> 
+                <Button variant="outline" size="sm" asChild title="View Listing" disabled={property.status !== 'approved'}>
+                  <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
+                    <span className="inline-flex items-center"><Eye className="h-4 w-4" /></span>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
                 <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(property)} title="Delete Listing" disabled={property.status === 'pending'}> <Trash2 className="h-4 w-4" /> </Button>
@@ -217,7 +217,7 @@ export default function MyListingsPage() {
           ))}
         </div>
       )}
-       {propertyToPromote && ( <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}> <DialogContent className="sm:max-w-lg"> <DialogHeader> <DialogTitle className="font-headline text-xl flex items-center"><Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier</DialogTitle> <DialogDescription> Select a promotion package for "<strong>{propertyToPromote.title}</strong>". </DialogDescription> </DialogHeader> <div className="py-4 space-y-4"> <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId}> {platformSettings.promotionTiers.map((tier) => ( <Label key={tier.id} htmlFor={tier.id} className={cn( "flex flex-col p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary" )}> <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> <RadioGroupItem value={tier.id} id={tier.id} className="shrink-0"/> </div> <p className="text-sm text-muted-foreground mt-1">{tier.description}</p> <div className="mt-2 text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div> </Label> ))} </RadioGroup> {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )} </div> <DialogFooter> <DialogClose asChild> <Button variant="outline">Cancel</Button> </DialogClose> <Button onClick={handleConfirmPromotion} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0}> {selectedTierId ? \`Promote (NGN \${getSelectedTierFee().toLocaleString()})\` : 'Select a Tier'} </Button> </DialogFooter> </DialogContent> </Dialog> )}
+       {propertyToPromote && ( <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}> <DialogContent className="sm:max-w-lg"> <DialogHeader> <DialogTitle className="font-headline text-xl flex items-center"><Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier</DialogTitle> <DialogDescription> Select a promotion package for "<strong>{propertyToPromote.title}</strong>". </DialogDescription> </DialogHeader> <div className="py-4 space-y-4"> <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId}> {platformSettings.promotionTiers.map((tier) => ( <Label key={tier.id} htmlFor={tier.id} className={cn( "flex flex-col p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary" )}> <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> <RadioGroupItem value={tier.id} id={tier.id} className="shrink-0"/> </div> <p className="text-sm text-muted-foreground mt-1">{tier.description}</p> <div className="mt-2 text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div> </Label> ))} </RadioGroup> {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )} </div> <DialogFooter> <DialogClose asChild> <Button variant="outline">Cancel</Button> </DialogClose> <Button onClick={handleConfirmPromotion} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0}> {selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier'} </Button> </DialogFooter> </DialogContent> </Dialog> )}
        {propertyToDelete && ( <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}> <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle className="font-headline">Confirm Deletion</DialogTitle> <DialogDescription> Are you sure you want to delete the listing "<strong>{propertyToDelete.title}</strong>"? This action cannot be undone. </DialogDescription> </DialogHeader> <DialogFooter> <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose> <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button> </DialogFooter> </DialogContent> </Dialog> )}
     </div>
   );
