@@ -136,8 +136,8 @@ export let footerContentData: FooterContent = {
       title: "Company",
       links: [
         { text: "About Us", href: "/about" },
-        { text: "Careers", href: "#" },
-        { text: "Blog", href: "#" },
+        // { text: "Careers", href: "#" }, // Removed
+        // { text: "Blog", href: "#" }, // Removed
         { text: "Contact Us", href: "/contact" }
       ]
     },
@@ -162,3 +162,4 @@ export let footerContentData: FooterContent = {
   copyrightText: `© ${new Date().getFullYear()} Homeland Capital. All rights reserved.`,
   builtWithText: "Built with Next.js, Tailwind CSS, and ShadCN UI."
 };
+
