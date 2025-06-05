@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole } from '@/lib/types';
@@ -123,7 +124,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    // Initial check - setLoading(true) is the default state
     performInitialAuthCheckInternal()
       .then(result => {
         if (isMountedRef.current) {
@@ -140,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .finally(() => {
         if (isMountedRef.current) {
-          setLoading(false); // Ensure loading is set to false after initial check completes
+          setLoading(false);
         }
       });
 
@@ -289,11 +289,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (!isMountedRef.current) return;
+    setLoading(true);
+
     const { error } = await supabase.auth.signOut();
-    if (error) {
-        toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
-    } else {
+
+    if (isMountedRef.current) {
+      setUser(null); 
+      setSession(null);
+
+      if (error) {
+        console.error("Supabase signOut error:", error);
+        // Treat "Auth session missing" or "No active session" as effectively logged out.
+        if (error.message.toLowerCase().includes("auth session missing") || error.message.toLowerCase().includes("no active session")) {
+            toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        } else {
+            toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
+        }
+      } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+      }
+      router.push('/'); 
+      setLoading(false);
     }
   };
 
