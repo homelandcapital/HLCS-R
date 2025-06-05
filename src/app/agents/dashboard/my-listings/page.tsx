@@ -76,6 +76,7 @@ export default function MyListingsPage() {
     } else if (data) {
        const formattedProperties = data.map(p => ({
         ...p,
+        human_readable_id: p.human_readable_id,
         agent: p.agent ? { ...(p.agent as any), role: 'agent' as UserRole, id: p.agent.id! } as Agent : undefined,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
@@ -104,6 +105,12 @@ export default function MyListingsPage() {
     if (!propertyToDelete || !user || user.role !== 'agent') return;
     if (propertyToDelete.agent_id !== user.id) {
         toast({ title: "Unauthorized", description: "You can only delete your own listings.", variant: "destructive" });
+        setIsDeleteDialogOpen(false);
+        setPropertyToDelete(null);
+        return;
+    }
+    if (propertyToDelete.status === 'approved' || propertyToDelete.status === 'pending') {
+        toast({ title: "Action Not Allowed", description: "Approved or pending listings cannot be deleted by agents.", variant: "destructive" });
         setIsDeleteDialogOpen(false);
         setPropertyToDelete(null);
         return;
@@ -259,7 +266,7 @@ export default function MyListingsPage() {
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
-                <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(property)} title="Delete Listing" disabled={property.status === 'pending'}> <Trash2 className="h-4 w-4" /> </Button>
+                <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(property)} title="Delete Listing" disabled={property.status === 'pending' || property.status === 'approved'}> <Trash2 className="h-4 w-4" /> </Button>
                 {!property.is_promoted && ( <Button variant="outline" className="col-span-3 mt-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700" onClick={() => handleOpenPromoteDialog(property)} disabled={property.status !== 'approved' || !platformSettings.promotionsEnabled} title={!platformSettings.promotionsEnabled ? "Promotions are currently disabled" : "Promote this listing"}> <Star className="h-4 w-4 mr-2" /> Promote Listing </Button> )}
               </CardFooter>
             </Card>
