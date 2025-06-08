@@ -66,28 +66,69 @@ export let homePageContentData: HomePageContent = {
 
 export let servicesPageContentData: ServicesPageContent = {
   pageTitle: "Our Services - Homeland Capital",
-  headerTitle: "Our Services",
-  introParagraph: "At Homeland Capital, we offer a comprehensive suite of services to meet all your real estate needs.",
-  services: [
+  headerTitle: "Our Comprehensive Services",
+  headerSubtitle: "Explore Prime Real Estate, Top Quality Machinery, Expert Development Projects, and Transformative Community Initiatives",
+  mainCategories: [
     {
-      title: "Property Sales & Purchases",
-      description: "Whether you're buying your dream home or selling your current property, our expert agents are here to guide you through every step of the process, ensuring a smooth and successful transaction."
+      title: "Real Estate",
+      description: "Our Community Projects execute initiatives that improve the well-being and quality of life for residents. These projects typically encompass several key areas: UrbHealth Programs: These programs focus on providing essential health care services, promoting wellness, and preventing diseases within the community. They might include free medical check-ups, vaccination drives, mental health support, and health education workshops. UrbEducation & Skill Training Programs: These programs provide educational opportunities by providing learning resources and materials as well as tools to aid students. This can include donating textbooks, school supplies, and refurbishing classrooms to offer schools the appropriate support to assist in academic achievement. UrbNutrition Support Programs: Addressing food insecurity, these programs provide nutritious food packages to families in need. They often focus on vulnerable populations, ensuring that children, the elderly, and low-income families have access to balanced and wholesome meals. UrbInfrastructure & Development Packages: These initiatives work to improve access to basic utilities such as clean water, electricity, and sanitation. Projects might include the development of infrastructure such as building wells, installing solar panels, or improving waste management systems, to create a more comfortable and healthy living environment. Together, these community projects foster a holistic approach to improving living standards, empowering individuals and building stronger, more resilient communities."
     },
     {
-      title: "Property Listings",
-      description: "We provide a robust platform for agents to list properties, reaching a wide audience of potential buyers. Our tools help showcase your listings in the best possible light."
+      title: "Machinery Marketplace",
+      description: "Access a wide range of industrial and agricultural machinery. We connect buyers and sellers, ensuring fair prices and reliable equipment. From construction tools to farming implements, find what you need to power your operations."
     },
     {
-      title: "Market Analysis",
-      description: "Stay informed with our up-to-date market analysis and insights, helping you make educated decisions whether you're buying, selling, or investing."
+      title: "Development Project",
+      description: "We manage and execute development projects from conception to completion. Our expertise covers residential, commercial, and mixed-use developments, focusing on quality, sustainability, and timely delivery."
     },
     {
-      title: "Personalized Dashboards",
-      description: "Tailored dashboards for users, agents, and administrators to manage properties, inquiries, and platform settings efficiently."
+      title: "Community Project",
+      description: "Homeland Capital is committed to social responsibility. Our community projects focus on sustainable development, education, healthcare, and infrastructure improvements, aiming to uplift and empower local communities."
     }
   ],
-  conclusionParagraph: "More details about our specific service packages and offerings will be available here soon."
+  propertyVerificationSection: {
+    title: "Let us perform a comprehensive property verification for your real estate investments, anywhere in Nigeria.",
+    subtitle: "Avoid/Mitigate identifiable risks:",
+    items: [
+      { iconName: "FileWarning", title: "Avoid Fake Certificates", description: "Secure your Certificates of Occupancy are genuine and legally valid." },
+      { iconName: "SearchX", title: "Detect Fake Allocations", description: "Identify and avoid improperly allocated land to prevent loss of investment." },
+      { iconName: "ShieldOff", title: "Prevent Encumbrances", description: "Verify property details are free from encumbrances, claim ownership and titles." },
+      { iconName: "HardHat", title: "Avoid Defective Structures", description: "Check buildings for structural integrity and avoid defective constructions." },
+      { iconName: "Waves", title: "Ascertain Flooding Issues", description: "Assess property for susceptibility to flooding and soil concentrations." },
+      { iconName: "KeyRound", title: "Authenticate Ownership", description: "Verify and authenticate property ownership to ensure legitimate transactions." }
+    ]
+  },
+  detailedVerificationSection: {
+    title: "Any Potential Scams of Your Investments",
+    subtitle: "Our Property Verification Service Includes:",
+    items: [
+      { iconName: "ClipboardList", title: "Comprehensive Inspections", description: "Perform detailed land inspections and field records." },
+      { iconName: "FileCheck2", title: "Document Corroboration", description: "Corroborate document details with actual site location." },
+      { iconName: "LocateFixed", title: "Survey Coordination", description: "Coordinate probing or the Surveyor General's office." },
+      { iconName: "FileText", title: "Document Examination", description: "Examine documents comprehensively for legal compliance." },
+      { iconName: "Landmark", title: "Compliance Checks", description: "Check compliance with government policies to requirements." },
+      { iconName: "ScanSearch", title: "Title Verification", description: "Verify completeness of title, discover root and encumbrances." },
+      { iconName: "ShieldCheck", title: "Ownership Authentication", description: "Authenticate property titles and ownership details." },
+      { iconName: "Coins", title: "Tax Checks", description: "Check levies and collateral issues." },
+      { iconName: "Users2", title: "Dispute Detection", description: "Detect inherent disputes of ownership, conflicts." },
+      { iconName: "ClipboardCheck", title: "Structural Assessment", description: "Assess impacts and likely structural conditions." },
+      { iconName: "CloudRain", title: "Flood Risk Evaluation", description: "Evaluate susceptibility to flooding." },
+      { iconName: "FileArchive", title: "Document Confirmation", description: "Confirm documents and correlate with structure." },
+      { iconName: "MapPinned", title: "Land Use Rectification", description: "Verify alignment with land use and master plans." },
+      { iconName: "Building", title: "Plan Conformity", description: "Check building plans for conformity." },
+      { iconName: "Ruler", title: "Space Measurement", description: "Measure site and space dimensions." },
+      { iconName: "Scale", title: "Value Assessment", description: "Assess property value for negotiation." },
+      { iconName: "Leaf", title: "Environmental Assessment", description: "Perform environmental risk assessment." },
+      { iconName: "LandPlot", title: "Encumbrance Checks", description: "Check for overlooked liens and any land use." },
+      { iconName: "Handshake", title: "Negotiation Management", description: "Manage project negotiations." },
+      { iconName: "UserCheck", title: "Citizen Authentication", description: "Authenticate known Citizen's documents." },
+      { iconName: "FileSignature", title: "Contract Preparation", description: "Prepare and review relevant documents." },
+      { iconName: "Library", title: "Title Perfection", description: "Perfect title documents post-transaction." }
+    ]
+  },
+  cta: { text: "Get in Touch", href: "/contact" }
 };
+
 
 export let aboutPageContentData: AboutPageContent = {
   pageTitle: "About Us - Homeland Capital",
@@ -209,5 +250,7 @@ export let footerContentData: FooterContent = {
   copyrightText: `© ${new Date().getFullYear()} Homeland Capital. All rights reserved.`,
   builtWithText: "Built with Next.js, Tailwind CSS, and ShadCN UI."
 };
+
+    
 
     

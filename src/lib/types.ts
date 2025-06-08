@@ -168,16 +168,35 @@ export interface HomePageContent {
   };
 }
 
+export interface ServiceCategory {
+  title: string;
+  description: string;
+}
+
+export interface ServiceGridItem {
+  iconName: string;
+  title: string;
+  description: string;
+}
+
 export interface ServicesPageContent {
   pageTitle: string;
   headerTitle: string;
-  introParagraph: string;
-  services: Array<{
+  headerSubtitle: string;
+  mainCategories: ServiceCategory[];
+  propertyVerificationSection: {
     title: string;
-    description: string;
-  }>;
-  conclusionParagraph: string;
+    subtitle: string;
+    items: ServiceGridItem[];
+  };
+  detailedVerificationSection: {
+    title: string; // e.g., "Any Potential Scams of Your Investments"
+    subtitle: string; // e.g., "Our Property Verification Service Includes:"
+    items: ServiceGridItem[];
+  };
+  cta: CmsLink;
 }
+
 
 export interface AboutPageHeroSection {
   title: string;
@@ -289,5 +308,7 @@ export interface PlatformSettings {
 
 // Import Database type from supabase
 import type { Database } from './database.types';
+
+    
 
     
