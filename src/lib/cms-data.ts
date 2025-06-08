@@ -1,5 +1,5 @@
 
-import type { HomePageContent, ServicesPageContent, AboutPageContent, ContactPageContent, FooterContent } from './types';
+import type { HomePageContent, ServicesPageContent, AboutPageContent, ContactPageContentNew, FooterContent, OfficeDetails } from './types';
 
 // Changed from const to let to allow modification at runtime for CMS demo
 export let homePageContentData: HomePageContent = {
@@ -113,21 +113,52 @@ export let aboutPageContentData: AboutPageContent = {
   conclusionParagraph: "More detailed information about our company history, team, and values will be added soon."
 };
 
-export let contactPageContentData: ContactPageContent = {
+// Updated Contact Page Content Structure
+export let contactPageContentData: ContactPageContentNew = {
   pageTitle: "Contact Us - Homeland Capital",
-  headerTitle: "Get In Touch",
-  headerDescription: "We'd love to hear from you! Whether you have a question about our services, need assistance, or just want to chat, please reach out.",
-  contactInfo: {
-    email: "info@homelandcapital.com",
-    phone: "0801 234 5670",
-    address: "Plot 25, Admiralty Way,\nLekki Phase 1, Lagos, Nigeria",
-    officeHours: {
-      weekdays: "Monday - Friday: 9:00 AM - 6:00 PM",
-      saturday: "Saturday: 10:00 AM - 4:00 PM",
-      sunday: "Closed"
+  headerTitle: "Contact Us",
+  headerSubtitle: "Have questions or want to discuss a potential opportunity? We're here to help. Reach out to our team using any of the methods below.",
+  formSection: {
+    title: "Send Us a Message",
+    inquiryTypes: ["General", "Investment", "Property", "Partnership"],
+  },
+  officesSection: {
+    title: "Our Offices",
+    headquarters: {
+      tabName: "Headquarters",
+      name: "Homeland Capital Solution HQ",
+      address: "123 Finance Street, Suite 500\nNew York, NY 10001\nUnited States",
+      phone: "+1 (212) 555-7890",
+      email: "info@homelandcapitalsolution.com",
+      mapCoordinates: { lat: 40.7061, lng: -74.0088 }, // Approx. Financial District
+      mapTitle: "Homeland Capital HQ"
+    },
+    regionalOffice: {
+      tabName: "Regional Office",
+      name: "Downtown Conference Center", // Using example from image
+      address: "157 William St, New York, NY 10038\nUnited States",
+      phone: "+1 (212) 555-1234", // Example phone
+      email: "regional@homelandcapitalsolution.com", // Example email
+      mapCoordinates: { lat: 40.7095, lng: -74.0055 }, // Approx. 157 William St
+      mapTitle: "Downtown Conference Center"
     }
+  },
+  businessHoursSection: {
+    title: "Business Hours",
+    hours: [
+      { day: "Monday - Friday", time: "9:00 AM - 6:00 PM" },
+      { day: "Saturday", time: "10:00 AM - 2:00 PM" },
+      { day: "Sunday", time: "Closed" }
+    ]
+  },
+  investorRelationsSection: {
+    title: "Investor Relations",
+    description: "For investor-specific inquiries, please contact our Investor Relations department directly:",
+    email: "investors@homelandcapitalsolution.com",
+    phone: "+1 (212) 555-8901"
   }
 };
+
 
 export let footerContentData: FooterContent = {
   tagline: "Your partner in finding the perfect property.",
@@ -136,8 +167,6 @@ export let footerContentData: FooterContent = {
       title: "Company",
       links: [
         { text: "About Us", href: "/about" },
-        // { text: "Careers", href: "#" }, // Removed
-        // { text: "Blog", href: "#" }, // Removed
         { text: "Contact Us", href: "/contact" }
       ]
     },
@@ -163,3 +192,4 @@ export let footerContentData: FooterContent = {
   builtWithText: "Built with Next.js, Tailwind CSS, and ShadCN UI."
 };
 
+    

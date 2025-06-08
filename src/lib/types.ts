@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
@@ -191,6 +192,7 @@ export interface AboutPageContent {
   conclusionParagraph: string;
 }
 
+// Old ContactPageContent, to be replaced or merged
 export interface ContactInfo {
   email: string;
   phone: string;
@@ -207,6 +209,44 @@ export interface ContactPageContent {
   headerDescription: string;
   contactInfo: ContactInfo;
 }
+
+
+// New structure for Contact Page
+export interface OfficeDetails {
+  tabName: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  mapCoordinates: { lat: number; lng: number };
+  mapTitle: string;
+}
+
+export interface ContactPageContentNew {
+  pageTitle: string;
+  headerTitle: string;
+  headerSubtitle: string;
+  formSection: {
+    title: string;
+    inquiryTypes: string[];
+  };
+  officesSection: {
+    title: string;
+    headquarters: OfficeDetails;
+    regionalOffice?: OfficeDetails;
+  };
+  businessHoursSection: {
+    title: string;
+    hours: Array<{ day: string; time: string }>;
+  };
+  investorRelationsSection: {
+    title: string;
+    description: string;
+    email: string;
+    phone: string;
+  };
+}
+
 
 export interface FooterLinkColumn {
   title: string;
@@ -234,3 +274,5 @@ export interface PlatformSettings {
 
 // Import Database type from supabase
 import type { Database } from './database.types';
+
+    
