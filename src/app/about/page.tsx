@@ -1,6 +1,7 @@
 
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Info, Users, Building } from 'lucide-react';
+import { Home, Wrench, Building2, Users } from 'lucide-react';
 import { aboutPageContentData as content } from '@/lib/cms-data';
 import type { Metadata } from 'next';
 import type { Icon as LucideIcon } from 'lucide-react';
@@ -10,9 +11,10 @@ export const metadata: Metadata = {
 };
 
 const iconMap: { [key: string]: LucideIcon } = {
-  Info,
+  Home,
+  Wrench,
+  Building2,
   Users,
-  Building,
 };
 
 const renderIcon = (iconName?: string, className?: string) => {
@@ -23,37 +25,66 @@ const renderIcon = (iconName?: string, className?: string) => {
 
 export default function AboutPage() {
   return (
-    <div className="container mx-auto px-4 py-12">
-      <Card className="max-w-3xl mx-auto shadow-lg">
-        <CardHeader className="text-center">
-          {/* Assuming main icon is Building for About page, can be made dynamic if needed */}
-          <Building className="mx-auto h-16 w-16 text-primary mb-4" />
-          <CardTitle className="text-3xl font-headline">{content.headerTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-lg text-muted-foreground text-center">
-            {content.introParagraph}
-          </p>
-          
-          <div className="space-y-4 text-foreground">
-            {content.sections.map((section, index) => (
-              <div key={index}>
-                <h3 className="font-semibold text-xl text-primary mb-1 flex items-center">
-                  {renderIcon(section.iconName, "w-5 h-5 mr-2")}
-                  {section.title}
-                </h3>
-                <p>
-                  {section.description}
+    <div className="space-y-16 md:space-y-24">
+      {/* Hero Section */}
+      <section className="container mx-auto px-4">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+          <div className="relative aspect-[4/3] md:aspect-auto md:h-full rounded-lg overflow-hidden shadow-xl">
+            <Image
+              src={content.heroSection.imageUrl}
+              alt={content.heroSection.imageAlt}
+              layout="fill"
+              objectFit="cover"
+              data-ai-hint={content.heroSection.imageAiHint}
+              priority
+            />
+            <div className="absolute bottom-4 right-4 bg-yellow-400 text-yellow-900 p-4 rounded-lg shadow-lg text-center">
+              {content.heroSection.badgeText.split('\n').map((line, index) => (
+                <p key={index} className={index === 0 ? "text-3xl font-bold" : "text-sm font-semibold"}>
+                  {line}
                 </p>
-              </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6">
+            <h1 className="text-3xl md:text-4xl font-headline text-primary">
+              {content.heroSection.title}
+            </h1>
+            {content.heroSection.paragraphs.map((paragraph, index) => (
+              <p key={index} className="text-foreground leading-relaxed">
+                {paragraph}
+              </p>
             ))}
           </div>
+        </div>
+      </section>
 
-          <p className="text-muted-foreground pt-4 text-center">
-            {content.conclusionParagraph}
+      {/* Our Services Section */}
+      <section className="bg-muted py-16 md:py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-headline text-center text-foreground mb-4">
+            {content.servicesSection.title}
+          </h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+            {content.servicesSection.subtitle}
           </p>
-        </CardContent>
-      </Card>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {content.servicesSection.items.map((service, index) => (
+              <Card key={index} className="text-center shadow-lg hover:shadow-xl transition-shadow bg-card flex flex-col">
+                <CardHeader className="items-center">
+                  <div className="bg-primary/10 p-4 rounded-full mb-4 inline-block">
+                    {renderIcon(service.iconName, "w-8 h-8 text-primary")}
+                  </div>
+                  <CardTitle className="font-headline text-xl text-primary">{service.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-muted-foreground">{service.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

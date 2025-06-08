@@ -90,27 +90,45 @@ export let servicesPageContentData: ServicesPageContent = {
 };
 
 export let aboutPageContentData: AboutPageContent = {
-  pageTitle: "About Homeland Capital",
-  headerTitle: "About Homeland Capital",
-  introParagraph: "Homeland Capital is dedicated to simplifying the real estate experience through technology and exceptional service.",
-  sections: [
-    {
-      iconName: "Info",
-      title: "Our Mission",
-      description: "To empower individuals and real estate professionals by providing an intuitive, efficient, and comprehensive platform for all property-related needs. We strive to connect buyers, sellers, and agents seamlessly, fostering a transparent and trustworthy real estate marketplace."
-    },
-    {
-      iconName: "Users",
-      title: "Who We Are",
-      description: "Homeland Capital was founded by a team of passionate technologists and real estate experts who believe in the power of innovation to transform the property market. We are committed to continuous improvement and delivering value to our users."
-    },
-    {
-      iconName: "Building",
-      title: "Our Vision",
-      description: "To be the leading online real estate platform, recognized for our cutting-edge technology, user-centric design, and unwavering commitment to integrity and customer satisfaction. We aim to make finding, buying, and selling property an enjoyable and rewarding experience for everyone involved."
-    }
-  ],
-  conclusionParagraph: "More detailed information about our company history, team, and values will be added soon."
+  pageTitle: "About Us - Homeland Capital",
+  heroSection: {
+    title: "Building better futures through quality homes, robust machinery, impactful development, and community-driven projects",
+    paragraphs: [
+      "At Homeland Capital, our goal is to provide exceptional service across various sectors, including real estate, the machinery marketplace, community projects, and development projects.",
+      "We strive to be the top choice for clients seeking expert guidance, offering tailored solutions to meet their unique needs.",
+      "Our team of professionals brings extensive expertise to every venture, ensuring successful outcomes whether in buying, selling, or investing in real estate, facilitating machinery transactions, or managing community and development projects. We are committed to transparency, personalized attention, and delivering results that exceed expectations."
+    ],
+    imageUrl: "https://placehold.co/800x600.png",
+    imageAlt: "Modern building architecture",
+    imageAiHint: "modern architecture building",
+    badgeText: "99%\nTop Sales"
+  },
+  servicesSection: {
+    title: "Our Services",
+    subtitle: "Explore all the different types of properties so you can choose the best option for you.",
+    items: [
+      {
+        iconName: "Home",
+        title: "Real Estate Listing",
+        description: "Discover prime real estate with expert guidance tailored to your needs. Whether buying, selling, or managing, we help maximize your investment in luxurious homes or high-potential commercial properties. Unlock your real estate potential with us."
+      },
+      {
+        iconName: "Wrench",
+        title: "Machinery marketplace",
+        description: "Welcome to the marketplace for top-quality industrial machinery! Discover new and used equipment, including construction, manufacturing, and agricultural machinery, with competitive prices and warranties. Upgrade your operations today and power your success!"
+      },
+      {
+        iconName: "Building2",
+        title: "Development projects",
+        description: "At Homeland Capital, we provide expert guidance in real estate, machinery transactions, and development projects. Our tailored solutions ensure successful outcomes across all ventures. Committed to transparency and excellence, we are your top choice for exceptional service."
+      },
+      {
+        iconName: "Users",
+        title: "Community projects",
+        description: "Our Community Projects enhance well-being through health programs, educational support, and nutrition packages. We also Improve access to essential utilities like clean water and electricity. These initiatives empower individuals and strengthen communities."
+      }
+    ]
+  }
 };
 
 // Updated Contact Page Content Structure

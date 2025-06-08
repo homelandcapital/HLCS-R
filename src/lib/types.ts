@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
@@ -180,17 +179,33 @@ export interface ServicesPageContent {
   conclusionParagraph: string;
 }
 
+export interface AboutPageHeroSection {
+  title: string;
+  paragraphs: string[];
+  imageUrl: string;
+  imageAlt: string;
+  imageAiHint: string;
+  badgeText: string;
+}
+
+export interface AboutPageServiceItem {
+  iconName: string;
+  title: string;
+  description: string;
+}
+
+export interface AboutPageServicesSection {
+  title: string;
+  subtitle: string;
+  items: AboutPageServiceItem[];
+}
+
 export interface AboutPageContent {
   pageTitle: string;
-  headerTitle: string;
-  introParagraph: string;
-  sections: Array<{
-    title: string;
-    description: string;
-    iconName?: string;
-  }>;
-  conclusionParagraph: string;
+  heroSection: AboutPageHeroSection;
+  servicesSection: AboutPageServicesSection;
 }
+
 
 // Old ContactPageContent, to be replaced or merged
 export interface ContactInfo {
