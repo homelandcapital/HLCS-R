@@ -145,12 +145,17 @@ export interface CmsFeatureItem { // Kept for AboutPage backwards compatibility 
 }
 
 // New specific types for HomePage
-interface HomePageHeroSection {
+interface HeroSlide {
   titleLines: string[];
+  subtitle?: string;
   cta: CmsLink;
   backgroundImageUrl: string;
   backgroundImageAlt: string;
   backgroundImageAiHint: string;
+}
+
+interface HomePageHeroSection {
+  slides: HeroSlide[];
 }
 
 interface HomePageServiceItem {
@@ -198,10 +203,6 @@ export interface HomePageContent {
   findYourHome: HomePageFindHomeSection;
   developmentProjects: HomePageProjectSection;
   communityOutreach: HomePageProjectSection;
-  // Old structure, remove if not needed elsewhere or refactor
-  // servicesSection: { title: string; items: CmsFeatureItem[]; };
-  // whyChooseUsSection: { title: string; items: CmsFeatureItem[]; };
-  // ctaSection: { title: string; subtitle: string; cta: CmsLink; };
 }
 
 

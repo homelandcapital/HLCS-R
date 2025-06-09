@@ -3,38 +3,66 @@ import type { HomePageContent, ServicesPageContent, AboutPageContent, ContactPag
 
 export let homePageContentData: HomePageContent = {
   hero: {
-    titleLines: [
-      "Your one-stop business platform for Nigerians and Diaspora:",
-      "Enabling business Solutions in Real Estate,",
-      "Machinery marketplace, manufacturing and",
-      "Community Projects."
-    ],
-    cta: { text: "Start Now", href: "/services" }, // Assuming "Start Now" leads to services or contact
-    backgroundImageUrl: "https://placehold.co/1920x1080.png",
-    backgroundImageAlt: "Abstract image representing business growth and green shoots",
-    backgroundImageAiHint: "business growth finance",
+    slides: [
+      {
+        titleLines: [
+          "Your one-stop business platform for Nigerians and Diaspora:",
+          "Enabling business Solutions in Real Estate,",
+          "Machinery marketplace, manufacturing and",
+          "Community Projects."
+        ],
+        cta: { text: "Explore Real Estate", href: "/properties" },
+        backgroundImageUrl: "https://placehold.co/1920x1080.png",
+        backgroundImageAlt: "Modern cityscape with green spaces",
+        backgroundImageAiHint: "cityscape modern green",
+      },
+      {
+        titleLines: ["Power Your Projects"],
+        subtitle: "Discover a vast marketplace for quality new and used industrial & agricultural machinery.",
+        cta: { text: "Explore Machinery", href: "/services#machinery" },
+        backgroundImageUrl: "https://placehold.co/1920x1081.png",
+        backgroundImageAlt: "Heavy construction machinery at a site",
+        backgroundImageAiHint: "construction machinery heavy",
+      },
+      {
+        titleLines: ["Building the Future, Together"],
+        subtitle: "Partner with us for innovative and sustainable development projects across various sectors.",
+        cta: { text: "View Developments", href: "/services#development" },
+        backgroundImageUrl: "https://placehold.co/1920x1082.png",
+        backgroundImageAlt: "Architectural model of a new development",
+        backgroundImageAiHint: "architectural model development",
+      },
+      {
+        titleLines: ["Investing in Our Communities"],
+        subtitle: "Join our community-centric initiatives focused on health, education, and infrastructure.",
+        cta: { text: "Learn About Community", href: "/services#community" },
+        backgroundImageUrl: "https://placehold.co/1920x1083.png",
+        backgroundImageAlt: "Community members working together on a project",
+        backgroundImageAiHint: "community project people",
+      }
+    ]
   },
   ourServices: {
     title: "Our Services",
     subtitle: "Explore vast collection of properties, machinery, development, and community project opportunities to find the perfect fit for your specific needs and goals.",
     items: [
       {
-        iconName: "Home", // Or Building2
+        iconName: "Home",
         title: "Real Estate Listing",
         description: "Discover prime real estate with expert guidance tailored to your needs. Whether buying, selling, or managing, we help maximize your investment in luxurious homes or high-potential commercial properties. Unlock your real estate potential with us.",
       },
       {
-        iconName: "Wrench", // Or ShoppingCart
+        iconName: "Wrench",
         title: "Machinery marketplace",
         description: "Welcome to the marketplace for top-quality industrial machinery! Discover new and used equipment, including construction, manufacturing, and agricultural machinery, with competitive prices and warranties. Upgrade your operations today and power your success!",
       },
       {
-        iconName: "ClipboardList", // Or HardHat
+        iconName: "ClipboardList",
         title: "Development projects",
         description: "At Homeland Capital, we provide expert guidance in real estate, machinery transactions, and development projects. Our tailored solutions ensure successful outcomes across all ventures. Committed to transparency and excellence, we are your top choice for exceptional service.",
       },
       {
-        iconName: "Users", // Or Handshake
+        iconName: "Users",
         title: "Community projects",
         description: "Our Community Projects enhance well-being through health programs, educational support, and nutrition packages. We also Improve access to essential utilities like clean water and electricity. These initiatives empower individuals and strengthen communities.",
       }
@@ -60,7 +88,7 @@ export let homePageContentData: HomePageContent = {
     imageUrl: "https://placehold.co/600x400.png",
     imageAlt: "Architectural blueprints and plans",
     imageAiHint: "architect blueprints plans",
-    cta: { text: "Explore Projects", href: "/services#development" }, // Example link to a section
+    cta: { text: "Explore Projects", href: "/services#development" },
     imagePosition: 'right',
   },
   communityOutreach: {
@@ -70,7 +98,7 @@ export let homePageContentData: HomePageContent = {
     imageUrl: "https://placehold.co/600x400.png",
     imageAlt: "Row of yellow construction tractors",
     imageAiHint: "construction machinery tractors",
-    cta: { text: "Explore Projects", href: "/services#community" }, // Example link to a section
+    cta: { text: "Explore Projects", href: "/services#community" },
     imagePosition: 'left',
   }
 };
@@ -200,16 +228,16 @@ export let contactPageContentData: ContactPageContentNew = {
       address: "123 Finance Street, Suite 500\nNew York, NY 10001\nUnited States",
       phone: "+1 (212) 555-7890",
       email: "info@homelandcapitalsolution.com",
-      mapCoordinates: { lat: 40.7061, lng: -74.0088 }, // Approx. Financial District
+      mapCoordinates: { lat: 40.7061, lng: -74.0088 }, 
       mapTitle: "Homeland Capital HQ"
     },
     regionalOffice: {
       tabName: "Regional Office",
-      name: "Downtown Conference Center", // Using example from image
+      name: "Downtown Conference Center", 
       address: "157 William St, New York, NY 10038\nUnited States",
-      phone: "+1 (212) 555-1234", // Example phone
-      email: "regional@homelandcapitalsolution.com", // Example email
-      mapCoordinates: { lat: 40.7095, lng: -74.0055 }, // Approx. 157 William St
+      phone: "+1 (212) 555-1234", 
+      email: "regional@homelandcapitalsolution.com", 
+      mapCoordinates: { lat: 40.7095, lng: -74.0055 }, 
       mapTitle: "Downtown Conference Center"
     }
   },

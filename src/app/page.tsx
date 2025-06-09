@@ -9,6 +9,13 @@ import { ArrowRight, Home, Wrench, ClipboardList, Users, DollarSign, Search, Key
 import type { HomePageServiceItem, HomePageFindHomeFeature } from '@/lib/types';
 import { homePageContentData as content } from '@/lib/cms-data';
 import type { Icon as LucideIcon } from 'lucide-react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"; // Assuming this component exists or will be added
 
 // Helper to map icon names to Lucide components
 const iconMap: { [key: string]: LucideIcon } = {
@@ -33,30 +40,51 @@ const renderIcon = (iconName?: string, className?: string) => {
 export default function HomePageRedesigned() {
   return (
     <div className="space-y-16 md:space-y-24">
-      {/* Hero Section */}
-      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center text-center rounded-xl overflow-hidden">
-        <Image
-          src={content.hero.backgroundImageUrl}
-          alt={content.hero.backgroundImageAlt}
-          layout="fill"
-          objectFit="cover"
-          className="absolute inset-0 z-0"
-          data-ai-hint={content.hero.backgroundImageAiHint}
-          priority
-        />
-        <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Dark overlay */}
-        <div className="relative z-20 p-6 container mx-auto">
-          {content.hero.titleLines.map((line, index) => (
-            <h1 key={index} className={`text-2xl md:text-4xl lg:text-5xl font-headline font-bold text-white ${index < content.hero.titleLines.length -1 ? 'mb-2 md:mb-3' : 'mb-8 md:mb-10'}`}>
-              {line}
-            </h1>
-          ))}
-          <Button size="lg" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold text-lg px-8 py-6 shadow-lg">
-            <Link href={content.hero.cta.href}>
-              {content.hero.cta.text} <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
+      {/* Hero Section Carousel */}
+      <section className="relative rounded-xl overflow-hidden">
+        <Carousel
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent>
+            {content.hero.slides.map((slide, index) => (
+              <CarouselItem key={index}>
+                <div className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center text-center">
+                  <Image
+                    src={slide.backgroundImageUrl}
+                    alt={slide.backgroundImageAlt}
+                    layout="fill"
+                    objectFit="cover"
+                    className="absolute inset-0 z-0"
+                    data-ai-hint={slide.backgroundImageAiHint}
+                    priority={index === 0} // Only prioritize the first image
+                  />
+                  <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Dark overlay */}
+                  <div className="relative z-20 p-6 container mx-auto">
+                    {slide.titleLines.map((line, lineIndex) => (
+                      <h1 key={lineIndex} className={`text-2xl md:text-4xl lg:text-5xl font-headline font-bold text-white ${lineIndex < slide.titleLines.length -1 ? 'mb-2 md:mb-3' : slide.subtitle ? 'mb-3 md:mb-4' : 'mb-8 md:mb-10'}`}>
+                        {line}
+                      </h1>
+                    ))}
+                    {slide.subtitle && (
+                       <p className="text-xl md:text-2xl text-gray-200 mb-8 md:mb-10 max-w-3xl mx-auto">{slide.subtitle}</p>
+                    )}
+                    <Button size="lg" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold text-lg px-8 py-6 shadow-lg">
+                      <Link href={slide.cta.href}>
+                        {slide.cta.text} <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-30 hidden sm:inline-flex" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden sm:inline-flex" />
+        </Carousel>
       </section>
 
       {/* Our Services Section */}
