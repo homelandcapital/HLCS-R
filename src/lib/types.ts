@@ -136,7 +136,7 @@ export interface CmsLink {
   href: string;
 }
 
-export interface CmsFeatureItem {
+export interface CmsFeatureItem { // Kept for AboutPage backwards compatibility for now
   iconName?: string;
   title: string;
   description: string;
@@ -144,29 +144,66 @@ export interface CmsFeatureItem {
   ctaText?: string;
 }
 
-export interface HomePageContent {
-  hero: {
-    title: string;
-    subtitle: string;
-    cta: CmsLink;
-    imageUrl: string;
-    imageAlt: string;
-    imageAiHint: string;
-  };
-  servicesSection: {
-    title: string;
-    items: CmsFeatureItem[];
-  };
-  whyChooseUsSection: {
-    title: string;
-    items: CmsFeatureItem[];
-  };
-  ctaSection: {
-    title: string;
-    subtitle: string;
-    cta: CmsLink;
-  };
+// New specific types for HomePage
+interface HomePageHeroSection {
+  titleLines: string[];
+  cta: CmsLink;
+  backgroundImageUrl: string;
+  backgroundImageAlt: string;
+  backgroundImageAiHint: string;
 }
+
+interface HomePageServiceItem {
+  iconName: string;
+  title: string;
+  description: string;
+}
+
+interface HomePageOurServicesSection {
+  title: string;
+  subtitle: string;
+  items: HomePageServiceItem[];
+}
+
+interface HomePageFindHomeFeature {
+  iconName: string;
+  text: string;
+  subtext: string;
+}
+
+interface HomePageFindHomeSection {
+  title: string;
+  subtitle: string;
+  features: HomePageFindHomeFeature[];
+  imageUrl: string;
+  imageAlt: string;
+  imageAiHint: string;
+  cta: CmsLink;
+}
+
+interface HomePageProjectSection {
+  title: string;
+  subtitle: string;
+  description: string;
+  imageUrl: string;
+  imageAlt: string;
+  imageAiHint: string;
+  cta: CmsLink;
+  imagePosition: 'left' | 'right';
+}
+
+export interface HomePageContent {
+  hero: HomePageHeroSection;
+  ourServices: HomePageOurServicesSection;
+  findYourHome: HomePageFindHomeSection;
+  developmentProjects: HomePageProjectSection;
+  communityOutreach: HomePageProjectSection;
+  // Old structure, remove if not needed elsewhere or refactor
+  // servicesSection: { title: string; items: CmsFeatureItem[]; };
+  // whyChooseUsSection: { title: string; items: CmsFeatureItem[]; };
+  // ctaSection: { title: string; subtitle: string; cta: CmsLink; };
+}
+
 
 export interface ServiceCategory {
   title: string;
@@ -190,8 +227,8 @@ export interface ServicesPageContent {
     items: ServiceGridItem[];
   };
   detailedVerificationSection: {
-    title: string; // e.g., "Any Potential Scams of Your Investments"
-    subtitle: string; // e.g., "Our Property Verification Service Includes:"
+    title: string; 
+    subtitle: string; 
     items: ServiceGridItem[];
   };
   cta: CmsLink;
@@ -308,7 +345,3 @@ export interface PlatformSettings {
 
 // Import Database type from supabase
 import type { Database } from './database.types';
-
-    
-
-    

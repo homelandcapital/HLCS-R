@@ -1,66 +1,77 @@
 
 import type { HomePageContent, ServicesPageContent, AboutPageContent, ContactPageContentNew, FooterContent, OfficeDetails } from './types';
 
-// Changed from const to let to allow modification at runtime for CMS demo
 export let homePageContentData: HomePageContent = {
   hero: {
-    title: "Welcome to Homeland Capital",
-    subtitle: "Discover your next property or list your own with a partner dedicated to innovation, transparency, and your success in the real estate market.",
-    cta: { text: "View Our Listings", href: "/properties" },
-    imageUrl: "https://placehold.co/1200x600.png",
-    imageAlt: "Lagos skyline or beautiful Nigerian homes",
-    imageAiHint: "lagos skyline nigerian homes",
+    titleLines: [
+      "Your one-stop business platform for Nigerians and Diaspora:",
+      "Enabling business Solutions in Real Estate,",
+      "Machinery marketplace, manufacturing and",
+      "Community Projects."
+    ],
+    cta: { text: "Start Now", href: "/services" }, // Assuming "Start Now" leads to services or contact
+    backgroundImageUrl: "https://placehold.co/1920x1080.png",
+    backgroundImageAlt: "Abstract image representing business growth and green shoots",
+    backgroundImageAiHint: "business growth finance",
   },
-  servicesSection: {
-    title: "Our Core Services",
+  ourServices: {
+    title: "Our Services",
+    subtitle: "Explore vast collection of properties, machinery, development, and community project opportunities to find the perfect fit for your specific needs and goals.",
     items: [
       {
-        iconName: "Search",
-        title: "Property Sales & Purchases",
-        description: "Navigate the market with ease, whether buying your dream home or selling your current property.",
-        link: "/services",
-        ctaText: "Learn More"
+        iconName: "Home", // Or Building2
+        title: "Real Estate Listing",
+        description: "Discover prime real estate with expert guidance tailored to your needs. Whether buying, selling, or managing, we help maximize your investment in luxurious homes or high-potential commercial properties. Unlock your real estate potential with us.",
       },
       {
-        iconName: "BarChartHorizontalBig",
-        title: "Expert Property Listings",
-        description: "Showcase your properties to a wide audience with our advanced listing platform and tools.",
-        link: "/services",
-        ctaText: "Learn More"
+        iconName: "Wrench", // Or ShoppingCart
+        title: "Machinery marketplace",
+        description: "Welcome to the marketplace for top-quality industrial machinery! Discover new and used equipment, including construction, manufacturing, and agricultural machinery, with competitive prices and warranties. Upgrade your operations today and power your success!",
       },
       {
-        iconName: "Handshake",
-        title: "Market Insights",
-        description: "Make informed decisions with our comprehensive market analysis and expert guidance.",
-        link: "/services",
-        ctaText: "Learn More"
+        iconName: "ClipboardList", // Or HardHat
+        title: "Development projects",
+        description: "At Homeland Capital, we provide expert guidance in real estate, machinery transactions, and development projects. Our tailored solutions ensure successful outcomes across all ventures. Committed to transparency and excellence, we are your top choice for exceptional service.",
+      },
+      {
+        iconName: "Users", // Or Handshake
+        title: "Community projects",
+        description: "Our Community Projects enhance well-being through health programs, educational support, and nutrition packages. We also Improve access to essential utilities like clean water and electricity. These initiatives empower individuals and strengthen communities.",
       }
     ]
   },
-  whyChooseUsSection: {
-    title: "Why Choose Homeland Capital?",
-    items: [
-      {
-        iconName: "Lightbulb",
-        title: "Technology Driven",
-        description: "Leveraging cutting-edge tech for a seamless real estate experience."
-      },
-      {
-        iconName: "Users",
-        title: "Client-Focused Approach",
-        description: "Your needs are our priority. We're dedicated to your success."
-      },
-      {
-        iconName: "Award",
-        title: "Trusted Expertise",
-        description: "Years of experience and deep market knowledge at your service."
-      }
-    ]
+  findYourHome: {
+    title: "Find your new home with us",
+    subtitle: "With accelerated growth of sales targets, we register new clients to the one of the industry faster within 3 years.",
+    features: [
+      { iconName: "Home", text: "Sell your home", subtext: "Free service" },
+      { iconName: "Search", text: "Buy a home", subtext: "Free service" },
+      { iconName: "KeyRound", text: "Ownership", subtext: "Free service" }
+    ],
+    imageUrl: "https://placehold.co/600x450.png",
+    imageAlt: "Construction worker on site with concrete slabs",
+    imageAiHint: "construction worker site",
+    cta: { text: "Search Properties", href: "/properties" }
   },
-  ctaSection: {
-    title: "Ready to Find Your Perfect Property?",
-    subtitle: "Start your journey with us today. Browse listings, connect with experts, and make your real estate goals a reality.",
-    cta: { text: "Explore Properties Now", href: "/properties" }
+  developmentProjects: {
+    title: "Discover our development Projects",
+    subtitle: "Get ready for seamless solutions.",
+    description: "We expertly manage development projects for various sectors, agriculture, and manufacturing, ensuring proficient planning, timely execution, and adherence to quality and budget standards.",
+    imageUrl: "https://placehold.co/600x400.png",
+    imageAlt: "Architectural blueprints and plans",
+    imageAiHint: "architect blueprints plans",
+    cta: { text: "Explore Projects", href: "/services#development" }, // Example link to a section
+    imagePosition: 'right',
+  },
+  communityOutreach: {
+    title: "Discover our Community project Outreach",
+    subtitle: "Get ready for seamless solutions.",
+    description: "At Homeland Capital, we are dedicated to community development that drives meaningful long-term growth and impacts the lives of the communities we serve.",
+    imageUrl: "https://placehold.co/600x400.png",
+    imageAlt: "Row of yellow construction tractors",
+    imageAiHint: "construction machinery tractors",
+    cta: { text: "Explore Projects", href: "/services#community" }, // Example link to a section
+    imagePosition: 'left',
   }
 };
 
@@ -250,7 +261,3 @@ export let footerContentData: FooterContent = {
   copyrightText: `© ${new Date().getFullYear()} Homeland Capital. All rights reserved.`,
   builtWithText: "Built with Next.js, Tailwind CSS, and ShadCN UI."
 };
-
-    
-
-    

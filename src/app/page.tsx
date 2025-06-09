@@ -5,19 +5,22 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Award, Search, Handshake, BarChartHorizontalBig, Lightbulb, Users, ArrowRight } from 'lucide-react';
-import type { CmsFeatureItem } from '@/lib/types';
+import { ArrowRight, Home, Wrench, ClipboardList, Users, DollarSign, Search, KeyRound, Building } from 'lucide-react';
+import type { HomePageServiceItem, HomePageFindHomeFeature } from '@/lib/types';
 import { homePageContentData as content } from '@/lib/cms-data';
 import type { Icon as LucideIcon } from 'lucide-react';
 
 // Helper to map icon names to Lucide components
 const iconMap: { [key: string]: LucideIcon } = {
-  Search,
-  BarChartHorizontalBig,
-  Handshake,
-  Lightbulb,
+  Home,
+  Wrench,
+  ClipboardList,
   Users,
-  Award,
+  DollarSign,
+  Search,
+  KeyRound,
+  Building,
+  ArrowRight,
 };
 
 const renderIcon = (iconName?: string, className?: string) => {
@@ -27,31 +30,28 @@ const renderIcon = (iconName?: string, className?: string) => {
 };
 
 
-export default function InformationalHomePage() {
+export default function HomePageRedesigned() {
   return (
-    <div className="space-y-16">
+    <div className="space-y-16 md:space-y-24">
       {/* Hero Section */}
-      <section className="relative py-20 md:py-32 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/10 via-background to-background">
-        <div className="absolute inset-0">
-          <Image
-            src={content.hero.imageUrl}
-            alt={content.hero.imageAlt}
-            layout="fill"
-            objectFit="cover"
-            className="opacity-20"
-            data-ai-hint={content.hero.imageAiHint}
-            priority
-          />
-           <div className="absolute inset-0 bg-background/50"></div>
-        </div>
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <h1 className="text-4xl md:text-6xl font-headline font-bold text-primary mb-6">
-            {content.hero.title}
-          </h1>
-          <p className="text-lg md:text-xl text-foreground max-w-2xl mx-auto mb-8">
-            {content.hero.subtitle}
-          </p>
-          <Button size="lg" asChild className="text-lg px-8 py-6 shadow-lg">
+      <section className="relative min-h-[60vh] md:min-h-[70vh] flex items-center justify-center text-center rounded-xl overflow-hidden">
+        <Image
+          src={content.hero.backgroundImageUrl}
+          alt={content.hero.backgroundImageAlt}
+          layout="fill"
+          objectFit="cover"
+          className="absolute inset-0 z-0"
+          data-ai-hint={content.hero.backgroundImageAiHint}
+          priority
+        />
+        <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Dark overlay */}
+        <div className="relative z-20 p-6 container mx-auto">
+          {content.hero.titleLines.map((line, index) => (
+            <h1 key={index} className={`text-2xl md:text-4xl lg:text-5xl font-headline font-bold text-white ${index < content.hero.titleLines.length -1 ? 'mb-2 md:mb-3' : 'mb-8 md:mb-10'}`}>
+              {line}
+            </h1>
+          ))}
+          <Button size="lg" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold text-lg px-8 py-6 shadow-lg">
             <Link href={content.hero.cta.href}>
               {content.hero.cta.text} <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
@@ -60,57 +60,127 @@ export default function InformationalHomePage() {
       </section>
 
       {/* Our Services Section */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-headline text-center text-foreground mb-12">{content.servicesSection.title}</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {content.servicesSection.items.map((service: CmsFeatureItem, index: number) => (
-            <Card key={index} className="text-center shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader>
-                <div className="mx-auto flex items-center justify-center">
-                  {renderIcon(service.iconName, "w-10 h-10 text-primary mb-4")}
-                </div>
-                <CardTitle className="font-headline text-xl">{service.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">{service.description}</p>
-                {service.link && service.ctaText && (
-                  <Button variant="outline" asChild>
-                    <Link href={service.link}>{service.ctaText}</Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Why Choose Us Section */}
-      <section className="bg-muted py-16">
+      <section className="py-12 md:py-16 bg-amber-50 rounded-lg">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-headline text-center text-foreground mb-12">{content.whyChooseUsSection.title}</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {content.whyChooseUsSection.items.map((item: CmsFeatureItem, index: number) => (
-              <div key={index} className="flex flex-col items-center text-center p-6 bg-card rounded-lg shadow-md">
-                {renderIcon(item.iconName, "w-8 h-8 text-accent")}
-                <h3 className="text-xl font-semibold text-primary mt-3 mb-2">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
-              </div>
+          <h2 className="text-3xl md:text-4xl font-headline text-center text-foreground mb-4">{content.ourServices.title}</h2>
+          <p className="text-center text-muted-foreground mb-10 md:mb-12 max-w-2xl mx-auto">{content.ourServices.subtitle}</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {content.ourServices.items.map((service: HomePageServiceItem, index: number) => (
+              <Card key={index} className="text-left shadow-lg hover:shadow-xl transition-shadow bg-card flex flex-col">
+                <CardHeader className="items-start">
+                  <div className="bg-primary/10 p-3 rounded-md mb-3 inline-block">
+                    {renderIcon(service.iconName, "w-7 h-7 text-primary")}
+                  </div>
+                  <CardTitle className="font-headline text-xl text-primary">{service.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p className="text-muted-foreground text-sm">{service.description}</p>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Call to Action Section */}
-      <section className="container mx-auto px-4 text-center py-12">
-        <h2 className="text-3xl font-headline text-foreground mb-6">{content.ctaSection.title}</h2>
-        <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-          {content.ctaSection.subtitle}
-        </p>
-        <Button size="lg" asChild className="text-lg px-8 py-6 shadow-lg">
-          <Link href={content.ctaSection.cta.href}>
-            {content.ctaSection.cta.text} <ArrowRight className="ml-2 h-5 w-5" />
-          </Link>
-        </Button>
+      {/* Find Your New Home Section */}
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+          <div className="relative aspect-[4/3] md:aspect-auto md:h-full rounded-lg overflow-hidden shadow-xl">
+            <Image
+              src={content.findYourHome.imageUrl}
+              alt={content.findYourHome.imageAlt}
+              layout="fill"
+              objectFit="cover"
+              data-ai-hint={content.findYourHome.imageAiHint}
+            />
+          </div>
+          <div className="space-y-6">
+            <h2 className="text-3xl md:text-4xl font-headline text-primary">
+              {content.findYourHome.title}
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              {content.findYourHome.subtitle}
+            </p>
+            <ul className="space-y-3">
+              {content.findYourHome.features.map((feature: HomePageFindHomeFeature, index: number) => (
+                <li key={index} className="flex items-center">
+                  {renderIcon(feature.iconName, "w-6 h-6 text-accent mr-3 shrink-0")}
+                  <div>
+                    <span className="font-semibold text-foreground">{feature.text}</span>
+                    <span className="text-sm text-muted-foreground ml-2">({feature.subtext})</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <Button size="lg" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold text-lg px-8 py-6 shadow-lg">
+              <Link href={content.findYourHome.cta.href}>
+                {content.findYourHome.cta.text} <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Development Projects Section */}
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <div className={`grid md:grid-cols-2 gap-10 md:gap-16 items-center`}>
+          <div className={`space-y-6 ${content.developmentProjects.imagePosition === 'right' ? 'md:order-1' : 'md:order-2'}`}>
+            <h2 className="text-3xl md:text-4xl font-headline text-orange-500"> {/* Changed color for "Development" */}
+              {content.developmentProjects.title}
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {content.developmentProjects.subtitle}
+            </p>
+            <p className="text-foreground leading-relaxed">
+              {content.developmentProjects.description}
+            </p>
+            <Button size="md" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold">
+              <Link href={content.developmentProjects.cta.href}>
+                {content.developmentProjects.cta.text} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className={`relative aspect-video md:aspect-auto md:h-[350px] rounded-lg overflow-hidden shadow-xl ${content.developmentProjects.imagePosition === 'right' ? 'md:order-2' : 'md:order-1'}`}>
+            <Image
+              src={content.developmentProjects.imageUrl}
+              alt={content.developmentProjects.imageAlt}
+              layout="fill"
+              objectFit="cover"
+              data-ai-hint={content.developmentProjects.imageAiHint}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Community Outreach Section */}
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <div className={`grid md:grid-cols-2 gap-10 md:gap-16 items-center`}>
+          <div className={`space-y-6 ${content.communityOutreach.imagePosition === 'right' ? 'md:order-1' : 'md:order-2'}`}>
+            <h2 className="text-3xl md:text-4xl font-headline text-orange-500"> {/* Changed color for "Community" */}
+              {content.communityOutreach.title}
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {content.communityOutreach.subtitle}
+            </p>
+            <p className="text-foreground leading-relaxed">
+              {content.communityOutreach.description}
+            </p>
+            <Button size="md" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold">
+              <Link href={content.communityOutreach.cta.href}>
+                {content.communityOutreach.cta.text} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className={`relative aspect-video md:aspect-auto md:h-[350px] rounded-lg overflow-hidden shadow-xl ${content.communityOutreach.imagePosition === 'right' ? 'md:order-2' : 'md:order-1'}`}>
+            <Image
+              src={content.communityOutreach.imageUrl}
+              alt={content.communityOutreach.imageAlt}
+              layout="fill"
+              objectFit="cover"
+              data-ai-hint={content.communityOutreach.imageAiHint}
+            />
+          </div>
+        </div>
       </section>
     </div>
   );
