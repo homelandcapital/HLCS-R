@@ -20,10 +20,21 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/lib/supabaseClient';
 import AgentPropertyGridItem from '@/components/property/agent-property-grid-item';
 import AgentPropertyListItem from '@/components/property/agent-property-list-item';
-import { addDays, formatISO } from 'date-fns';
+import { addDays, formatISO, format as formatDate } from 'date-fns'; // Added formatDate
 import { useSearchParams, useRouter } from 'next/navigation';
 import { initializePayment, verifyPayment, type InitializePaymentInput } from '@/actions/paystack-actions';
 
+function generateCustomPaystackReference(): string {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2); // YY
+  const day = String(now.getDate()).padStart(2, '0'); // DD
+  const hours = String(now.getHours()).padStart(2, '0'); // HH
+  const minutes = String(now.getMinutes()).padStart(2, '0'); // MM (minutes)
+  const seconds = String(now.getSeconds()).padStart(2, '0'); // SS
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM (month, 0-indexed)
+  
+  return `Promo-${year}${day}${hours}${minutes}${seconds}${month}`;
+}
 
 function MyListingsPageComponent() {
   const { user, loading: authLoading } = useAuth();
@@ -120,7 +131,6 @@ function MyListingsPageComponent() {
     }
   }, [user, authLoading, fetchAgentProperties, fetchPlatformSettings]);
 
-  // Effect to handle Paystack callback for promotion payment verification
   useEffect(() => {
     const reference = searchParams.get('reference');
     const trxref = searchParams.get('trxref');
@@ -133,8 +143,8 @@ function MyListingsPageComponent() {
         try {
           const response = await verifyPayment({ reference: paymentReference });
           if (response.success && response.paymentSuccessful) {
-            toast({ title: 'Promotion Activated!', description: `Property promotion for ${response.data?.metadata?.propertyId} is now active.`, variant: 'default' });
-            if (user && user.role === 'agent') fetchAgentProperties(user.id); // Refresh listings
+            toast({ title: 'Promotion Activated!', description: `Property promotion for property ID ending ...${response.data?.metadata?.property_id?.slice(-8)} is now active.`, variant: 'default' });
+            if (user && user.role === 'agent') fetchAgentProperties(user.id); 
           } else if (response.success && !response.paymentSuccessful) {
             toast({ title: 'Payment Not Successful', description: `Paystack reported transaction ${paymentReference} as ${response.data?.status}.`, variant: 'default' });
           } else {
@@ -143,7 +153,6 @@ function MyListingsPageComponent() {
         } catch (error: any) {
           toast({ title: 'Error Verifying Payment', description: error.message, variant: 'destructive' });
         } finally {
-          // Clean the URL by removing Paystack query params
           router.replace('/agents/dashboard/my-listings', { scroll: false });
           setIsProcessingPayment(false);
         }
@@ -211,10 +220,12 @@ function MyListingsPageComponent() {
     }
 
     setIsProcessingPayment(true);
+    const transactionReference = generateCustomPaystackReference();
+
     const paymentDetails: InitializePaymentInput = {
       email: user.email,
-      amountInKobo: selectedTier.fee * 100, // Convert NGN to Kobo
-      reference: `promo_${propertyToPromote.id}_${selectedTier.id}_${Date.now()}`,
+      amountInKobo: selectedTier.fee * 100, 
+      reference: transactionReference,
       metadata: {
         propertyId: propertyToPromote.id,
         tierId: selectedTier.id,
@@ -224,14 +235,14 @@ function MyListingsPageComponent() {
         agentId: user.id,
         purpose: 'property_promotion'
       },
-      // callbackUrl will use PAYSTACK_CALLBACK_URL from .env or default in action
+      callbackUrl: `${window.location.origin}/agents/dashboard/my-listings` // Ensure callback is to this page
     };
 
     try {
       const response = await initializePayment(paymentDetails);
       if (response.success && response.data?.authorization_url) {
         toast({ title: 'Redirecting to Paystack...', description: 'Please complete your payment.' });
-        setIsPromoteDialogOpen(false); // Close dialog before redirect
+        setIsPromoteDialogOpen(false); 
         window.location.href = response.data.authorization_url;
       } else {
         toast({ title: 'Payment Initialization Failed', description: response.message, variant: 'destructive' });
@@ -412,11 +423,9 @@ function MyListingsPageComponent() {
 
 export default function MyListingsPage() {
   return (
-    // Suspense is needed because MyListingsPageComponent uses useSearchParams
     <Suspense fallback={<div>Loading listings...</div>}>
       <MyListingsPageComponent />
     </Suspense>
   );
 }
-
     

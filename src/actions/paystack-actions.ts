@@ -43,7 +43,7 @@ export interface InitializePaymentResponse {
 export async function initializePayment(input: InitializePaymentInput): Promise<InitializePaymentResponse> {
   const validation = InitializePaymentInputSchema.safeParse(input);
   if (!validation.success) {
-    console.error("Paystack InitializePaymentInputSchema validation error:", validation.error.errors);
+    console.error("[PaystackActions] InitializePaymentInputSchema validation error:", validation.error.errors);
     return { success: false, message: `Invalid input: ${validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}` };
   }
 
@@ -51,12 +51,10 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
   if (!secretKey) {
-    console.error('Paystack secret key is not configured.');
+    console.error('[PaystackActions] Paystack secret key is not configured.');
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
   
-  // Reconstruct metadata to match Paystack's expected custom_fields structure
-  // while also keeping our specific flat metadata for easier access later.
   const paystackMetadata = {
     property_id: metadata.propertyId,
     tier_id: metadata.tierId,
@@ -73,6 +71,8 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     ],
   };
 
+  console.log(`[PaystackActions] Initializing payment for reference: ${reference} with metadata:`, JSON.stringify(paystackMetadata, null, 2));
+
   try {
     const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
       method: 'POST',
@@ -82,17 +82,17 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
       },
       body: JSON.stringify({
         email,
-        amount: amountInKobo, // Paystack expects amount in Kobo
+        amount: amountInKobo,
         reference,
         callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL,
-        metadata: paystackMetadata, // Send the structured metadata
+        metadata: paystackMetadata,
       }),
     });
 
     const responseData = await response.json();
 
     if (!response.ok || !responseData.status) {
-      console.error('Paystack initialization error:', responseData);
+      console.error('[PaystackActions] Paystack initialization error:', responseData);
       return { success: false, message: responseData.message || 'Failed to initialize payment with Paystack.' };
     }
 
@@ -102,13 +102,12 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
       data: responseData.data,
     };
   } catch (error: any) {
-    console.error('Error initializing Paystack payment:', error);
+    console.error('[PaystackActions] Error initializing Paystack payment:', error);
     return { success: false, message: `An unexpected error occurred: ${error.message}` };
   }
 }
 
 
-// Schema for verifying payment
 const VerifyPaymentInputSchema = z.object({
   reference: z.string().min(1, { message: 'Payment reference is required to verify.' }),
 });
@@ -124,16 +123,16 @@ export interface PaystackVerifiedPaymentData {
   channel: string;
   currency: string;
   ip_address: string | null;
-  metadata: { // Define expected structure for metadata coming back from Paystack
+  metadata: {
     property_id?: string;
     tier_id?: string;
     tier_name?: string;
     tier_fee?: number;
-    tier_duration?: number;
+    tier_duration?: any; // Can be string or number from Paystack
     agent_id?: string;
     purpose?: string;
     custom_fields?: Array<{ display_name: string; variable_name: string; value: any }>;
-    [key: string]: any; // Allow other passthrough keys if Paystack adds them
+    [key: string]: any; 
   };
   customer: {
     id: number;
@@ -173,6 +172,7 @@ export interface VerifyPaymentResponse {
 export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPaymentResponse> {
   const validation = VerifyPaymentInputSchema.safeParse(input);
   if (!validation.success) {
+    console.error("[PaystackActions] VerifyPaymentInputSchema validation error:", validation.error.errors);
     return { success: false, message: `Invalid input: ${validation.error.errors.map(e => e.message).join(', ')}` };
   }
   
@@ -180,9 +180,11 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
   if (!secretKey) {
-    console.error('Paystack secret key is not configured.');
+    console.error('[PaystackActions] Paystack secret key is not configured for verification.');
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
+
+  console.log(`[PaystackActions] Verifying payment for reference: ${reference}`);
 
   try {
     const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
@@ -195,19 +197,32 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     const responseData = await response.json();
 
     if (!response.ok || !responseData.status) {
-      console.error('Paystack verification error:', responseData);
+      console.error('[PaystackActions] Paystack verification error response:', responseData);
       return { success: false, message: responseData.message || 'Failed to verify payment with Paystack.' };
     }
     
-    const isSuccessful = responseData.data.status === 'success';
     const paymentData = responseData.data as PaystackVerifiedPaymentData;
+    console.log('[PaystackActions] verifyPayment: Full paymentData from Paystack:', JSON.stringify(paymentData, null, 2));
+    const isSuccessful = paymentData.status === 'success';
 
     if (isSuccessful && paymentData.metadata?.purpose === 'property_promotion') {
-      const { property_id, tier_id, tier_name, tier_duration } = paymentData.metadata;
+      console.log('[PaystackActions] verifyPayment: Condition for property promotion met. Metadata:', JSON.stringify(paymentData.metadata, null, 2));
       
-      if (property_id && tier_id && tier_name && tier_duration) {
+      const property_id = paymentData.metadata.property_id;
+      const tier_id = paymentData.metadata.tier_id;
+      const tier_name = paymentData.metadata.tier_name;
+      const tier_duration_from_meta = paymentData.metadata.tier_duration;
+
+      console.log(`[PaystackActions] verifyPayment: Extracted metadata - property_id: ${property_id}, tier_id: ${tier_id}, tier_name: ${tier_name}, tier_duration_from_meta: ${tier_duration_from_meta} (type: ${typeof tier_duration_from_meta})`);
+
+      const tier_duration = tier_duration_from_meta ? Number(tier_duration_from_meta) : null;
+      console.log(`[PaystackActions] verifyPayment: Converted tier_duration: ${tier_duration}`);
+      
+      if (property_id && tier_id && tier_name && tier_duration && tier_duration > 0) {
         const promotedAtDate = new Date();
-        const expiresAtDate = addDays(promotedAtDate, Number(tier_duration));
+        const expiresAtDate = addDays(promotedAtDate, tier_duration);
+
+        console.log(`[PaystackActions] verifyPayment: Preparing to update Supabase for property ${property_id}. Promoted At: ${promotedAtDate.toISOString()}, Expires At: ${expiresAtDate.toISOString()}`);
 
         const { error: updateError } = await supabase
           .from('properties')
@@ -222,26 +237,26 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
           .eq('id', property_id);
 
         if (updateError) {
-          console.error('Error updating property promotion status:', updateError);
-          // Payment was successful, but DB update failed. This needs careful handling/logging.
-          // For now, return success for payment, but message indicates partial failure.
+          console.error('[PaystackActions] verifyPayment: Error updating property promotion status in Supabase:', JSON.stringify(updateError, null, 2));
           return {
-            success: true, // Paystack call was successful
+            success: true, 
             message: `Payment verified successfully, but failed to update property promotion status: ${updateError.message}`,
             data: paymentData,
-            paymentSuccessful: true, // Payment itself was successful
+            paymentSuccessful: true,
           };
         }
-        console.log(`Property ${property_id} successfully promoted with tier ${tier_name}.`);
+        console.log(`[PaystackActions] verifyPayment: Property ${property_id} successfully promoted in Supabase with tier ${tier_name}.`);
       } else {
-        console.warn('Successful property promotion payment verified, but missing necessary metadata to update property:', paymentData.metadata);
+        console.warn('[PaystackActions] verifyPayment: Successful property promotion payment verified, but missing necessary metadata to update property or tier_duration is invalid.', { property_id, tier_id, tier_name, tier_duration_from_meta, tier_duration });
         return {
           success: true,
-          message: 'Payment verified successfully, but property update failed due to missing metadata.',
+          message: 'Payment verified successfully, but property update failed due to missing or invalid metadata.',
           data: paymentData,
           paymentSuccessful: true,
         };
       }
+    } else {
+        console.log('[PaystackActions] verifyPayment: Condition for property promotion NOT met or payment not successful.', { isSuccessful, metadataPurpose: paymentData.metadata?.purpose });
     }
 
     return {
@@ -251,9 +266,7 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
       paymentSuccessful: isSuccessful,
     };
   } catch (error: any) {
-    console.error('Error verifying Paystack payment:', error);
+    console.error('[PaystackActions] Error verifying Paystack payment:', error);
     return { success: false, message: `An unexpected error occurred: ${error.message}` };
   }
 }
-
-    
