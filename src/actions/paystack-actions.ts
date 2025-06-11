@@ -26,7 +26,7 @@ const InitializePaymentInputSchema = z.object({
         variable_name: z.string(),
         value: z.any(),
     })).optional()
-  }).passthrough(), // Allow other fields in metadata if needed, though we focus on defined ones
+  }).passthrough(), 
 });
 export type InitializePaymentInput = z.infer<typeof InitializePaymentInputSchema>;
 
@@ -55,6 +55,7 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
   
+  // Ensure tier_id and tier_duration are included in custom_fields
   const paystackMetadata = {
     property_id: metadata.propertyId,
     tier_id: metadata.tierId,
@@ -65,7 +66,9 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     purpose: metadata.purpose,
     custom_fields: [
       { display_name: "Property ID", variable_name: "property_id", value: metadata.propertyId },
+      { display_name: "Tier ID", variable_name: "tier_id", value: metadata.tierId },
       { display_name: "Tier Name", variable_name: "tier_name", value: metadata.tierName },
+      { display_name: "Tier Duration", variable_name: "tier_duration", value: metadata.tierDuration.toString() }, // Ensure value is string for custom_fields
       { display_name: "Agent ID", variable_name: "agent_id", value: metadata.agentId },
       { display_name: "Purpose", variable_name: "purpose", value: metadata.purpose },
     ],
@@ -85,7 +88,7 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
         amount: amountInKobo,
         reference,
         callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL,
-        metadata: paystackMetadata,
+        metadata: paystackMetadata, // Send the combined metadata
       }),
     });
 
@@ -128,7 +131,7 @@ export interface PaystackVerifiedPaymentData {
     tier_id?: string;
     tier_name?: string;
     tier_fee?: number;
-    tier_duration?: any; // Can be string or number from Paystack
+    tier_duration?: any; 
     agent_id?: string;
     purpose?: string;
     custom_fields?: Array<{ display_name: string; variable_name: string; value: any }>;
@@ -208,14 +211,45 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     if (isSuccessful && paymentData.metadata?.purpose === 'property_promotion') {
       console.log('[PaystackActions] verifyPayment: Condition for property promotion met. Metadata:', JSON.stringify(paymentData.metadata, null, 2));
       
-      const property_id = paymentData.metadata.property_id;
-      const tier_id = paymentData.metadata.tier_id;
-      const tier_name = paymentData.metadata.tier_name;
-      const tier_duration_from_meta = paymentData.metadata.tier_duration;
+      let property_id: string | undefined;
+      let tier_id: string | undefined;
+      let tier_name: string | undefined;
+      let tier_duration_from_meta: any; // Can be string or number
 
-      console.log(`[PaystackActions] verifyPayment: Extracted metadata - property_id: ${property_id}, tier_id: ${tier_id}, tier_name: ${tier_name}, tier_duration_from_meta: ${tier_duration_from_meta} (type: ${typeof tier_duration_from_meta})`);
+      const customFields = paymentData.metadata.custom_fields;
+      if (customFields && Array.isArray(customFields)) {
+        console.log('[PaystackActions] verifyPayment: Attempting to extract from custom_fields array.');
+        property_id = customFields.find(f => f.variable_name === 'property_id')?.value;
+        tier_id = customFields.find(f => f.variable_name === 'tier_id')?.value;
+        tier_name = customFields.find(f => f.variable_name === 'tier_name')?.value;
+        tier_duration_from_meta = customFields.find(f => f.variable_name === 'tier_duration')?.value;
+      } else {
+        console.log('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata.');
+      }
 
-      const tier_duration = tier_duration_from_meta ? Number(tier_duration_from_meta) : null;
+      // Fallback to direct metadata properties if not found in custom_fields (or if custom_fields itself is missing)
+      if (!property_id && paymentData.metadata.property_id) {
+        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.property_id');
+        property_id = paymentData.metadata.property_id;
+      }
+      if (!tier_id && paymentData.metadata.tier_id) {
+        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_id');
+        tier_id = paymentData.metadata.tier_id;
+      }
+      if (!tier_name && paymentData.metadata.tier_name) {
+        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_name');
+        tier_name = paymentData.metadata.tier_name;
+      }
+      if (tier_duration_from_meta === undefined && paymentData.metadata.tier_duration !== undefined) {
+        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_duration');
+        tier_duration_from_meta = paymentData.metadata.tier_duration;
+      }
+      
+      console.log(`[PaystackActions] verifyPayment: Extracted metadata values - property_id: ${property_id}, tier_id: ${tier_id}, tier_name: ${tier_name}, tier_duration_from_meta: ${tier_duration_from_meta} (type: ${typeof tier_duration_from_meta})`);
+
+      const tier_duration = tier_duration_from_meta !== undefined && tier_duration_from_meta !== null && !isNaN(Number(tier_duration_from_meta))
+        ? Number(tier_duration_from_meta)
+        : null;
       console.log(`[PaystackActions] verifyPayment: Converted tier_duration: ${tier_duration}`);
       
       if (property_id && tier_id && tier_name && tier_duration && tier_duration > 0) {
@@ -224,33 +258,45 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
 
         console.log(`[PaystackActions] verifyPayment: Preparing to update Supabase for property ${property_id}. Promoted At: ${promotedAtDate.toISOString()}, Expires At: ${expiresAtDate.toISOString()}`);
 
-        const { error: updateError } = await supabase
-          .from('properties')
-          .update({
+        const updatePayload = {
             is_promoted: true,
             promotion_tier_id: tier_id,
             promotion_tier_name: tier_name,
             promoted_at: promotedAtDate.toISOString(),
             promotion_expires_at: expiresAtDate.toISOString(),
             updated_at: new Date().toISOString()
-          })
+        };
+        console.log('[PaystackActions] verifyPayment: Supabase update payload:', JSON.stringify(updatePayload, null, 2));
+        
+        const { error: updateError } = await supabase
+          .from('properties')
+          .update(updatePayload)
           .eq('id', property_id);
 
         if (updateError) {
           console.error('[PaystackActions] verifyPayment: Error updating property promotion status in Supabase:', JSON.stringify(updateError, null, 2));
+          // Even if DB update fails, Paystack payment was successful.
           return {
             success: true, 
-            message: `Payment verified successfully, but failed to update property promotion status: ${updateError.message}`,
+            message: `Payment verified successfully via Paystack, but failed to update property promotion status in our database: ${updateError.message}. Please contact support with reference: ${reference}.`,
             data: paymentData,
-            paymentSuccessful: true,
+            paymentSuccessful: true, // Paystack payment was successful
           };
         }
         console.log(`[PaystackActions] verifyPayment: Property ${property_id} successfully promoted in Supabase with tier ${tier_name}.`);
+        // If DB update is successful, this is the ideal success message.
+        return {
+            success: true,
+            message: `Payment verified and property ${property_id} successfully promoted.`,
+            data: paymentData,
+            paymentSuccessful: true,
+        };
+
       } else {
         console.warn('[PaystackActions] verifyPayment: Successful property promotion payment verified, but missing necessary metadata to update property or tier_duration is invalid.', { property_id, tier_id, tier_name, tier_duration_from_meta, tier_duration });
         return {
-          success: true,
-          message: 'Payment verified successfully, but property update failed due to missing or invalid metadata.',
+          success: true, // Paystack payment was successful
+          message: 'Payment verified successfully, but property update failed due to missing or invalid metadata. Please contact support.',
           data: paymentData,
           paymentSuccessful: true,
         };
@@ -260,8 +306,8 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     }
 
     return {
-      success: true,
-      message: responseData.message,
+      success: true, // Default to true if Paystack API call itself was fine
+      message: responseData.message, // Original Paystack message
       data: paymentData,
       paymentSuccessful: isSuccessful,
     };
@@ -270,3 +316,5 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     return { success: false, message: `An unexpected error occurred: ${error.message}` };
   }
 }
+
+    
