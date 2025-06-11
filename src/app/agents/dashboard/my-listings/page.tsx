@@ -2,7 +2,7 @@
 // src/app/agents/dashboard/my-listings/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import type { Property, Agent, PromotionTierConfig, UserRole, PlatformSettings } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,12 +18,14 @@ import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/lib/supabaseClient';
-import AgentPropertyGridItem from '@/components/property/agent-property-grid-item'; // For Grid View
-import AgentPropertyListItem from '@/components/property/agent-property-list-item'; // For List View
+import AgentPropertyGridItem from '@/components/property/agent-property-grid-item';
+import AgentPropertyListItem from '@/components/property/agent-property-list-item';
 import { addDays, formatISO } from 'date-fns';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { initializePayment, verifyPayment, type InitializePaymentInput } from '@/actions/paystack-actions';
 
 
-export default function MyListingsPage() {
+function MyListingsPageComponent() {
   const { user, loading: authLoading } = useAuth();
   const [agentProperties, setAgentProperties] = useState<Property[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
@@ -35,6 +37,9 @@ export default function MyListingsPage() {
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const fetchPlatformSettings = useCallback(async () => {
     const { data: dbSettings, error: settingsError } = await supabase
@@ -115,6 +120,39 @@ export default function MyListingsPage() {
     }
   }, [user, authLoading, fetchAgentProperties, fetchPlatformSettings]);
 
+  // Effect to handle Paystack callback for promotion payment verification
+  useEffect(() => {
+    const reference = searchParams.get('reference');
+    const trxref = searchParams.get('trxref');
+    const paymentReference = reference || trxref;
+
+    if (paymentReference && !isProcessingPayment) {
+      setIsProcessingPayment(true);
+      const handleVerify = async () => {
+        toast({ title: 'Verifying Payment...', description: `Checking status for transaction: ${paymentReference}` });
+        try {
+          const response = await verifyPayment({ reference: paymentReference });
+          if (response.success && response.paymentSuccessful) {
+            toast({ title: 'Promotion Activated!', description: `Property promotion for ${response.data?.metadata?.propertyId} is now active.`, variant: 'default' });
+            if (user && user.role === 'agent') fetchAgentProperties(user.id); // Refresh listings
+          } else if (response.success && !response.paymentSuccessful) {
+            toast({ title: 'Payment Not Successful', description: `Paystack reported transaction ${paymentReference} as ${response.data?.status}.`, variant: 'default' });
+          } else {
+            toast({ title: 'Verification Failed', description: response.message || 'Could not verify payment.', variant: 'destructive' });
+          }
+        } catch (error: any) {
+          toast({ title: 'Error Verifying Payment', description: error.message, variant: 'destructive' });
+        } finally {
+          // Clean the URL by removing Paystack query params
+          router.replace('/agents/dashboard/my-listings', { scroll: false });
+          setIsProcessingPayment(false);
+        }
+      };
+      handleVerify();
+    }
+  }, [searchParams, toast, fetchAgentProperties, user, router, isProcessingPayment]);
+
+
   const openDeleteDialog = (property: Property) => {
     setPropertyToDelete(property);
     setIsDeleteDialogOpen(true);
@@ -156,14 +194,14 @@ export default function MyListingsPage() {
     setIsPromoteDialogOpen(true);
   };
 
-  const handleConfirmPromotion = async () => {
-    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings) return;
-     if (propertyToPromote.agent_id !== user.id) {
-        toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" });
-        setIsPromoteDialogOpen(false);
-        setPropertyToPromote(null);
-        setSelectedTierId(null);
+  const handleInitiatePromotionPayment = async () => {
+    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings) {
+        toast({ title: 'Error', description: 'Missing information to start promotion payment.', variant: 'destructive' });
         return;
+    }
+    if (propertyToPromote.agent_id !== user.id) {
+        toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" });
+        setIsPromoteDialogOpen(false); return;
     }
 
     const selectedTier = platformSettings.promotionTiers.find(t => t.id === selectedTierId);
@@ -172,31 +210,39 @@ export default function MyListingsPage() {
         return;
     }
 
-    const promotedAtDate = new Date();
-    const expiresAtDate = addDays(promotedAtDate, selectedTier.duration);
+    setIsProcessingPayment(true);
+    const paymentDetails: InitializePaymentInput = {
+      email: user.email,
+      amountInKobo: selectedTier.fee * 100, // Convert NGN to Kobo
+      reference: `promo_${propertyToPromote.id}_${selectedTier.id}_${Date.now()}`,
+      metadata: {
+        propertyId: propertyToPromote.id,
+        tierId: selectedTier.id,
+        tierName: selectedTier.name,
+        tierFee: selectedTier.fee,
+        tierDuration: selectedTier.duration,
+        agentId: user.id,
+        purpose: 'property_promotion'
+      },
+      // callbackUrl will use PAYSTACK_CALLBACK_URL from .env or default in action
+    };
 
-    const { error } = await supabase
-      .from('properties')
-      .update({
-        is_promoted: true,
-        promotion_tier_id: selectedTier.id,
-        promotion_tier_name: selectedTier.name,
-        promoted_at: promotedAtDate.toISOString(),
-        promotion_expires_at: expiresAtDate.toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', propertyToPromote.id);
-
-    if (error) {
-      toast({ title: "Error Promoting Listing", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Listing Promoted!", description: `${propertyToPromote.title} promoted with ${selectedTier.name}.` });
-      fetchAgentProperties((user as Agent).id);
+    try {
+      const response = await initializePayment(paymentDetails);
+      if (response.success && response.data?.authorization_url) {
+        toast({ title: 'Redirecting to Paystack...', description: 'Please complete your payment.' });
+        setIsPromoteDialogOpen(false); // Close dialog before redirect
+        window.location.href = response.data.authorization_url;
+      } else {
+        toast({ title: 'Payment Initialization Failed', description: response.message, variant: 'destructive' });
+        setIsProcessingPayment(false);
+      }
+    } catch (error: any) {
+      toast({ title: 'Error Initializing Payment', description: error.message, variant: 'destructive' });
+      setIsProcessingPayment(false);
     }
-    setIsPromoteDialogOpen(false);
-    setPropertyToPromote(null);
-    setSelectedTierId(null);
   };
+
 
   if (pageLoading || authLoading || !platformSettings) {
     return (
@@ -308,13 +354,12 @@ export default function MyListingsPage() {
                       "flex items-start space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors",
                       selectedTierId === tier.id && "border-primary ring-2 ring-primary bg-primary/5"
                     )}
-                    onClick={() => setSelectedTierId(tier.id)} // Make the whole div clickable
+                    onClick={() => setSelectedTierId(tier.id)}
                   >
                     <RadioGroupItem value={tier.id} id={`promo-tier-item-${tier.id}`} className="mt-1 shrink-0"/>
                     <Label htmlFor={`promo-tier-item-${tier.id}`} className="flex-grow cursor-pointer space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-foreground">{tier.name}</span>
-                        {/* RadioGroupItem moved out of Label for this structure */}
                       </div>
                       <p className="text-sm text-muted-foreground">{tier.description}</p>
                       <div className="text-sm">
@@ -332,14 +377,14 @@ export default function MyListingsPage() {
             </div>
              <DialogFooter>
                <DialogClose asChild>
-                 <Button variant="outline">Cancel</Button>
+                 <Button variant="outline" disabled={isProcessingPayment}>Cancel</Button>
                </DialogClose>
                <Button 
-                onClick={handleConfirmPromotion} 
+                onClick={handleInitiatePromotionPayment} 
                 className="bg-yellow-500 hover:bg-yellow-600 text-black" 
-                disabled={!selectedTierId || platformSettings.promotionTiers.length === 0}
+                disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment}
                >
-                 {selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier'}
+                 {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
                </Button>
              </DialogFooter>
            </DialogContent>
@@ -365,3 +410,13 @@ export default function MyListingsPage() {
   );
 }
 
+export default function MyListingsPage() {
+  return (
+    // Suspense is needed because MyListingsPageComponent uses useSearchParams
+    <Suspense fallback={<div>Loading listings...</div>}>
+      <MyListingsPageComponent />
+    </Suspense>
+  );
+}
+
+    
