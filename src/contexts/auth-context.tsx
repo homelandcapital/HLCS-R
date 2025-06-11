@@ -49,6 +49,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id} at ${callTime}`);
     const functionStartTime = Date.now();
 
+    // Attempt to refresh/get current session explicitly
+    console.log(`[AuthContext] fetchUserProfileAndRelatedData: Attempting explicit supabase.auth.getSession() for ${supabaseUser.id} at ${new Date().toISOString()}`);
+    const explicitSessionStartTime = Date.now();
+    const { data: { session: currentAuthSessionFromGetSession }, error: explicitSessionError } = await supabase.auth.getSession();
+    const explicitSessionEndTime = Date.now();
+    console.log(`[AuthContext] fetchUserProfileAndRelatedData: Explicit supabase.auth.getSession() for ${supabaseUser.id} completed in ${explicitSessionEndTime - explicitSessionStartTime}ms.`);
+
+    if (!isMountedRef.current) {
+        console.log(`[AuthContext] fetchUserProfileAndRelatedData: Unmounted during explicit getSession for ${supabaseUser.id}. Aborting.`);
+        return null;
+    }
+
+    if (explicitSessionError) {
+      console.error(`[AuthContext] fetchUserProfileAndRelatedData: Error during explicit getSession for ${supabaseUser.id}:`, explicitSessionError.message);
+      // Proceeding, but this is a warning sign.
+    }
+    if (!currentAuthSessionFromGetSession || currentAuthSessionFromGetSession.user.id !== supabaseUser.id) {
+      console.warn(`[AuthContext] fetchUserProfileAndRelatedData: Session mismatch or no session after explicit getSession for ${supabaseUser.id}. Auth User ID: ${supabaseUser.id}, Explicit Session User ID: ${currentAuthSessionFromGetSession?.user?.id}. This could mean the user is signed out or session is invalid.`);
+      // If session is truly invalid, fetching profile might fail or return nothing.
+      // Consider returning null if critical, but for now, let's see if the profile query hangs.
+      // This might happen if a SIGNED_OUT event hasn't fully processed before a refocus triggers another fetch.
+      // return null; // Potentially return null if session is invalid
+    }
+
+
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Querying 'users' table for ${supabaseUser.id} at ${new Date().toISOString()}`);
     const usersQueryStartTime = Date.now();
     const { data: userProfilesData, error: profileQueryError } = await supabase
@@ -75,8 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userProfilesData || userProfilesData.length === 0) {
       console.warn('[AuthContext] fetchUserProfileAndRelatedData: User profile not found in public.users for id:', supabaseUser.id);
-      const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
-      if (currentAuthSession) {
+      if (currentAuthSessionFromGetSession) { 
          toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
       }
       const duration = Date.now() - functionStartTime;
@@ -244,8 +268,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           case 'PASSWORD_RECOVERY':
             console.log('[AuthContext] onAuthStateChange: PASSWORD_RECOVERY event.');
             if (isMountedRef.current) {
-              setLoading(false);
-              router.push('/update-password');
+              setLoading(false); // No immediate profile fetch needed, user needs to update password
+              // Session state is set, update-password page will use it
             }
             break;
           case 'INITIAL_SESSION':
@@ -421,7 +445,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    if (!session) {
+    // Use the session state from AuthContext, which is updated by onAuthStateChange
+    if (!session) { 
       toast({ title: 'Error', description: 'No active password recovery session. Please request a new reset link.', variant: 'destructive' });
       return { error: new Error("No active password recovery session.") };
     }
@@ -435,6 +460,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
+        // Sign out to clear any local session state and force re-login with new password
+        // The onAuthStateChange handler for 'SIGNED_OUT' will then redirect to home or login.
         supabase.auth.signOut().catch(signOutError => {
             console.error("[AuthContext] updateUserPassword: Error during signOut after password update:", signOutError);
         });
@@ -543,4 +570,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

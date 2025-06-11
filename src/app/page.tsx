@@ -15,7 +15,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"; // Assuming this component exists or will be added
+} from "@/components/ui/carousel"; 
 
 // Helper to map icon names to Lucide components
 const iconMap: { [key: string]: LucideIcon } = {
@@ -56,9 +56,10 @@ export default function HomePageRedesigned() {
                   <Image
                     src={slide.backgroundImageUrl}
                     alt={slide.backgroundImageAlt}
-                    layout="fill"
-                    objectFit="cover"
+                    fill
+                    style={{ objectFit: "cover" }}
                     className="absolute inset-0 z-0"
+                    sizes="100vw"
                     data-ai-hint={slide.backgroundImageAiHint}
                     priority={index === 0} // Only prioritize the first image
                   />
@@ -117,8 +118,9 @@ export default function HomePageRedesigned() {
             <Image
               src={content.findYourHome.imageUrl}
               alt={content.findYourHome.imageAlt}
-              layout="fill"
-              objectFit="cover"
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="(max-width: 768px) 100vw, 50vw"
               data-ai-hint={content.findYourHome.imageAiHint}
             />
           </div>
@@ -172,8 +174,9 @@ export default function HomePageRedesigned() {
             <Image
               src={content.developmentProjects.imageUrl}
               alt={content.developmentProjects.imageAlt}
-              layout="fill"
-              objectFit="cover"
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="(max-width: 768px) 100vw, 50vw"
               data-ai-hint={content.developmentProjects.imageAiHint}
             />
           </div>
@@ -203,8 +206,9 @@ export default function HomePageRedesigned() {
             <Image
               src={content.communityOutreach.imageUrl}
               alt={content.communityOutreach.imageAlt}
-              layout="fill"
-              objectFit="cover"
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="(max-width: 768px) 100vw, 50vw"
               data-ai-hint={content.communityOutreach.imageAiHint}
             />
           </div>
@@ -213,3 +217,4 @@ export default function HomePageRedesigned() {
     </div>
   );
 }
+
