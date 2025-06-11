@@ -183,27 +183,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         console.log(`[AuthContext] onAuthStateChange: Event: ${event}, Event Session: ${!!currentEventSession}, User in Event Session: ${currentEventSession?.user?.id || 'N/A'}, Time: ${new Date().toISOString()}`);
         
-        // Update local session state immediately from the event
-        setSession(currentEventSession);
+        setSession(currentEventSession); // Update local session state immediately from the event
 
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
           if (isMountedRef.current) {
-            console.log(`[AuthContext] onAuthStateChange: Event ${event}. Attempting to verify session with supabase.auth.getUser().`);
-            setLoading(true);
+             console.log(`[AuthContext] onAuthStateChange: Event ${event}. Attempting to verify session with supabase.auth.getUser().`);
+             setLoading(true);
           }
           try {
+            // Get the most up-to-date user from Supabase Auth
             const { data: { user: verifiedUser }, error: getUserError } = await supabase.auth.getUser();
 
             if (getUserError) {
               console.error(`[AuthContext] onAuthStateChange: supabase.auth.getUser() error after ${event}:`, getUserError.message);
               if (isMountedRef.current) {
                 setUser(null);
-                // Check if the error is due to an invalid refresh token
-                if (getUserError.message.toLowerCase().includes("invalid refresh token") || 
-                    (getUserError as AuthApiError).status === 401 || 
-                    (getUserError as AuthApiError).status === 403) {
-                  console.log(`[AuthContext] onAuthStateChange: Invalid token detected after ${event}. Forcing sign out.`);
+                if (getUserError.message.toLowerCase().includes("invalid refresh token") || (getUserError as AuthApiError).status === 401 || (getUserError as AuthApiError).status === 403) {
+                  console.log(`[AuthContext] onAuthStateChange: Invalid token detected for event ${event}. Forcing sign out.`);
                   await supabase.auth.signOut(); // This will trigger a SIGNED_OUT event
+                } else {
+                  setLoading(false);
                 }
               }
             } else if (verifiedUser) {
@@ -212,12 +211,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               if (isMountedRef.current) {
                 setUser(profile);
                 if (profile && event === 'SIGNED_IN') {
-                  if (profile.role === 'agent') router.push('/agents/dashboard');
-                  else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
-                  else router.push('/users/dashboard');
+                    if (profile.role === 'agent') router.push('/agents/dashboard');
+                    else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
+                    else router.push('/users/dashboard');
                 }
               }
-            } else {
+            } else { // No verified user from supabase.auth.getUser()
               console.log(`[AuthContext] onAuthStateChange: supabase.auth.getUser() returned no user after ${event}. Treating as signed out.`);
               if (isMountedRef.current) setUser(null);
             }
@@ -232,10 +231,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
+            console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event. Updating state and navigating.");
             setUser(null);
-            setLoading(false); // Ensure loading is false
-            console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event, navigating to home.");
-            // Navigation now handled by signOut function's finally block or if already on a public page.
+            setSession(null); // Ensure session is also cleared
+            setLoading(false); // Final loading state update
+            toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+            router.push('/');
           }
         } else if (event === 'PASSWORD_RECOVERY') {
           if (isMountedRef.current) {
@@ -243,11 +244,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
           }
         } else if (event === 'INITIAL_SESSION') {
-          console.log("[AuthContext] onAuthStateChange: INITIAL_SESSION event. This is typically handled by performInitialAuthCheckInternal.");
-          // If initial check already ran and set loading to false, and no user in currentEventSession, ensure consistency.
-          if (initialCheckPerformedRef.current && !currentEventSession?.user && isMountedRef.current && !loading) {
-            // setUser(null); // Already handled by performInitialAuthCheckInternal
-          }
+           console.log("[AuthContext] onAuthStateChange: INITIAL_SESSION event. This is typically handled by performInitialAuthCheckInternal.");
+           // If initial check already ran and set loading to false, and no user in currentEventSession, ensure consistency.
+           if (initialCheckPerformedRef.current && !currentEventSession?.user && isMountedRef.current && !loading) {
+             // setUser(null); // Already handled by performInitialAuthCheckInternal
+           }
         }
       }
     );
@@ -257,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isMountedRef.current = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, router, toast, loading]); // Added loading to dependency array
+  }, [fetchUserProfileAndRelatedData, router, toast, loading]);
 
 
   const signInWithPassword = async (email: string, password: string) => {
@@ -336,34 +337,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("[AuthContext] signOut: Initiating sign out.");
     if (!isMountedRef.current) {
       console.log("[AuthContext] signOut: Component unmounted, skipping sign out.");
-      return Promise.resolve();
+      return;
     }
-    setLoading(true); // Indicate loading during sign out process
+    setLoading(true); 
 
     try {
       const { error: signOutServiceError } = await supabase.auth.signOut();
-      if (isMountedRef.current) {
-        if (signOutServiceError) {
-          console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError.message);
-          toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
-        } else {
-          toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        }
+      // The onAuthStateChange listener will handle the SIGNED_OUT event for UI updates (setUser, setSession, setLoading, toast, navigation).
+      // We only toast an error here if the signOut call itself fails abruptly.
+      if (isMountedRef.current && signOutServiceError) {
+        console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError.message);
+        toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
+        setLoading(false); // Reset loading if the sign out call failed and SIGNED_OUT event might not fire as expected.
       }
+      // If signOutServiceError is null, we expect onAuthStateChange(SIGNED_OUT) to handle everything else.
     } catch (thrownError: any) {
       console.error("[AuthContext] signOut: Exception during Supabase signOut:", thrownError.message);
       if (isMountedRef.current) {
         toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred during logout.', variant: 'destructive' });
-      }
-    } finally {
-      if (isMountedRef.current) {
-        console.log("[AuthContext] signOut: In finally block. Setting user and session to null, navigating to home.");
-        setUser(null);
-        setSession(null); // Explicitly clear local session state
-        router.push('/');
-        setLoading(false);
-      } else {
-        console.log("[AuthContext] signOut: In finally block, but component unmounted. Skipping state updates/navigation.");
+        setLoading(false); // Reset loading if an exception occurred
       }
     }
   };
@@ -398,9 +390,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMountedRef.current) toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         if (isMountedRef.current) {
-          toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
-          // Sign out will be triggered by Supabase, which calls onAuthStateChange with SIGNED_OUT
+          // Don't toast success here, onAuthStateChange(SIGNED_OUT) after signOut will handle it
           await supabase.auth.signOut();
+          // A "Password Updated. Please login." toast can be added in SIGNED_OUT if desired, or rely on general "Logged Out"
         }
       }
     } catch (e) {
@@ -475,7 +467,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated: !!user && !!session, // isAuthenticated depends on both user profile and Supabase session
+      isAuthenticated: !!user && !!session, 
       user,
       loading,
       isPropertySaved,
