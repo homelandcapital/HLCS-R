@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('users')
       .select('*')
       .eq('id', supabaseUser.id);
-
+console.log('userProfilesData:', userProfilesData)
     if (profileQueryError) {
       const pgError = profileQueryError as PostgrestError;
       console.error('Error fetching user profile. Message:', pgError.message);
@@ -126,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     performInitialAuthCheckInternal()
       .then(result => {
+        console.log({result, isMountedRef})
         if (isMountedRef.current) {
           setUser(result.user);
           setSession(result.session);

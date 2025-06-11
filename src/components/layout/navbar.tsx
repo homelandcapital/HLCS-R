@@ -50,6 +50,7 @@ const Navbar = () => {
   };
 
   const AuthActions = ({ isMobile = false }: { isMobile?: boolean }) => {
+    console.log({ isMobile , loading })
     if (loading) {
       return isMobile ? (
         <div className="space-y-2">
@@ -64,7 +65,7 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className={isMobile ? "w-full justify-start px-2 py-2 text-lg" : "rounded-full p-0 h-9 w-9 sm:h-10 sm:w-10"}>
               <Avatar className={isMobile ? "h-7 w-7 mr-2" : "h-8 w-8 sm:h-9 sm:w-9"}>
-                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person avatar" />
+                <AvatarImage src={user.avatar_url} alt={user.name} data-ai-hint="person avatar" />
                 <AvatarFallback>
                   {user.name ? user.name.substring(0, 2).toUpperCase() : <UserCircle className="h-5 w-5"/>}
                 </AvatarFallback>
