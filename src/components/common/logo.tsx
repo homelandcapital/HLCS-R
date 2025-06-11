@@ -2,8 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-// import { CldImage } from 'next-cloudinary'; // Temporarily comment out CldImage
-import Image from 'next/image'; // Use next/image for diagnostics
+import { CldImage } from 'next-cloudinary';
 
 const Logo = () => {
   const logoPublicId = 'v1749088331/main-inverted-logo-no-bg_o987qt';
@@ -18,8 +17,9 @@ const Logo = () => {
     );
   }
 
-  if (logoPublicId === 'YOUR_LOGO_PUBLIC_ID_HERE' || !logoPublicId || logoPublicId.startsWith('https://')) {
-    console.warn(`Cloudinary logo public ID ('${logoPublicId}') appears to be a placeholder or an invalid format (e.g., a full URL) in src/components/common/logo.tsx. Please set it to your actual Cloudinary public ID. Logo will fall back to text.`);
+  // This check is for placeholder or missing public ID.
+  if (logoPublicId === 'YOUR_LOGO_PUBLIC_ID_HERE' || !logoPublicId) {
+    console.warn(`Cloudinary logo public ID ('${logoPublicId}') appears to be a placeholder or is missing. Please set it to your actual Cloudinary public ID. Logo will fall back to text.`);
     return (
       <Link href="/" className="text-2xl font-bold text-primary group" aria-label="Homeland Capital Home">
         Homeland Capital
@@ -27,33 +27,17 @@ const Logo = () => {
     );
   }
 
-  // Manually construct the full URL for next/image
-  const fullImageUrl = `https://res.cloudinary.com/${cloudName}/image/upload/${logoPublicId}.png`;
-  // Assuming the original image is PNG. If it could be other types, fetching format from Cloudinary or using CldImage is better.
-  // For diagnostics, we'll assume PNG. Note: CldImage handles format optimization automatically.
-
   return (
     <Link href="/" className="flex items-center group" aria-label="Homeland Capital Home">
-      {/* Diagnostic using next/image */}
-      <Image
-        src={fullImageUrl}
-        alt="Homeland Capital Logo"
-        width={180} // Original width from CldImage
-        height={45}  // Original height from CldImage
-        priority
-        className="h-9 w-auto" // Original className
-        unoptimized={true} // Add unoptimized for Cloudinary URLs to prevent double optimization or path issues with Next.js loader
-      />
-      {/*
       <CldImage
-        src={logoPublicId}
+        src={logoPublicId} // This is the public ID including version and folders
         alt="Homeland Capital Logo"
-        width="180"
-        height="45"
-        priority
-        className="h-9 w-auto"
+        width="180" // Desired display width for the rendered <img> tag
+        height="45"  // Desired display height for the rendered <img> tag (maintaining aspect ratio)
+        priority // If the logo is above the fold and critical for LCP
+        className="h-9 w-auto" // Tailwind classes for responsive height and auto width based on intrinsic aspect ratio
+        // `next-cloudinary` handles transformations like f_auto, q_auto automatically based on props and global config
       />
-      */}
     </Link>
   );
 };
