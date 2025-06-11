@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id} at ${callTime}. InitialLoad: ${isInitialLoad}`);
     const functionStartTime = Date.now();
 
-    // No explicit getSession() here anymore, rely on Supabase client's active session for data queries
+    // No explicit getSession() here, rely on Supabase client's active session for data queries
 
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Querying 'users' table for ${supabaseUser.id} at ${new Date().toISOString()}`);
     const usersQueryStartTime = Date.now();
@@ -59,7 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq('id', supabaseUser.id);
     const usersQueryEndTime = Date.now();
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: 'users' table query for ${supabaseUser.id} completed in ${usersQueryEndTime - usersQueryStartTime}ms.`);
-
 
     if (!isMountedRef.current) {
         console.log(`[AuthContext] fetchUserProfileAndRelatedData: Unmounted during profile query for ${supabaseUser.id}. Aborting.`);
@@ -204,45 +203,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         console.log(`[AuthContext] onAuthStateChange: Event: ${event}, Session from event: ${!!sessionFromEvent}, User from event: ${sessionFromEvent?.user?.id || 'N/A'}, Time: ${new Date().toISOString()}`);
 
-        // Always update the local session state with the one from the event first
         setSession(sessionFromEvent); 
 
         switch (event) {
           case 'SIGNED_IN':
           case 'USER_UPDATED':
           case 'TOKEN_REFRESHED':
-            if (isMountedRef.current) setLoading(true);
-            
-            // Explicitly get the latest session state, as sessionFromEvent might be slightly stale
-            // or not fully reflect the outcome of an internal refresh that triggered TOKEN_REFRESHED.
-            console.log(`[AuthContext] onAuthStateChange (${event}): Attempting explicit supabase.auth.getSession() at ${new Date().toISOString()}`);
-            const { data: { session: currentLatestSession }, error: getSessionError } = await supabase.auth.getSession();
-            console.log(`[AuthContext] onAuthStateChange (${event}): Explicit supabase.auth.getSession() completed. User: ${currentLatestSession?.user?.id || 'N/A'}`);
-
-            if (!isMountedRef.current) {
-              console.log(`[AuthContext] onAuthStateChange (${event}): Unmounted during explicit getSession. setLoading(false).`);
-              setLoading(false); // Ensure loading is false if unmounted
-              return;
-            }
-
-            if (getSessionError) {
-                console.error(`[AuthContext] onAuthStateChange (${event}): Error from explicit getSession():`, getSessionError.message);
-                // If getSession itself errors (e.g. network), treat as signed out for safety
-                if (isMountedRef.current) {
-                    setUser(null);
-                    setSession(null); // Also nullify local session state
-                    setLoading(false);
-                }
-                return;
-            }
-
-            // Use the user from the explicitly fetched latest session
-            const currentUserFromLatestSession = currentLatestSession?.user;
-
-            if (currentUserFromLatestSession) {
-              console.log(`[AuthContext] onAuthStateChange (${event}): User ${currentUserFromLatestSession.id} found in latest session. Re-fetching profile.`);
+            if (sessionFromEvent?.user) {
+              if (isMountedRef.current) setLoading(true);
+              console.log(`[AuthContext] onAuthStateChange (${event}): User ${sessionFromEvent.user.id} found in event. Re-fetching profile.`);
               try {
-                const profile = await fetchUserProfileAndRelatedData(currentUserFromLatestSession, false);
+                const profile = await fetchUserProfileAndRelatedData(sessionFromEvent.user, false);
                 if (isMountedRef.current) {
                   setUser(profile);
                   if (event === 'SIGNED_IN' && profile) {
@@ -262,7 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
             } else { 
-              console.log(`[AuthContext] onAuthStateChange (${event}): No user in latest session after explicit getSession(). Setting user to null.`);
+              console.log(`[AuthContext] onAuthStateChange (${event}): No user in session from event. Setting user to null.`);
               if (isMountedRef.current) {
                 setUser(null);
                 setLoading(false);
@@ -273,25 +244,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log('[AuthContext] onAuthStateChange: SIGNED_OUT event.');
             if (isMountedRef.current) {
               setUser(null);
-              setSession(null); // Ensure session is also cleared
+              setSession(null); 
               setLoading(false);
             }
             break;
           case 'PASSWORD_RECOVERY':
             console.log('[AuthContext] onAuthStateChange: PASSWORD_RECOVERY event. User might need to update password.');
             if (isMountedRef.current) {
-              // Session might be active but require password update. User data might not be fully relevant yet.
               setLoading(false); 
             }
             break;
           case 'INITIAL_SESSION':
-            console.log('[AuthContext] onAuthStateChange: INITIAL_SESSION event. Handled by performInitialAuthCheck.');
-            // This event is typically handled by the performInitialAuthCheck.
-            // If performInitialAuthCheck has already run and set loading to false, we don't want to set it to true again here
-            // unless sessionFromEvent.user actually exists and wasn't caught by performInitialAuthCheck.
-            // But performInitialAuthCheck *also* calls getSession.
-            // So, it's safer to let performInitialAuthCheck manage loading for this specific event.
-            // If performInitialAuthCheck did not set loading to false for some reason, this ensures it gets set.
+            console.log('[AuthContext] onAuthStateChange: INITIAL_SESSION event. Handled by performInitialAuthCheck or subsequent SIGNED_IN/TOKEN_REFRESHED.');
             if (isMountedRef.current && loading && !sessionFromEvent?.user) {
                 console.log('[AuthContext] onAuthStateChange (INITIAL_SESSION): No user from event, ensuring loading is false if still true.');
                 setLoading(false);
@@ -307,7 +271,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('[AuthContext] Cleaning up auth listener.');
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, router, toast, loading]); // Added loading to dependency array
+  }, [fetchUserProfileAndRelatedData, router, toast, loading]); 
 
 
   const signInWithPassword = async (email: string, password: string) => {
@@ -315,7 +279,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
-    // onAuthStateChange will handle user state and redirection
     return { error };
   };
 
@@ -463,10 +426,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    // The session for password update is typically handled via the recovery link,
-    // not necessarily the active 'session' state in AuthContext for a logged-in user.
-    // Supabase client handles the recovery token from the URL hash.
-    
     let errorResult: Error | null = null;
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
@@ -476,8 +435,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         toast({ title: 'Password Updated Successfully', description: 'Your password has been changed. Please log in with your new password.' });
-        // Sign out to force re-login with new credentials.
-        // onAuthStateChange for SIGNED_OUT will handle redirect.
         supabase.auth.signOut().catch(signOutError => {
             console.error("[AuthContext] updateUserPassword: Error during signOut after password update:", signOutError);
         });
@@ -504,8 +461,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const toggleSaveProperty = useCallback(async (propertyId: string) => {
-    const currentAuthUser = supabase.auth.getUser(); // Get current auth user directly for this action
-    if (!(await currentAuthUser).data.user || !user || user.role !== 'user') { // Check against direct auth state
+    const currentAuthUser = supabase.auth.getUser(); 
+    if (!(await currentAuthUser).data.user || !user || user.role !== 'user') { 
       toast({
         title: "Login Required",
         description: "You need to be logged in as a user to save properties.",
@@ -515,7 +472,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const generalUser = user as GeneralUser; // Assuming 'user' state is correctly reflecting the DB user
+    const generalUser = user as GeneralUser; 
     const currentlySaved = (generalUser.savedPropertyIds || []).includes(propertyId);
     let updatedSavedIds: string[];
     let toastMessage = "";
@@ -557,12 +514,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("[AuthContext] toggleSaveProperty: Error in toggleSaveProperty:", e);
       toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive"});
     }
-  }, [user, router, toast]); // Removed session from deps as we get user directly
+  }, [user, router, toast]); 
 
 
   return (
     <AuthContext.Provider value={{
-      isAuthenticated: !!user && !!session, // isAuthenticated depends on both user profile and active session
+      isAuthenticated: !!user && !!session, 
       user,
       loading,
       isPropertySaved,
