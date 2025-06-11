@@ -1,13 +1,13 @@
+
 'use client';
 
 import Link from 'next/link';
 import { CldImage } from 'next-cloudinary';
 
 const Logo = () => {
-  // IMPORTANT: Replace 'your_logo_public_id' with the actual Public ID of your logo
-  // from your Cloudinary account.
-  // Also, ensure NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME is set in your .env.local file.
-  const logoPublicId = 'https://res.cloudinary.com/douzsh9ui/image/upload/v1749088331/main-inverted-logo-no-bg_o987qt.png'; 
+  // IMPORTANT: This is the public ID of your logo in Cloudinary.
+  // It includes the version folder and the asset name without the extension.
+  const logoPublicId = 'v1749088331/main-inverted-logo-no-bg_o987qt'; 
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
@@ -20,9 +20,10 @@ const Logo = () => {
     );
   }
   
-  // Check if the logoPublicId is still the placeholder or an invalid example
-  if (logoPublicId === 'YOUR_LOGO_PUBLIC_ID_HERE' || !logoPublicId || logoPublicId.startsWith('https://res.cloudinary.com/YOUR_CLOUD_NAME')) {
-     console.warn(`Cloudinary logo public ID ('${logoPublicId}') appears to be a placeholder or invalid in src/components/common/logo.tsx. Please set it to your actual Cloudinary public ID. Logo will fall back to text.`);
+  // Check if the logoPublicId is still a placeholder or an obviously invalid example.
+  // This check is simplified as the main issue is providing a public ID, not a full URL.
+  if (logoPublicId === 'YOUR_LOGO_PUBLIC_ID_HERE' || !logoPublicId || logoPublicId.startsWith('https://')) {
+     console.warn(`Cloudinary logo public ID ('${logoPublicId}') appears to be a placeholder or an invalid format (e.g., a full URL) in src/components/common/logo.tsx. Please set it to your actual Cloudinary public ID. Logo will fall back to text.`);
      return (
       <Link href="/" className="text-2xl font-bold text-primary group" aria-label="Homeland Capital Home">
         Homeland Capital
