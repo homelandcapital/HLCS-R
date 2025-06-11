@@ -47,12 +47,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
     const callTime = new Date().toISOString();
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id} at ${callTime}`);
-    const startTime = Date.now();
+    const functionStartTime = Date.now();
 
+    console.log(`[AuthContext] fetchUserProfileAndRelatedData: Querying 'users' table for ${supabaseUser.id} at ${new Date().toISOString()}`);
+    const usersQueryStartTime = Date.now();
     const { data: userProfilesData, error: profileQueryError } = await supabase
       .from('users')
       .select('*')
       .eq('id', supabaseUser.id);
+    const usersQueryEndTime = Date.now();
+    console.log(`[AuthContext] fetchUserProfileAndRelatedData: 'users' table query for ${supabaseUser.id} completed in ${usersQueryEndTime - usersQueryStartTime}ms.`);
+
 
     if (!isMountedRef.current) {
         console.log(`[AuthContext] fetchUserProfileAndRelatedData: Unmounted during profile query for ${supabaseUser.id}. Aborting.`);
@@ -63,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const pgError = profileQueryError as PostgrestError;
       console.error('[AuthContext] fetchUserProfileAndRelatedData: Error fetching profile. Message:', pgError.message, 'Details:', pgError.details, 'Hint:', pgError.hint, 'Code:', pgError.code);
       toast({ title: 'Profile Error', description: `Could not load your profile data. ${pgError.message || 'Please check console for details.'}`, variant: 'destructive'});
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - functionStartTime;
       console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished with error for ${supabaseUser.id} in ${duration}ms.`);
       return null;
     }
@@ -74,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (currentAuthSession) {
          toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. This might happen if registration was interrupted or profile data is missing. Please contact support or try re-registering.', variant: 'destructive'});
       }
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - functionStartTime;
       console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished, profile not found for ${supabaseUser.id} in ${duration}ms.`);
       return null;
     }
@@ -82,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (userProfilesData.length > 1) {
       console.error('[AuthContext] fetchUserProfileAndRelatedData: Multiple user profiles found for id (data integrity issue):', supabaseUser.id);
       toast({ title: 'Profile Error', description: 'Multiple profiles found for your account. Please contact support.', variant: 'destructive'});
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - functionStartTime;
       console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished with multiple profiles error for ${supabaseUser.id} in ${duration}ms.`);
       return null;
     }
@@ -91,10 +96,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let authenticatedUser: AuthenticatedUser;
 
     if (baseProfile.role === 'user') {
+      console.log(`[AuthContext] fetchUserProfileAndRelatedData: User role detected. Querying 'saved_properties' for ${baseProfile.id} at ${new Date().toISOString()}`);
+      const savedPropsQueryStartTime = Date.now();
       const { data: savedPropsData, error: savedPropsError } = await supabase
         .from('saved_properties')
         .select('property_id')
         .eq('user_id', baseProfile.id);
+      const savedPropsQueryEndTime = Date.now();
+      console.log(`[AuthContext] fetchUserProfileAndRelatedData: 'saved_properties' query for ${baseProfile.id} completed in ${savedPropsQueryEndTime - savedPropsQueryStartTime}ms.`);
+
 
       if (!isMountedRef.current) {
         console.log(`[AuthContext] fetchUserProfileAndRelatedData: Unmounted during saved_properties query for ${supabaseUser.id}. Aborting.`);
@@ -110,11 +120,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       console.error('[AuthContext] fetchUserProfileAndRelatedData: Unknown user role in profile:', baseProfile.role);
       toast({ title: 'Profile Error', description: `Unknown user role: ${baseProfile.role}.`, variant: 'destructive'});
-      const duration = Date.now() - startTime;
+      const duration = Date.now() - functionStartTime;
       console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished with unknown role error for ${supabaseUser.id} in ${duration}ms.`);
       return null;
     }
-    const duration = Date.now() - startTime;
+    const duration = Date.now() - functionStartTime;
     console.log(`[AuthContext] fetchUserProfileAndRelatedData: Successfully fetched and processed profile for ${supabaseUser.id} in ${duration}ms.`);
     return authenticatedUser;
   }, [toast]);
@@ -133,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (!isMountedRef.current) {
           console.log('[AuthContext] performInitialAuthCheck: Unmounted during getSession.');
-          setLoading(false); // Ensure loading is false if unmounted
+          setLoading(false); 
           return;
         }
 
@@ -184,12 +194,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         console.log(`[AuthContext] onAuthStateChange: Event: ${event}, Session: ${!!currentSession}, User: ${currentSession?.user?.id || 'N/A'}, Time: ${new Date().toISOString()}`);
 
-        setSession(currentSession); // Update session state immediately
+        setSession(currentSession); 
 
         switch (event) {
           case 'SIGNED_IN':
           case 'USER_UPDATED':
-          case 'TOKEN_REFRESHED': // Treat these events similarly for profile fetching
+          case 'TOKEN_REFRESHED': 
             if (currentSession?.user) {
               console.log(`[AuthContext] onAuthStateChange: Event ${event} with user ${currentSession.user.id}. Re-fetching profile.`);
               if (isMountedRef.current) setLoading(true);
@@ -216,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
             } else {
-              // Event occurred but no user in session (e.g. TOKEN_REFRESHED failed to produce a user)
+              
               console.log(`[AuthContext] onAuthStateChange: Event ${event} but no user in currentSession. Setting user to null.`);
               if (isMountedRef.current) {
                 setUser(null);
@@ -240,14 +250,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             break;
           case 'INITIAL_SESSION':
             console.log('[AuthContext] onAuthStateChange: INITIAL_SESSION event. Handled by performInitialAuthCheck or subsequent SIGNED_IN/TOKEN_REFRESHED.');
-            // If performInitialAuthCheck has already run, setLoading(false) was called.
-            // If currentSession has a user here, it might mean a quick re-auth on focus
-            // which would be caught by the TOKEN_REFRESHED or SIGNED_IN like logic above.
-            // If it doesn't have a user, it means still no session.
+            
             if (!currentSession?.user && isMountedRef.current && !loading) {
-              // If INITIAL_SESSION fires and there's no user, and we are not already loading from initial check,
-              // ensure loading is false.
-              // setLoading(false); This might be redundant given initial check's finally block.
+              
             }
             break;
           default:
@@ -260,7 +265,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('[AuthContext] Cleaning up auth listener.');
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, router, toast]); // Removed `loading` from dependencies as it causes loops
+  }, [fetchUserProfileAndRelatedData, router, toast]); 
 
 
   const signInWithPassword = async (email: string, password: string) => {
@@ -268,7 +273,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
-    // onAuthStateChange will handle setting user and redirecting
+    
     return { error };
   };
 
