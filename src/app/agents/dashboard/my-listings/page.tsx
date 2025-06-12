@@ -143,7 +143,7 @@ function MyListingsPageComponent() {
 
   const handleVerifyPayment = useCallback(async (reference: string) => {
     if (!reference) return;
-    setIsProcessingPayment(true); // Indicate general payment processing
+    setIsProcessingPayment(true); 
     toast({ title: 'Verifying Payment...', description: `Checking status for transaction: ${reference}` });
     try {
       const response = await verifyPayment({ reference });
@@ -159,7 +159,6 @@ function MyListingsPageComponent() {
       toast({ title: 'Error Verifying Payment', description: error.message, variant: 'destructive' });
     } finally {
       setIsProcessingPayment(false);
-      // Clear URL params after verification attempt
       const currentPath = window.location.pathname;
       router.replace(currentPath, { scroll: false });
     }
@@ -167,13 +166,12 @@ function MyListingsPageComponent() {
 
 
   useEffect(() => {
-    // This useEffect handles verification if redirected from Paystack (fallback)
     const referenceFromUrl = searchParams.get('reference');
     const trxrefFromUrl = searchParams.get('trxref');
     const paymentReferenceFromUrl = referenceFromUrl || trxrefFromUrl;
 
     if (paymentReferenceFromUrl && !isProcessingPayment && !isVerifyingViaUrl) {
-      setIsVerifyingViaUrl(true); // Mark that verification is being handled by URL params
+      setIsVerifyingViaUrl(true); 
       handleVerifyPayment(paymentReferenceFromUrl).finally(() => {
         setIsVerifyingViaUrl(false);
       });
@@ -258,12 +256,10 @@ function MyListingsPageComponent() {
         agentId: user.id,
         purpose: 'property_promotion'
       },
-      // Callback URL is still useful for Paystack's records and potential fallbacks
       callbackUrl: `${window.location.origin}/agents/dashboard/my-listings` 
     };
 
     try {
-      // 1. Initialize payment on the backend to log it and get a valid reference
       const initResponse = await initializePayment(paymentDetailsForInit);
 
       if (!initResponse.success || !initResponse.data?.reference) {
@@ -272,9 +268,8 @@ function MyListingsPageComponent() {
         return;
       }
 
-      const paymentReference = initResponse.data.reference; // Use reference from backend
+      const paymentReference = initResponse.data.reference; 
       
-      // 2. Use PaystackPop for inline checkout
       if (window.PaystackPop) {
         const handler = window.PaystackPop.setup({
           key: PAYSTACK_PUBLIC_KEY,
@@ -282,20 +277,19 @@ function MyListingsPageComponent() {
           amount: selectedTier.fee * 100,
           ref: paymentReference,
           currency: 'NGN', 
-          metadata: paymentDetailsForInit.metadata, // Pass the same metadata
+          metadata: paymentDetailsForInit.metadata,
           callback: function(response: { reference: string }) {
-            // This callback is executed only upon successful authorization from Paystack
             console.log('Paystack popup success callback. Reference:', response.reference);
-            setIsPromoteDialogOpen(false);
-            handleVerifyPayment(response.reference); // Verify the payment on our backend
+            // setIsPromoteDialogOpen(false); // Dialog is already closed before iframe opens
+            handleVerifyPayment(response.reference);
           },
           onClose: function() {
             console.log('Paystack popup closed by user.');
             toast({ title: 'Payment Cancelled', description: 'You closed the payment popup.', variant: 'default' });
             setIsProcessingPayment(false);
-            // Optionally, re-enable the promote button if needed
           }
         });
+        setIsPromoteDialogOpen(false); // Close our dialog BEFORE opening Paystack's iframe
         handler.openIframe();
       } else {
         toast({ title: 'Error', description: 'Paystack library not loaded. Please refresh.', variant: 'destructive' });
@@ -306,7 +300,6 @@ function MyListingsPageComponent() {
       toast({ title: 'Error Initializing Payment', description: error.message, variant: 'destructive' });
       setIsProcessingPayment(false);
     }
-    // setIsProcessingPayment(false) will be handled by callbacks or errors
   };
 
 
@@ -443,18 +436,20 @@ function MyListingsPageComponent() {
                   <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p>
                 )}
               </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline" disabled={isProcessingPayment}>Cancel</Button>
-                </DialogClose>
-                <Button 
-                  onClick={handleInitiatePromotionPayment} 
-                  className="bg-yellow-500 hover:bg-yellow-600 text-black" 
-                  disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !PAYSTACK_PUBLIC_KEY}
-                >
-                  {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
-                </Button>
-              </DialogFooter>
+              <form onSubmit={(e) => e.preventDefault()}>
+                <DialogFooter>
+                    <DialogClose asChild>
+                    <Button variant="outline" disabled={isProcessingPayment}>Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                    onClick={handleInitiatePromotionPayment} 
+                    className="bg-yellow-500 hover:bg-yellow-600 text-black" 
+                    disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !PAYSTACK_PUBLIC_KEY}
+                    >
+                    {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
+                    </Button>
+                </DialogFooter>
+              </form>
                 {!PAYSTACK_PUBLIC_KEY && <p className="text-xs text-destructive text-center mt-2">Paystack Public Key not configured. Promotion disabled.</p>}
             </DialogContent>
           </Dialog>
@@ -487,4 +482,6 @@ export default function MyListingsPage() {
     </Suspense>
   );
 }
+    
+
     
