@@ -45,15 +45,17 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
       <CardHeader className="p-0 relative">
-        <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer" className="block w-full h-56 relative">
-          <Image
-            src={displayImage}
-            alt={property.title}
-            layout="fill"
-            objectFit="cover"
-            className="group-hover:scale-105 transition-transform"
-            data-ai-hint="house exterior building"
-          />
+        <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+          <a target="_blank" rel="noopener noreferrer" className="block w-full h-56 relative">
+            <Image
+              src={displayImage}
+              alt={property.title}
+              layout="fill"
+              objectFit="cover"
+              className="group-hover:scale-105 transition-transform"
+              data-ai-hint="house exterior building"
+            />
+          </a>
         </Link>
         <div className="absolute top-2 left-2 flex flex-col gap-1 items-start z-10">
             <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize flex items-center text-xs px-2 py-0.5 shadow-md">
@@ -70,10 +72,12 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
         </div>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-          <CardTitle className="text-xl font-headline mb-1 hover:text-primary transition-colors line-clamp-2">
-            {property.title}
-          </CardTitle>
+        <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+          <a target="_blank" rel="noopener noreferrer">
+            <CardTitle className="text-xl font-headline mb-1 hover:text-primary transition-colors line-clamp-2">
+              {property.title}
+            </CardTitle>
+          </a>
         </Link>
         <div className="flex items-center text-xs text-muted-foreground mb-0.5">
             <Hash className="w-3 h-3 mr-1" /> {property.human_readable_id || property.id.substring(0,8) + '...'}
@@ -106,10 +110,12 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
       </CardContent>
       <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
         <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
-            <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-                <span className="flex items-center"> {/* Ensures Link has a single child */}
-                    <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
-                </span>
+            <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+                <a target="_blank" rel="noopener noreferrer">
+                    <span className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
+                    </span>
+                </a>
             </Link>
         </Button>
         <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled className="flex items-center">

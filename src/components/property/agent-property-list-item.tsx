@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, BedDouble, Bath, Building2, Maximize, Eye, Edit3, Trash2, Star, AlertTriangle, CheckCircle, XCircle, MessageSquare, Hash, ListChecks, LayoutGrid, ArrowRight } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, Eye, Edit3, Trash2, Star, AlertTriangle, CheckCircle, XCircle, MessageSquare, Hash, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -15,7 +15,7 @@ interface AgentPropertyListItemProps {
   property: Property;
   onOpenDeleteDialog: (property: Property) => void;
   onOpenPromoteDialog: (property: Property) => void;
-  platformSettings: PlatformSettings | null; // Pass platform settings for promotion button logic
+  platformSettings: PlatformSettings | null;
 }
 
 const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDialog, platformSettings }: AgentPropertyListItemProps) => {
@@ -46,15 +46,17 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 w-full group">
       <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-start">
         <div className="relative w-full sm:w-48 h-48 sm:h-36 rounded-md overflow-hidden shrink-0">
-          <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-            <Image
-              src={displayImage}
-              alt={property.title}
-              layout="fill"
-              objectFit="cover"
-              className="hover:scale-105 transition-transform"
-              data-ai-hint="house exterior building"
-            />
+          <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+            <a target="_blank" rel="noopener noreferrer" className="block w-full h-full">
+              <Image
+                src={displayImage}
+                alt={property.title}
+                layout="fill"
+                objectFit="cover"
+                className="hover:scale-105 transition-transform"
+                data-ai-hint="house exterior building"
+              />
+            </a>
           </Link>
           <div className="absolute top-2 left-2 flex flex-col gap-1">
             <Badge variant={getStatusBadgeVariant(property.status)} className="capitalize flex items-center text-xs px-2 py-0.5 w-fit">
@@ -68,10 +70,12 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
           </div>
         </div>
         <div className="flex flex-col flex-grow">
-          <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-            <h2 className="text-xl font-headline mb-1 hover:text-primary transition-colors line-clamp-2">
-              {property.title}
-            </h2>
+          <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+            <a target="_blank" rel="noopener noreferrer">
+              <h2 className="text-xl font-headline mb-1 hover:text-primary transition-colors line-clamp-2">
+                {property.title}
+              </h2>
+            </a>
           </Link>
           <div className="flex items-center text-xs text-muted-foreground mb-0.5">
             <Hash className="w-3 h-3 mr-1" /> {property.human_readable_id || property.id.substring(0,8) + '...'}
@@ -101,10 +105,10 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
           </div>
           <div className="mt-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
-              <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-                <span className="flex items-center justify-center">
-                  <Eye className="h-4 w-4" />
-                </span>
+              <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+                <a target="_blank" rel="noopener noreferrer">
+                  <span className="flex items-center justify-center"> <Eye className="h-4 w-4" /> </span>
+                </a>
               </Link>
             </Button>
             <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled>
@@ -132,10 +136,12 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
               </Button>
             )}
              <Button asChild variant="default" size="sm" className="w-full sm:w-auto">
-              <Link href={`/properties/${property.id}`}>
-                <span className="inline-flex items-center">
-                  View Details <ArrowRight className="ml-2 h-4 w-4" />
-                </span>
+              <Link href={`/properties/${property.id}`} legacyBehavior passHref>
+                <a>
+                  <span className="inline-flex items-center">
+                    View Details <ArrowRight className="ml-2 h-4 w-4" />
+                  </span>
+                </a>
               </Link>
             </Button>
           </div>
