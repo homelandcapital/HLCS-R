@@ -21,8 +21,8 @@ const InitializePaymentInputSchema = z.object({
   email: z.string().email({ message: 'A valid email is required.' }),
   amountInKobo: z.coerce.number().int().positive({ message: 'Amount must be a positive integer in Kobo.' }),
   reference: z.string().min(1, { message: 'A unique payment reference is required.'}),
-  callbackUrl: z.string().url().optional().describe('Optional: URL to redirect to after payment. Define in your .env or pass per transaction.'),
-  metadata: MetadataSchema,
+  callbackUrl: z.string().url().optional().describe('Optional: URL to redirect to after payment for server-to-server. Not primary for inline.'),
+  metadata: MetadataSchema, // Expects metadata to be { custom_fields: [...] }
 });
 export type InitializePaymentInput = z.infer<typeof InitializePaymentInputSchema>;
 
@@ -51,7 +51,6 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
   
-  // The metadata object from input already contains custom_fields structured correctly.
   console.log(`[PaystackActions] Initializing payment for reference: ${reference} with metadata:`, JSON.stringify(metadata, null, 2));
 
   try {
@@ -65,7 +64,7 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
         email,
         amount: amountInKobo,
         reference,
-        callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL,
+        callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL, // For server-to-server if inline fails or for Paystack's records
         metadata: metadata, // Pass the already structured metadata directly
       }),
     });
@@ -105,14 +104,8 @@ export interface PaystackVerifiedPaymentData {
   currency: string;
   ip_address: string | null;
   metadata: {
-    property_id?: string; // Kept for potential direct access or other metadata structures
-    tier_id?: string;
-    tier_name?: string;
-    tier_fee?: number;
-    tier_duration?: any; 
-    agent_id?: string;
-    purpose?: string;
     custom_fields?: Array<{ display_name: string; variable_name: string; value: any }>;
+    // Allow other direct properties for flexibility, though custom_fields is preferred
     [key: string]: any; 
   };
   customer: {
@@ -184,19 +177,22 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     
     const paymentData = responseData.data as PaystackVerifiedPaymentData;
     console.log('[PaystackActions] verifyPayment: Full paymentData from Paystack:', JSON.stringify(paymentData, null, 2));
+    
     const isSuccessful = paymentData.status === 'success';
-
     let purposeFromMeta: string | undefined;
     const customFields = paymentData.metadata?.custom_fields;
 
     if (customFields && Array.isArray(customFields)) {
+        console.log('[PaystackActions] verifyPayment: custom_fields is an array:', JSON.stringify(customFields));
         purposeFromMeta = customFields.find(f => f.variable_name === 'purpose')?.value;
-    } else if (paymentData.metadata?.purpose) { // Fallback to direct metadata.purpose if custom_fields missing
+    } else if (paymentData.metadata?.purpose) { 
+        console.log('[PaystackActions] verifyPayment: custom_fields NOT an array or missing. Falling back to paymentData.metadata.purpose.');
         purposeFromMeta = paymentData.metadata.purpose;
+    } else {
+        console.log('[PaystackActions] verifyPayment: Could not find purpose in metadata or custom_fields.');
     }
     
     console.log('[PaystackActions] verifyPayment: isSuccessful:', isSuccessful, 'Purpose from metadata:', purposeFromMeta);
-
 
     if (isSuccessful && purposeFromMeta === 'property_promotion') {
       console.log('[PaystackActions] verifyPayment: Condition for property promotion met. Metadata:', JSON.stringify(paymentData.metadata, null, 2));
@@ -213,9 +209,9 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
         tier_name = customFields.find(f => f.variable_name === 'tier_name')?.value;
         tier_duration_from_meta = customFields.find(f => f.variable_name === 'tier_duration')?.value;
       } else {
-        console.log('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata. Trying direct access.');
+        console.warn('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata. This might cause issues if data is only in custom_fields.');
         // Fallback to direct metadata properties (less reliable for custom data from Paystack)
-        property_id = paymentData.metadata.property_id;
+        property_id = paymentData.metadata.property_id; // This might be undefined if data is only in custom_fields
         tier_id = paymentData.metadata.tier_id;
         tier_name = paymentData.metadata.tier_name;
         tier_duration_from_meta = paymentData.metadata.tier_duration;
@@ -253,7 +249,7 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
           console.error('[PaystackActions] verifyPayment: Error updating property promotion status in Supabase:', JSON.stringify(updateError, null, 2));
           return {
             success: true, 
-            message: `Payment verified successfully via Paystack, but failed to update property promotion status in our database: ${updateError.message}. Please contact support with reference: ${reference}.`,
+            message: `Payment verified successfully, but failed to update property promotion status in our database: ${updateError.message}. Please contact support with reference: ${reference}.`,
             data: paymentData,
             paymentSuccessful: true, 
           };
@@ -270,25 +266,32 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
         console.warn('[PaystackActions] verifyPayment: Successful property promotion payment verified, but missing necessary metadata to update property or tier_duration is invalid.', { property_id, tier_id, tier_name, tier_duration_from_meta, tier_duration });
         return {
           success: true, 
-          message: 'Payment verified successfully, but property update failed due to missing or invalid metadata. Please contact support.',
+          message: `Payment verified, but essential details (property ID, tier ID/Name, or valid duration) were missing/invalid in Paystack's metadata. DB not updated. Ref: ${reference}. Details: P_ID=${property_id}, T_ID=${tier_id}, T_Name=${tier_name}, T_Dur=${tier_duration}`,
           data: paymentData,
           paymentSuccessful: true,
         };
       }
     } else {
-        console.log('[PaystackActions] verifyPayment: Condition for property promotion NOT met or payment not successful.', { isSuccessful, metadataPurpose: purposeFromMeta });
+        let detailedMessage = responseData.message;
+        if (isSuccessful && purposeFromMeta !== 'property_promotion') {
+            detailedMessage = `Payment successful via Paystack, but the transaction purpose was '${purposeFromMeta || "not set"}', not 'property_promotion'. Property promotion status in DB not updated. Ref: ${reference}.`;
+            console.log('[PaystackActions] verifyPayment:', detailedMessage);
+        } else if (!isSuccessful) {
+            detailedMessage = `Payment was not successful according to Paystack. Status: ${paymentData.status}. DB not updated. Ref: ${reference}.`;
+            console.log('[PaystackActions] verifyPayment:', detailedMessage);
+        } else {
+            console.log('[PaystackActions] verifyPayment: Condition for property promotion NOT met or payment not successful (unknown reason if purpose was correct).', { isSuccessful, metadataPurpose: purposeFromMeta });
+        }
+        return {
+          success: true, 
+          message: detailedMessage, 
+          data: paymentData,
+          paymentSuccessful: isSuccessful,
+        };
     }
 
-    return {
-      success: true, 
-      message: responseData.message, 
-      data: paymentData,
-      paymentSuccessful: isSuccessful,
-    };
   } catch (error: any) {
     console.error('[PaystackActions] Error verifying Paystack payment:', error);
-    return { success: false, message: `An unexpected error occurred: ${error.message}` };
+    return { success: false, message: `An unexpected error occurred during verification: ${error.message}` };
   }
 }
-
-    
