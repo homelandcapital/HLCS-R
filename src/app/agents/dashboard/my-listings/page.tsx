@@ -38,7 +38,7 @@ function generateCustomPaystackReference(): string {
   const hours = String(now.getHours()).padStart(2, '0'); // HH
   const minutes = String(now.getMinutes()).padStart(2, '0'); // MM (minutes)
   const seconds = String(now.getSeconds()).padStart(2, '0'); // SS
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM (month, 0-indexed)
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM_month (0-indexed)
   
   return `Promo-${year}${day}${hours}${minutes}${seconds}${month}`;
 }
@@ -148,7 +148,7 @@ function MyListingsPageComponent() {
     try {
       const response = await verifyPayment({ reference });
       if (response.success && response.paymentSuccessful) {
-        toast({ title: 'Promotion Activated!', description: `Property promotion for property ID ending ...${response.data?.metadata?.property_id?.slice(-8)} is now active.`, variant: 'default' });
+        toast({ title: 'Promotion Activated!', description: `Property promotion for property ID ending ...${response.data?.metadata?.property_id?.slice(-8) || response.data?.metadata?.custom_fields?.find(f => f.variable_name === 'property_id')?.value?.slice(-8)} is now active.`, variant: 'default' });
         if (user && user.role === 'agent') fetchAgentProperties(user.id); 
       } else if (response.success && !response.paymentSuccessful) {
         toast({ title: 'Payment Not Successful', description: `Paystack reported transaction ${reference} as ${response.data?.status}.`, variant: 'default' });
@@ -243,24 +243,29 @@ function MyListingsPageComponent() {
     setIsProcessingPayment(true);
     const transactionReference = generateCustomPaystackReference();
 
-    const paymentDetailsForInit: InitializePaymentInput = {
+    const metadataForPaystack = {
+        custom_fields: [
+            { display_name: "Property ID", variable_name: "property_id", value: propertyToPromote.id },
+            { display_name: "Tier ID", variable_name: "tier_id", value: selectedTier.id },
+            { display_name: "Tier Name", variable_name: "tier_name", value: selectedTier.name },
+            { display_name: "Tier Fee NGN", variable_name: "tier_fee", value: selectedTier.fee.toString() },
+            { display_name: "Tier Duration Days", variable_name: "tier_duration", value: selectedTier.duration.toString() },
+            { display_name: "Agent ID", variable_name: "agent_id", value: user.id },
+            { display_name: "Purpose", variable_name: "purpose", value: "property_promotion" },
+        ],
+        property_title_for_display: propertyToPromote.title.substring(0, 100), // Optional: for display on Paystack page
+    };
+
+    const paymentDetailsForServerAction: InitializePaymentInput = {
       email: user.email,
       amountInKobo: selectedTier.fee * 100, 
       reference: transactionReference,
-      metadata: {
-        propertyId: propertyToPromote.id,
-        tierId: selectedTier.id,
-        tierName: selectedTier.name,
-        tierFee: selectedTier.fee,
-        tierDuration: selectedTier.duration,
-        agentId: user.id,
-        purpose: 'property_promotion'
-      },
+      metadata: metadataForPaystack, // Send the already formatted metadata
       callbackUrl: `${window.location.origin}/agents/dashboard/my-listings` 
     };
 
     try {
-      const initResponse = await initializePayment(paymentDetailsForInit);
+      const initResponse = await initializePayment(paymentDetailsForServerAction);
 
       if (!initResponse.success || !initResponse.data?.reference) {
         toast({ title: 'Payment Initialization Failed', description: initResponse.message || "Could not get payment reference.", variant: 'destructive' });
@@ -268,19 +273,18 @@ function MyListingsPageComponent() {
         return;
       }
 
-      const paymentReference = initResponse.data.reference; 
+      const paymentReferenceFromServer = initResponse.data.reference; 
       
       if (window.PaystackPop) {
         const handler = window.PaystackPop.setup({
           key: PAYSTACK_PUBLIC_KEY,
           email: user.email,
           amount: selectedTier.fee * 100,
-          ref: paymentReference,
+          ref: paymentReferenceFromServer, // Use reference from our backend
           currency: 'NGN', 
-          metadata: paymentDetailsForInit.metadata,
+          metadata: metadataForPaystack, // Pass the custom_fields structured metadata
           callback: function(response: { reference: string }) {
             console.log('Paystack popup success callback. Reference:', response.reference);
-            // setIsPromoteDialogOpen(false); // Dialog is already closed before iframe opens
             handleVerifyPayment(response.reference);
           },
           onClose: function() {
@@ -289,7 +293,7 @@ function MyListingsPageComponent() {
             setIsProcessingPayment(false);
           }
         });
-        setIsPromoteDialogOpen(false); // Close our dialog BEFORE opening Paystack's iframe
+        setIsPromoteDialogOpen(false); 
         handler.openIframe();
       } else {
         toast({ title: 'Error', description: 'Paystack library not loaded. Please refresh.', variant: 'destructive' });

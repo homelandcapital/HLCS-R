@@ -2,31 +2,27 @@
 'use server';
 
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient'; // Ensure Supabase client is available
+import { supabase } from '@/lib/supabaseClient'; 
 import { addDays } from 'date-fns';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
-// Schema for initializing payment
+const CustomFieldSchema = z.object({
+  display_name: z.string(),
+  variable_name: z.string(),
+  value: z.any(), 
+});
+
+const MetadataSchema = z.object({
+  custom_fields: z.array(CustomFieldSchema).min(1, "custom_fields array cannot be empty"),
+}).passthrough(); // .passthrough() allows other top-level keys if needed for display
+
 const InitializePaymentInputSchema = z.object({
   email: z.string().email({ message: 'A valid email is required.' }),
   amountInKobo: z.coerce.number().int().positive({ message: 'Amount must be a positive integer in Kobo.' }),
   reference: z.string().min(1, { message: 'A unique payment reference is required.'}),
   callbackUrl: z.string().url().optional().describe('Optional: URL to redirect to after payment. Define in your .env or pass per transaction.'),
-  metadata: z.object({
-    propertyId: z.string().uuid({ message: "Valid Property ID is required in metadata."}),
-    tierId: z.string({ message: "Tier ID is required in metadata."}),
-    tierName: z.string({ message: "Tier Name is required in metadata."}),
-    tierFee: z.number({ message: "Tier Fee is required in metadata."}), // Original fee in NGN
-    tierDuration: z.number().int().positive({ message: "Tier Duration in days is required in metadata."}),
-    agentId: z.string().uuid({ message: "Agent ID is required in metadata."}),
-    purpose: z.literal('property_promotion', { message: "Purpose must be 'property_promotion'."}),
-    custom_fields: z.array(z.object({ // Paystack's standard metadata structure
-        display_name: z.string(),
-        variable_name: z.string(),
-        value: z.any(),
-    })).optional()
-  }).passthrough(), 
+  metadata: MetadataSchema,
 });
 export type InitializePaymentInput = z.infer<typeof InitializePaymentInputSchema>;
 
@@ -55,26 +51,8 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
   
-  // Ensure tier_id and tier_duration are included in custom_fields
-  const paystackMetadata = {
-    property_id: metadata.propertyId,
-    tier_id: metadata.tierId,
-    tier_name: metadata.tierName,
-    tier_fee: metadata.tierFee,
-    tier_duration: metadata.tierDuration,
-    agent_id: metadata.agentId,
-    purpose: metadata.purpose,
-    custom_fields: [
-      { display_name: "Property ID", variable_name: "property_id", value: metadata.propertyId },
-      { display_name: "Tier ID", variable_name: "tier_id", value: metadata.tierId },
-      { display_name: "Tier Name", variable_name: "tier_name", value: metadata.tierName },
-      { display_name: "Tier Duration", variable_name: "tier_duration", value: metadata.tierDuration.toString() }, // Ensure value is string for custom_fields
-      { display_name: "Agent ID", variable_name: "agent_id", value: metadata.agentId },
-      { display_name: "Purpose", variable_name: "purpose", value: metadata.purpose },
-    ],
-  };
-
-  console.log(`[PaystackActions] Initializing payment for reference: ${reference} with metadata:`, JSON.stringify(paystackMetadata, null, 2));
+  // The metadata object from input already contains custom_fields structured correctly.
+  console.log(`[PaystackActions] Initializing payment for reference: ${reference} with metadata:`, JSON.stringify(metadata, null, 2));
 
   try {
     const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
@@ -88,7 +66,7 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
         amount: amountInKobo,
         reference,
         callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL,
-        metadata: paystackMetadata, // Send the combined metadata
+        metadata: metadata, // Pass the already structured metadata directly
       }),
     });
 
@@ -127,7 +105,7 @@ export interface PaystackVerifiedPaymentData {
   currency: string;
   ip_address: string | null;
   metadata: {
-    property_id?: string;
+    property_id?: string; // Kept for potential direct access or other metadata structures
     tier_id?: string;
     tier_name?: string;
     tier_fee?: number;
@@ -208,15 +186,26 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     console.log('[PaystackActions] verifyPayment: Full paymentData from Paystack:', JSON.stringify(paymentData, null, 2));
     const isSuccessful = paymentData.status === 'success';
 
-    if (isSuccessful && paymentData.metadata?.purpose === 'property_promotion') {
+    let purposeFromMeta: string | undefined;
+    const customFields = paymentData.metadata?.custom_fields;
+
+    if (customFields && Array.isArray(customFields)) {
+        purposeFromMeta = customFields.find(f => f.variable_name === 'purpose')?.value;
+    } else if (paymentData.metadata?.purpose) { // Fallback to direct metadata.purpose if custom_fields missing
+        purposeFromMeta = paymentData.metadata.purpose;
+    }
+    
+    console.log('[PaystackActions] verifyPayment: isSuccessful:', isSuccessful, 'Purpose from metadata:', purposeFromMeta);
+
+
+    if (isSuccessful && purposeFromMeta === 'property_promotion') {
       console.log('[PaystackActions] verifyPayment: Condition for property promotion met. Metadata:', JSON.stringify(paymentData.metadata, null, 2));
       
       let property_id: string | undefined;
       let tier_id: string | undefined;
       let tier_name: string | undefined;
-      let tier_duration_from_meta: any; // Can be string or number
+      let tier_duration_from_meta: any; 
 
-      const customFields = paymentData.metadata.custom_fields;
       if (customFields && Array.isArray(customFields)) {
         console.log('[PaystackActions] verifyPayment: Attempting to extract from custom_fields array.');
         property_id = customFields.find(f => f.variable_name === 'property_id')?.value;
@@ -224,24 +213,11 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
         tier_name = customFields.find(f => f.variable_name === 'tier_name')?.value;
         tier_duration_from_meta = customFields.find(f => f.variable_name === 'tier_duration')?.value;
       } else {
-        console.log('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata.');
-      }
-
-      // Fallback to direct metadata properties if not found in custom_fields (or if custom_fields itself is missing)
-      if (!property_id && paymentData.metadata.property_id) {
-        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.property_id');
+        console.log('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata. Trying direct access.');
+        // Fallback to direct metadata properties (less reliable for custom data from Paystack)
         property_id = paymentData.metadata.property_id;
-      }
-      if (!tier_id && paymentData.metadata.tier_id) {
-        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_id');
         tier_id = paymentData.metadata.tier_id;
-      }
-      if (!tier_name && paymentData.metadata.tier_name) {
-        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_name');
         tier_name = paymentData.metadata.tier_name;
-      }
-      if (tier_duration_from_meta === undefined && paymentData.metadata.tier_duration !== undefined) {
-        console.log('[PaystackActions] verifyPayment: Fallback: using paymentData.metadata.tier_duration');
         tier_duration_from_meta = paymentData.metadata.tier_duration;
       }
       
@@ -275,16 +251,14 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
 
         if (updateError) {
           console.error('[PaystackActions] verifyPayment: Error updating property promotion status in Supabase:', JSON.stringify(updateError, null, 2));
-          // Even if DB update fails, Paystack payment was successful.
           return {
             success: true, 
             message: `Payment verified successfully via Paystack, but failed to update property promotion status in our database: ${updateError.message}. Please contact support with reference: ${reference}.`,
             data: paymentData,
-            paymentSuccessful: true, // Paystack payment was successful
+            paymentSuccessful: true, 
           };
         }
         console.log(`[PaystackActions] verifyPayment: Property ${property_id} successfully promoted in Supabase with tier ${tier_name}.`);
-        // If DB update is successful, this is the ideal success message.
         return {
             success: true,
             message: `Payment verified and property ${property_id} successfully promoted.`,
@@ -295,19 +269,19 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
       } else {
         console.warn('[PaystackActions] verifyPayment: Successful property promotion payment verified, but missing necessary metadata to update property or tier_duration is invalid.', { property_id, tier_id, tier_name, tier_duration_from_meta, tier_duration });
         return {
-          success: true, // Paystack payment was successful
+          success: true, 
           message: 'Payment verified successfully, but property update failed due to missing or invalid metadata. Please contact support.',
           data: paymentData,
           paymentSuccessful: true,
         };
       }
     } else {
-        console.log('[PaystackActions] verifyPayment: Condition for property promotion NOT met or payment not successful.', { isSuccessful, metadataPurpose: paymentData.metadata?.purpose });
+        console.log('[PaystackActions] verifyPayment: Condition for property promotion NOT met or payment not successful.', { isSuccessful, metadataPurpose: purposeFromMeta });
     }
 
     return {
-      success: true, // Default to true if Paystack API call itself was fine
-      message: responseData.message, // Original Paystack message
+      success: true, 
+      message: responseData.message, 
       data: paymentData,
       paymentSuccessful: isSuccessful,
     };
