@@ -336,8 +336,7 @@ export default function PropertyDetailsPage() {
                 </Avatar>
                 <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
                 {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
-                {agent.phone && <div className="flex items-center text-sm text-foreground"> <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone} </div> }
-                {agent.email && <div className="flex items-center text-sm text-foreground"> <Mail className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.email} </div> }
+                {/* Phone and Email removed from here */}
               </CardContent>
             </Card>
           )}
