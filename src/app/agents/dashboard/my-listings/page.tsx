@@ -2,14 +2,14 @@
 // src/app/agents/dashboard/my-listings/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Property, Agent, PromotionTierConfig, UserRole, PlatformSettings } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Script from 'next/script';
-import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, Star, LayoutGrid, List } from 'lucide-react';
+import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, Star, LayoutGrid, List, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ import AgentPropertyGridItem from '@/components/property/agent-property-grid-ite
 import AgentPropertyListItem from '@/components/property/agent-property-list-item';
 import { initializePayment, verifyPayment } from '@/actions/paystack-actions';
 import type { InitializePaymentInput } from '@/actions/paystack-actions';
-import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 
 
@@ -33,14 +33,13 @@ declare global {
 
 function generateCustomPaystackReference(propertyIdSuffix: string, tierId: string): string {
   const now = new Date();
-  const year = now.getFullYear().toString().slice(-2); // YY
-  const day = now.getDate().toString().padStart(2, '0'); // DD
-  const hours = now.getHours().toString().padStart(2, '0'); // HH
-  const minutes = now.getMinutes().toString().padStart(2, '0'); // MM (minutes)
-  const seconds = now.getSeconds().toString().padStart(2, '0'); // SS
-  const month = (now.getMonth() + 1).toString().padStart(2, '0'); // MM (month)
+  const year = now.getFullYear().toString().slice(-2); 
+  const day = now.getDate().toString().padStart(2, '0'); 
+  const hours = now.getHours().toString().padStart(2, '0'); 
+  const minutes = now.getMinutes().toString().padStart(2, '0'); 
+  const seconds = now.getSeconds().toString().padStart(2, '0'); 
+  const month = (now.getMonth() + 1).toString().padStart(2, '0'); 
   
-  // Limit propertyIdSuffix to avoid overly long refs; Paystack might have limits.
   const shortPropId = propertyIdSuffix.substring(0, 8); 
   return `Promo-${year}${day}${hours}${minutes}${seconds}${month}_${shortPropId}_${tierId}`;
 }
@@ -61,14 +60,13 @@ export default function MyListingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [isVerifyingViaUrl, setIsVerifyingViaUrl] = useState(false); // New state
+  const [isVerifyingViaUrl, setIsVerifyingViaUrl] = useState(false); 
   const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
 
 
   const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
   const fetchPlatformSettings = useCallback(async () => {
-    // console.log('[MyListingsPage] Fetching platform settings...');
     const { data: dbSettings, error: settingsError } = await supabase
       .from('platform_settings')
       .select('*')
@@ -76,8 +74,7 @@ export default function MyListingsPage() {
       .single();
 
     if (settingsError || !dbSettings) {
-      console.warn("[MyListingsPage] Error fetching platform settings or no settings found, using mock:", settingsError?.message);
-      // Fallback to mock/default settings is fine for UI, but promotion won't work without real tiers
+      console.warn("[MyListingsPage] Error fetching platform settings or no settings found:", settingsError?.message);
     } else {
         const promotionTiersFromDb = Array.isArray(dbSettings.promotion_tiers) 
             ? dbSettings.promotion_tiers as PromotionTierConfig[]
@@ -92,7 +89,6 @@ export default function MyListingsPage() {
 
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
-    // console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`);
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
@@ -102,7 +98,6 @@ export default function MyListingsPage() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("[MyListingsPage] Error fetching agent's properties:", error);
       toast({ title: 'Error', description: 'Could not fetch your listings.', variant: 'destructive' });
       setAgentProperties([]);
     } else if (data) {
@@ -113,29 +108,25 @@ export default function MyListingsPage() {
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
       })) as Property[];
       setAgentProperties(formattedProperties);
-      // console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`);
     }
     setPageLoading(false);
   }, [toast]);
 
   const handleVerifyPayment = useCallback(async (reference: string) => {
-    // console.log(`[MyListingsPage] handleVerifyPayment called with reference: ${reference}`);
     if (!user || user.role !== 'agent') return;
     setIsProcessingPayment(true);
 
     const response = await verifyPayment(reference);
-    // console.log('[MyListingsPage] verifyPayment server action response:', response);
 
     if (response.success && response.paymentSuccessful) {
       toast({ title: 'Promotion Activated!', description: response.message });
-      // console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
       fetchAgentProperties(user.id);
     } else {
       toast({ title: 'Promotion Verification Failed', description: response.message || 'Could not verify payment.', variant: 'destructive' });
     }
     setIsProcessingPayment(false);
-    setIsVerifyingViaUrl(false); // Reset URL verification flag
-    router.replace('/agents/dashboard/my-listings', undefined); // Remove query params
+    setIsVerifyingViaUrl(false); 
+    router.replace('/agents/dashboard/my-listings', undefined); 
   }, [user, fetchAgentProperties, toast, router]);
 
 
@@ -150,14 +141,12 @@ export default function MyListingsPage() {
 
    useEffect(() => {
     const reference = searchParams.get('reference') || searchParams.get('trxref');
-    // console.log(`[MyListingsPage] useEffect for URL verification. Ref: ${reference}, isProcessingPayment: ${isProcessingPayment}, isVerifyingViaUrl: ${isVerifyingViaUrl}`);
     if (reference && !isProcessingPayment && !isVerifyingViaUrl) {
-      // console.log(`[MyListingsPage] Found reference in URL: ${reference}. Initiating verification via URL.`);
-      setIsVerifyingViaUrl(true); // Set flag to true before calling
+      setIsVerifyingViaUrl(true); 
       handleVerifyPayment(reference);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isProcessingPayment, handleVerifyPayment]); // isVerifyingViaUrl is intentionally not in deps
+  }, [searchParams, isProcessingPayment, handleVerifyPayment]);
 
 
   const openDeleteDialog = (property: Property) => {
@@ -166,7 +155,6 @@ export default function MyListingsPage() {
   };
 
   const handleConfirmDelete = async () => {
-    // ... (existing delete logic remains the same)
     if (!propertyToDelete || !user || user.role !== 'agent') return;
     if (propertyToDelete.agent_id !== user.id) {
         toast({ title: "Unauthorized", description: "You can only delete your own listings.", variant: "destructive" });
@@ -229,7 +217,7 @@ export default function MyListingsPage() {
             { display_name: "Agent ID", variable_name: "agent_id", value: user.id },
             { display_name: "Purpose", variable_name: "purpose", value: "property_promotion" }
         ],
-        property_title_for_display: propertyToPromote.title // Optional, for Paystack's display
+        property_title_for_display: propertyToPromote.title 
     };
     
     const paymentDetailsForServerAction: InitializePaymentInput = {
@@ -237,12 +225,10 @@ export default function MyListingsPage() {
       amountInKobo: selectedTier.fee * 100,
       reference: uniqueReference,
       metadata: metadataForPaystack,
-      callbackUrl: `${window.location.origin}${window.location.pathname}` // Current page as callback
+      callbackUrl: `${window.location.origin}${window.location.pathname}` 
     };
-    // console.log('[MyListingsPage] Payment details for server action (initializePayment):', JSON.stringify(paymentDetailsForServerAction, null, 2));
 
     const initResponse = await initializePayment(paymentDetailsForServerAction);
-    // console.log('[MyListingsPage] initializePayment server action response:', initResponse);
 
     if (!initResponse.success || !initResponse.data) {
       toast({ title: "Payment Initialization Failed", description: initResponse.message, variant: "destructive" });
@@ -251,20 +237,18 @@ export default function MyListingsPage() {
     }
     
     if (window.PaystackPop && paystackScriptLoaded) {
-      setIsPromoteDialogOpen(false); // Close modal before opening Paystack
+      setIsPromoteDialogOpen(false); 
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: user.email,
         amount: selectedTier.fee * 100,
-        ref: initResponse.data.reference, // Use reference from backend
+        ref: initResponse.data.reference, 
         metadata: metadataForPaystack,
         channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
         callback: function(response: any) {
-          // console.log('Paystack popup success callback. Reference:', response.reference);
           handleVerifyPayment(response.reference);
         },
         onClose: function() {
-          // console.log('Paystack popup closed by user.');
           toast({ title: "Payment Canceled", description: "You closed the payment window.", variant: "default" });
           setIsProcessingPayment(false);
         },
@@ -308,7 +292,6 @@ export default function MyListingsPage() {
         src="https://js.paystack.co/v1/inline.js"
         strategy="lazyOnload"
         onLoad={() => {
-          // console.log('Paystack script loaded.');
           setPaystackScriptLoaded(true);
         }}
         onError={(e) => {
@@ -323,7 +306,15 @@ export default function MyListingsPage() {
           <div className="flex items-center gap-2 self-start sm:self-center">
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} aria-label="Grid view" title="Grid view"> <LayoutGrid className="h-5 w-5" /> </Button>
             <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')} aria-label="List view" title="List view"> <List className="h-5 w-5" /> </Button>
-            <Button asChild> <Link href="/agents/dashboard/add-property"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span> </Link> </Button>
+            <Button asChild>
+              <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
+                <a>
+                  <span className="inline-flex items-center">
+                    <PlusCircle className="mr-2 h-5 w-5" /> Add New Listing
+                  </span>
+                </a>
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -334,7 +325,13 @@ export default function MyListingsPage() {
         )}
 
         {agentProperties.length === 0 ? (
-          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-property"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span> </Link> </Button> </CardContent> </Card>
+          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg">
+            <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
+              <a>
+                <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span>
+              </a>
+            </Link>
+          </Button> </CardContent> </Card>
         ) : (
           <div className={cn( viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4' )}>
             {agentProperties.map(property =>
