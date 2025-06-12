@@ -39,7 +39,7 @@ function generateCustomPaystackReference(): string {
   const minutes = String(now.getMinutes()).padStart(2, '0'); // MM (minutes)
   const seconds = String(now.getSeconds()).padStart(2, '0'); // SS
   const month = String(now.getMonth() + 1).padStart(2, '0'); // MM_month (0-indexed)
-  
+
   return `Promo-${year}${day}${hours}${minutes}${seconds}${month}`;
 }
 
@@ -66,7 +66,7 @@ function MyListingsPageComponent() {
     const { data: dbSettings, error: settingsError } = await supabase
       .from('platform_settings')
       .select('*')
-      .eq('id', 1) 
+      .eq('id', 1)
       .single();
 
     if (settingsError || !dbSettings) {
@@ -87,7 +87,7 @@ function MyListingsPageComponent() {
       };
       setPlatformSettings(mockSettings);
     } else {
-        const promotionTiersFromDb = Array.isArray(dbSettings.promotion_tiers) 
+        const promotionTiersFromDb = Array.isArray(dbSettings.promotion_tiers)
             ? dbSettings.promotion_tiers as PromotionTierConfig[]
             : [];
 
@@ -103,7 +103,7 @@ function MyListingsPageComponent() {
 
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
-    console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`);
+    // console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`); // Essential log
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
@@ -128,7 +128,7 @@ function MyListingsPageComponent() {
         promotion_expires_at: p.promotion_expires_at,
       })) as Property[];
       setAgentProperties(formattedProperties);
-      console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`);
+      // console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`); // Essential log
     }
     setPageLoading(false);
   }, [toast]);
@@ -146,7 +146,7 @@ function MyListingsPageComponent() {
   const handleVerifyPayment = useCallback(async (reference: string) => {
     if (!reference) return;
     console.log(`[MyListingsPage] handleVerifyPayment called with reference: ${reference}`);
-    setIsProcessingPayment(true); 
+    setIsProcessingPayment(true);
     toast({ title: 'Verifying Payment...', description: `Checking status for transaction: ${reference}` });
     try {
       const response = await verifyPayment({ reference });
@@ -156,7 +156,7 @@ function MyListingsPageComponent() {
         toast({ title: 'Promotion Activated!', description: response.message || `Property promotion is now active. Refreshing listings...`, variant: 'default', duration: 7000 });
         if (user && user.role === 'agent') {
           console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
-          fetchAgentProperties(user.id); 
+          fetchAgentProperties(user.id);
         }
       } else {
         toast({ title: 'Verification Issue', description: response.message || 'Could not verify payment or payment was not successful.', variant: response.success ? 'default' : 'destructive', duration: 7000 });
@@ -167,7 +167,7 @@ function MyListingsPageComponent() {
     } finally {
       setIsProcessingPayment(false);
       const currentPath = window.location.pathname;
-      router.replace(currentPath, { scroll: false }); // Remove query params from URL
+      router.replace(currentPath, { scroll: false });
     }
   }, [toast, fetchAgentProperties, user, router]);
 
@@ -178,8 +178,8 @@ function MyListingsPageComponent() {
     const paymentReferenceFromUrl = referenceFromUrl || trxrefFromUrl;
 
     if (paymentReferenceFromUrl && !isProcessingPayment && !isVerifyingViaUrl) {
-      console.log(`[MyListingsPage] useEffect detected payment reference in URL: ${paymentReferenceFromUrl}`);
-      setIsVerifyingViaUrl(true); 
+      // console.log(`[MyListingsPage] useEffect detected payment reference in URL: ${paymentReferenceFromUrl}`); // Debug log
+      setIsVerifyingViaUrl(true);
       handleVerifyPayment(paymentReferenceFromUrl).finally(() => {
         setIsVerifyingViaUrl(false);
       });
@@ -266,16 +266,16 @@ function MyListingsPageComponent() {
 
     const paymentDetailsForServerAction: InitializePaymentInput = {
       email: user.email,
-      amountInKobo: selectedTier.fee * 100, 
+      amountInKobo: selectedTier.fee * 100,
       reference: transactionReference,
-      metadata: metadataForPaystack, 
-      callbackUrl: `${window.location.origin}/agents/dashboard/my-listings` 
+      metadata: metadataForPaystack,
+      callbackUrl: `${window.location.origin}/agents/dashboard/my-listings`
     };
-    console.log("[MyListingsPage] Payment details for server action (initializePayment):", JSON.stringify(paymentDetailsForServerAction, null, 2));
+    // console.log("[MyListingsPage] Payment details for server action (initializePayment):", JSON.stringify(paymentDetailsForServerAction, null, 2)); // Debug log
 
     try {
       const initResponse = await initializePayment(paymentDetailsForServerAction);
-      console.log("[MyListingsPage] initializePayment server action response:", initResponse);
+      // console.log("[MyListingsPage] initializePayment server action response:", initResponse); // Debug log
 
       if (!initResponse.success || !initResponse.data?.reference) {
         toast({ title: 'Payment Initialization Failed', description: initResponse.message || "Could not get payment reference.", variant: 'destructive' });
@@ -283,24 +283,24 @@ function MyListingsPageComponent() {
         return;
       }
 
-      const paymentReferenceFromServer = initResponse.data.reference; 
-      
+      const paymentReferenceFromServer = initResponse.data.reference;
+
       if (window.PaystackPop) {
-        setIsPromoteDialogOpen(false);
+        setIsPromoteDialogOpen(false); // Close dialog before opening Paystack popup
         const handler = window.PaystackPop.setup({
           key: PAYSTACK_PUBLIC_KEY,
           email: user.email,
           amount: selectedTier.fee * 100,
-          ref: paymentReferenceFromServer, 
-          currency: 'NGN', 
-          metadata: metadataForPaystack, 
+          ref: paymentReferenceFromServer,
+          currency: 'NGN',
+          metadata: metadataForPaystack,
           channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
           callback: function(response: { reference: string }) {
-            console.log('Paystack popup success callback. Reference:', response.reference);
+            console.log('Paystack popup success callback. Reference:', response.reference); // Essential log
             handleVerifyPayment(response.reference);
           },
           onClose: function() {
-            console.log('Paystack popup closed by user.');
+            // console.log('Paystack popup closed by user.'); // Debug log
             toast({ title: 'Payment Cancelled', description: 'You closed the payment popup.', variant: 'default' });
             setIsProcessingPayment(false);
           }
@@ -457,9 +457,9 @@ function MyListingsPageComponent() {
                     <DialogClose asChild>
                     <Button variant="outline" disabled={isProcessingPayment}>Cancel</Button>
                     </DialogClose>
-                    <Button 
-                    onClick={handleInitiatePromotionPayment} 
-                    className="bg-yellow-500 hover:bg-yellow-600 text-black" 
+                    <Button
+                    onClick={handleInitiatePromotionPayment}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-black"
                     disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !PAYSTACK_PUBLIC_KEY}
                     >
                     {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
@@ -498,6 +498,3 @@ export default function MyListingsPage() {
     </Suspense>
   );
 }
-    
-
-    
