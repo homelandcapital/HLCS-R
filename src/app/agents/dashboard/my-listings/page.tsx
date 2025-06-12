@@ -2,25 +2,48 @@
 // src/app/agents/dashboard/my-listings/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 import type { Property, Agent, PromotionTierConfig, UserRole, PlatformSettings } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, CheckCircle, XCircle, MessageSquare, Star, Hash, LayoutGrid, List } from 'lucide-react';
+import Script from 'next/script';
+import { Edit3, Trash2, Eye, PlusCircle, ListChecks, AlertTriangle, Star, LayoutGrid, List } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/lib/supabaseClient';
-import AgentPropertyGridItem from '@/components/property/agent-property-grid-item'; // For Grid View
-import AgentPropertyListItem from '@/components/property/agent-property-list-item'; // For List View
-import { addDays, formatISO } from 'date-fns';
+import AgentPropertyGridItem from '@/components/property/agent-property-grid-item';
+import AgentPropertyListItem from '@/components/property/agent-property-list-item';
+import { initializePayment, verifyPayment } from '@/actions/paystack-actions';
+import type { InitializePaymentInput } from '@/actions/paystack-actions';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
+import { format } from 'date-fns';
+
+
+declare global {
+  interface Window {
+    PaystackPop?: any;
+  }
+}
+
+function generateCustomPaystackReference(propertyIdSuffix: string, tierId: string): string {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2); // YY
+  const day = now.getDate().toString().padStart(2, '0'); // DD
+  const hours = now.getHours().toString().padStart(2, '0'); // HH
+  const minutes = now.getMinutes().toString().padStart(2, '0'); // MM (minutes)
+  const seconds = now.getSeconds().toString().padStart(2, '0'); // SS
+  const month = (now.getMonth() + 1).toString().padStart(2, '0'); // MM (month)
+  
+  // Limit propertyIdSuffix to avoid overly long refs; Paystack might have limits.
+  const shortPropId = propertyIdSuffix.substring(0, 8); 
+  return `Promo-${year}${day}${hours}${minutes}${seconds}${month}_${shortPropId}_${tierId}`;
+}
 
 
 export default function MyListingsPage() {
@@ -35,8 +58,17 @@ export default function MyListingsPage() {
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isVerifyingViaUrl, setIsVerifyingViaUrl] = useState(false); // New state
+  const [paystackScriptLoaded, setPaystackScriptLoaded] = useState(false);
+
+
+  const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
   const fetchPlatformSettings = useCallback(async () => {
+    // console.log('[MyListingsPage] Fetching platform settings...');
     const { data: dbSettings, error: settingsError } = await supabase
       .from('platform_settings')
       .select('*')
@@ -44,76 +76,89 @@ export default function MyListingsPage() {
       .single();
 
     if (settingsError || !dbSettings) {
-      console.warn("Error fetching platform settings or no settings found, using mock:", settingsError?.message);
-      const mockSettings: PlatformSettings = {
-          promotionsEnabled: true,
-          promotionTiers: [
-              { id: 'basic', name: 'Basic Boost', fee: 5000, duration: 7, description: 'Standard visibility boost for 7 days.' },
-              { id: 'premium', name: 'Premium Spotlight', fee: 12000, duration: 14, description: 'Enhanced visibility and higher placement for 14 days.' },
-              { id: 'ultimate', name: 'Ultimate Feature', fee: 25000, duration: 30, description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
-          ],
-          siteName: 'Homeland Capital',
-          defaultCurrency: 'NGN',
-          maintenanceMode: false,
-          notificationEmail: 'admin@homelandcapital.com',
-          predefinedAmenities: "Pool, Garage, Gym, Air Conditioning, Balcony, Hardwood Floors, Borehole, Standby Generator, Security Post",
-          propertyTypes: ['House', 'Apartment', 'Land', 'Shortlet'],
-      };
-      setPlatformSettings(mockSettings);
+      console.warn("[MyListingsPage] Error fetching platform settings or no settings found, using mock:", settingsError?.message);
+      // Fallback to mock/default settings is fine for UI, but promotion won't work without real tiers
     } else {
         const promotionTiersFromDb = Array.isArray(dbSettings.promotion_tiers) 
             ? dbSettings.promotion_tiers as PromotionTierConfig[]
             : [];
-
         setPlatformSettings({
             ...dbSettings,
             promotionsEnabled: dbSettings.promotions_enabled ?? true,
             promotionTiers: promotionTiersFromDb,
-            predefinedAmenities: dbSettings.predefined_amenities || "Pool,Garage,Gym",
-            propertyTypes: dbSettings.property_types || ['House', 'Apartment', 'Land', 'Shortlet'],
         } as PlatformSettings);
     }
   }, []);
 
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
+    // console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`);
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
-      .select(
-        '*, promotion_expires_at, agent:users!properties_agent_id_fkey(id, name, email, avatar_url, role, phone, agency)'
-      )
+      .select('*, promotion_expires_at, agent:users!properties_agent_id_fkey(id, name, email, avatar_url, role, phone, agency)')
       .eq('agent_id', agentId)
       .order('status', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error("Error fetching agent's properties:", error);
+      console.error("[MyListingsPage] Error fetching agent's properties:", error);
       toast({ title: 'Error', description: 'Could not fetch your listings.', variant: 'destructive' });
       setAgentProperties([]);
     } else if (data) {
        const formattedProperties = data.map(p => ({
         ...p,
-        human_readable_id: p.human_readable_id,
         agent: p.agent ? { ...(p.agent as any), role: 'agent' as UserRole, id: p.agent.id! } as Agent : undefined,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
-        promotion_expires_at: p.promotion_expires_at,
       })) as Property[];
       setAgentProperties(formattedProperties);
+      // console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`);
     }
     setPageLoading(false);
   }, [toast]);
 
+  const handleVerifyPayment = useCallback(async (reference: string) => {
+    // console.log(`[MyListingsPage] handleVerifyPayment called with reference: ${reference}`);
+    if (!user || user.role !== 'agent') return;
+    setIsProcessingPayment(true);
+
+    const response = await verifyPayment(reference);
+    // console.log('[MyListingsPage] verifyPayment server action response:', response);
+
+    if (response.success && response.paymentSuccessful) {
+      toast({ title: 'Promotion Activated!', description: response.message });
+      // console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
+      fetchAgentProperties(user.id);
+    } else {
+      toast({ title: 'Promotion Verification Failed', description: response.message || 'Could not verify payment.', variant: 'destructive' });
+    }
+    setIsProcessingPayment(false);
+    setIsVerifyingViaUrl(false); // Reset URL verification flag
+    router.replace('/agents/dashboard/my-listings', undefined); // Remove query params
+  }, [user, fetchAgentProperties, toast, router]);
+
+
   useEffect(() => {
     fetchPlatformSettings();
     if (!authLoading && user && user.role === 'agent') {
-      const currentAgent = user as Agent;
-      fetchAgentProperties(currentAgent.id);
+      fetchAgentProperties(user.id);
     } else if (!authLoading) {
       setPageLoading(false);
     }
   }, [user, authLoading, fetchAgentProperties, fetchPlatformSettings]);
+
+   useEffect(() => {
+    const reference = searchParams.get('reference') || searchParams.get('trxref');
+    // console.log(`[MyListingsPage] useEffect for URL verification. Ref: ${reference}, isProcessingPayment: ${isProcessingPayment}, isVerifyingViaUrl: ${isVerifyingViaUrl}`);
+    if (reference && !isProcessingPayment && !isVerifyingViaUrl) {
+      // console.log(`[MyListingsPage] Found reference in URL: ${reference}. Initiating verification via URL.`);
+      setIsVerifyingViaUrl(true); // Set flag to true before calling
+      handleVerifyPayment(reference);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isProcessingPayment, handleVerifyPayment]); // isVerifyingViaUrl is intentionally not in deps
+
 
   const openDeleteDialog = (property: Property) => {
     setPropertyToDelete(property);
@@ -121,6 +166,7 @@ export default function MyListingsPage() {
   };
 
   const handleConfirmDelete = async () => {
+    // ... (existing delete logic remains the same)
     if (!propertyToDelete || !user || user.role !== 'agent') return;
     if (propertyToDelete.agent_id !== user.id) {
         toast({ title: "Unauthorized", description: "You can only delete your own listings.", variant: "destructive" });
@@ -156,47 +202,80 @@ export default function MyListingsPage() {
     setIsPromoteDialogOpen(true);
   };
 
-  const handleConfirmPromotion = async () => {
-    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings) return;
-     if (propertyToPromote.agent_id !== user.id) {
-        toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" });
-        setIsPromoteDialogOpen(false);
-        setPropertyToPromote(null);
-        setSelectedTierId(null);
-        return;
+  const handleInitiatePromotionPayment = async () => {
+    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings || !PAYSTACK_PUBLIC_KEY) {
+      toast({ title: "Error", description: "Cannot initiate promotion. Missing details or Paystack key.", variant: "destructive" });
+      return;
+    }
+    if (propertyToPromote.agent_id !== user.id) {
+      toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" }); return;
     }
 
     const selectedTier = platformSettings.promotionTiers.find(t => t.id === selectedTierId);
     if (!selectedTier) {
-        toast({ title: "Error", description: "Selected promotion tier not found.", variant: "destructive" });
-        return;
+      toast({ title: "Error", description: "Selected promotion tier not found.", variant: "destructive" }); return;
     }
 
-    const promotedAtDate = new Date();
-    const expiresAtDate = addDays(promotedAtDate, selectedTier.duration);
+    setIsProcessingPayment(true);
+    const uniqueReference = generateCustomPaystackReference(propertyToPromote.id, selectedTier.id);
 
-    const { error } = await supabase
-      .from('properties')
-      .update({
-        is_promoted: true,
-        promotion_tier_id: selectedTier.id,
-        promotion_tier_name: selectedTier.name,
-        promoted_at: promotedAtDate.toISOString(),
-        promotion_expires_at: expiresAtDate.toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', propertyToPromote.id);
+    const metadataForPaystack = {
+        custom_fields: [
+            { display_name: "Property ID", variable_name: "property_id", value: propertyToPromote.id },
+            { display_name: "Tier ID", variable_name: "tier_id", value: selectedTier.id },
+            { display_name: "Tier Name", variable_name: "tier_name", value: selectedTier.name },
+            { display_name: "Tier Fee NGN", variable_name: "tier_fee", value: selectedTier.fee.toString() },
+            { display_name: "Tier Duration Days", variable_name: "tier_duration", value: selectedTier.duration.toString() },
+            { display_name: "Agent ID", variable_name: "agent_id", value: user.id },
+            { display_name: "Purpose", variable_name: "purpose", value: "property_promotion" }
+        ],
+        property_title_for_display: propertyToPromote.title // Optional, for Paystack's display
+    };
+    
+    const paymentDetailsForServerAction: InitializePaymentInput = {
+      email: user.email,
+      amountInKobo: selectedTier.fee * 100,
+      reference: uniqueReference,
+      metadata: metadataForPaystack,
+      callbackUrl: `${window.location.origin}${window.location.pathname}` // Current page as callback
+    };
+    // console.log('[MyListingsPage] Payment details for server action (initializePayment):', JSON.stringify(paymentDetailsForServerAction, null, 2));
 
-    if (error) {
-      toast({ title: "Error Promoting Listing", description: error.message, variant: "destructive" });
+    const initResponse = await initializePayment(paymentDetailsForServerAction);
+    // console.log('[MyListingsPage] initializePayment server action response:', initResponse);
+
+    if (!initResponse.success || !initResponse.data) {
+      toast({ title: "Payment Initialization Failed", description: initResponse.message, variant: "destructive" });
+      setIsProcessingPayment(false);
+      return;
+    }
+    
+    if (window.PaystackPop && paystackScriptLoaded) {
+      setIsPromoteDialogOpen(false); // Close modal before opening Paystack
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: user.email,
+        amount: selectedTier.fee * 100,
+        ref: initResponse.data.reference, // Use reference from backend
+        metadata: metadataForPaystack,
+        channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
+        callback: function(response: any) {
+          // console.log('Paystack popup success callback. Reference:', response.reference);
+          handleVerifyPayment(response.reference);
+        },
+        onClose: function() {
+          // console.log('Paystack popup closed by user.');
+          toast({ title: "Payment Canceled", description: "You closed the payment window.", variant: "default" });
+          setIsProcessingPayment(false);
+        },
+      });
+      handler.openIframe();
     } else {
-      toast({ title: "Listing Promoted!", description: `${propertyToPromote.title} promoted with ${selectedTier.name}.` });
-      fetchAgentProperties((user as Agent).id);
+      toast({ title: "Paystack Not Ready", description: "Paystack script not loaded or public key missing.", variant: "destructive" });
+      setIsProcessingPayment(false);
     }
-    setIsPromoteDialogOpen(false);
-    setPropertyToPromote(null);
-    setSelectedTierId(null);
   };
+
 
   if (pageLoading || authLoading || !platformSettings) {
     return (
@@ -224,144 +303,85 @@ export default function MyListingsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div> <h1 className="text-3xl font-headline flex items-center"> <ListChecks className="mr-3 h-8 w-8 text-primary" /> My Listings </h1> <p className="text-muted-foreground">Manage your properties listed on Homeland Capital.</p> </div>
-        <div className="flex items-center gap-2 self-start sm:self-center">
-           <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-            title="Grid view"
-          >
-            <LayoutGrid className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-            title="List view"
-          >
-            <List className="h-5 w-5" />
-          </Button>
-          <Button asChild>
-            <Link href="/agents/dashboard/add-property">
-              <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span>
-            </Link>
-          </Button>
+    <>
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          // console.log('Paystack script loaded.');
+          setPaystackScriptLoaded(true);
+        }}
+        onError={(e) => {
+          console.error('Error loading Paystack script:', e);
+          setPaystackScriptLoaded(false);
+          toast({title: "Error", description: "Could not load payment script. Promotions may not work.", variant: "destructive"});
+        }}
+      />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div> <h1 className="text-3xl font-headline flex items-center"> <ListChecks className="mr-3 h-8 w-8 text-primary" /> My Listings </h1> <p className="text-muted-foreground">Manage your properties listed on Homeland Capital.</p> </div>
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} aria-label="Grid view" title="Grid view"> <LayoutGrid className="h-5 w-5" /> </Button>
+            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')} aria-label="List view" title="List view"> <List className="h-5 w-5" /> </Button>
+            <Button asChild> <Link href="/agents/dashboard/add-property"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add New Listing</span> </Link> </Button>
+          </div>
         </div>
+
+        {platformSettings && !platformSettings.promotionsEnabled && (
+          <Card className="bg-yellow-50 border-yellow-300 p-4">
+              <CardContent className="flex items-center gap-3 p-0"> <AlertTriangle className="h-6 w-6 text-yellow-600" /> <div> <CardTitle className="text-yellow-700 text-base font-semibold">Property Promotions Disabled</CardTitle> <CardDescription className="text-yellow-600 text-sm">The platform administrator has currently disabled property promotions.</CardDescription> </div> </CardContent>
+          </Card>
+        )}
+
+        {agentProperties.length === 0 ? (
+          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-property"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span> </Link> </Button> </CardContent> </Card>
+        ) : (
+          <div className={cn( viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4' )}>
+            {agentProperties.map(property =>
+              viewMode === 'grid' ? (
+                <AgentPropertyGridItem key={property.id} property={property} onOpenDeleteDialog={openDeleteDialog} onOpenPromoteDialog={handleOpenPromoteDialog} platformSettings={platformSettings} />
+              ) : (
+                <AgentPropertyListItem key={property.id} property={property} onOpenDeleteDialog={openDeleteDialog} onOpenPromoteDialog={handleOpenPromoteDialog} platformSettings={platformSettings} />
+              )
+            )}
+          </div>
+        )}
+        {propertyToPromote && platformSettings && (
+          <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader> <DialogTitle className="font-headline text-xl"> <span className="flex items-center"> <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier </span> </DialogTitle> <DialogDescription> <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span> </DialogDescription> </DialogHeader>
+              <div className="py-4 space-y-4">
+                <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId} className="space-y-3">
+                  {platformSettings.promotionTiers.map((tier) => (
+                    <div key={tier.id} className={cn( "flex items-start space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary bg-primary/5" )} onClick={() => setSelectedTierId(tier.id)} >
+                      <RadioGroupItem value={tier.id} id={`promo-tier-item-${tier.id}`} className="mt-1 shrink-0"/>
+                      <Label htmlFor={`promo-tier-item-${tier.id}`} className="flex-grow cursor-pointer space-y-1">
+                        <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> </div>
+                        <p className="text-sm text-muted-foreground">{tier.description}</p>
+                        <div className="text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )}
+              </div>
+              <form onSubmit={(e) => e.preventDefault()}>
+                <DialogFooter>
+                  <DialogClose asChild><Button variant="outline" type="button">Cancel</Button></DialogClose>
+                  <Button onClick={handleInitiatePromotionPayment} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !paystackScriptLoaded} type="button">
+                    {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+        {propertyToDelete && (
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle className="font-headline">Confirm Deletion</DialogTitle> <DialogDescription> <span>Are you sure you want to delete the listing "<strong>{propertyToDelete.title}</strong>"? This action cannot be undone.</span> </DialogDescription> </DialogHeader> <DialogFooter> <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose> <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button> </DialogFooter> </DialogContent>
+          </Dialog>
+        )}
       </div>
-
-      {platformSettings && !platformSettings.promotionsEnabled && (
-        <Card className="bg-yellow-50 border-yellow-300 p-4">
-            <CardContent className="flex items-center gap-3 p-0"> <AlertTriangle className="h-6 w-6 text-yellow-600" /> <div> <CardTitle className="text-yellow-700 text-base font-semibold">Property Promotions Disabled</CardTitle> <CardDescription className="text-yellow-600 text-sm">The platform administrator has currently disabled property promotions.</CardDescription> </div> </CardContent>
-        </Card>
-      )}
-
-      {agentProperties.length === 0 ? (
-        <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-property"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span> </Link> </Button> </CardContent> </Card>
-      ) : (
-        <div className={cn(
-          viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4'
-        )}>
-          {agentProperties.map(property =>
-            viewMode === 'grid' ? (
-              <AgentPropertyGridItem
-                key={property.id}
-                property={property}
-                onOpenDeleteDialog={openDeleteDialog}
-                onOpenPromoteDialog={handleOpenPromoteDialog}
-                platformSettings={platformSettings}
-              />
-            ) : (
-              <AgentPropertyListItem
-                key={property.id}
-                property={property}
-                onOpenDeleteDialog={openDeleteDialog}
-                onOpenPromoteDialog={handleOpenPromoteDialog}
-                platformSettings={platformSettings}
-              />
-            )
-          )}
-        </div>
-      )}
-       {propertyToPromote && platformSettings && (
-         <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-           <DialogContent className="sm:max-w-lg">
-             <DialogHeader>
-               <DialogTitle className="font-headline text-xl">
-                  <span className="flex items-center">
-                    <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier
-                  </span>
-                </DialogTitle>
-               <DialogDescription>
-                  <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span>
-               </DialogDescription>
-             </DialogHeader>
-             <div className="py-4 space-y-4">
-              <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId} className="space-y-3">
-                {platformSettings.promotionTiers.map((tier) => (
-                  <div key={tier.id}
-                    className={cn(
-                      "flex items-start space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors",
-                      selectedTierId === tier.id && "border-primary ring-2 ring-primary bg-primary/5"
-                    )}
-                    onClick={() => setSelectedTierId(tier.id)} // Make the whole div clickable
-                  >
-                    <RadioGroupItem value={tier.id} id={`promo-tier-item-${tier.id}`} className="mt-1 shrink-0"/>
-                    <Label htmlFor={`promo-tier-item-${tier.id}`} className="flex-grow cursor-pointer space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-foreground">{tier.name}</span>
-                        {/* RadioGroupItem moved out of Label for this structure */}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{tier.description}</p>
-                      <div className="text-sm">
-                        <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span>
-                        <span className="text-muted-foreground mx-1">|</span>
-                        <span className="text-muted-foreground">Duration: {tier.duration} days</span>
-                      </div>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              {platformSettings.promotionTiers.length === 0 && (
-                <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p>
-              )}
-            </div>
-             <DialogFooter>
-               <DialogClose asChild>
-                 <Button variant="outline">Cancel</Button>
-               </DialogClose>
-               <Button 
-                onClick={handleConfirmPromotion} 
-                className="bg-yellow-500 hover:bg-yellow-600 text-black" 
-                disabled={!selectedTierId || platformSettings.promotionTiers.length === 0}
-               >
-                 {selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier'}
-               </Button>
-             </DialogFooter>
-           </DialogContent>
-         </Dialog>
-       )}
-       {propertyToDelete && (
-         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-           <DialogContent className="sm:max-w-md">
-             <DialogHeader>
-               <DialogTitle className="font-headline">Confirm Deletion</DialogTitle>
-               <DialogDescription>
-                <span>Are you sure you want to delete the listing "<strong>{propertyToDelete.title}</strong>"? This action cannot be undone.</span>
-               </DialogDescription>
-             </DialogHeader>
-             <DialogFooter>
-               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-               <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button>
-             </DialogFooter>
-           </DialogContent>
-         </Dialog>
-       )}
-    </div>
+    </>
   );
 }
-

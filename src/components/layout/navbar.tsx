@@ -22,7 +22,7 @@ import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 
 const Navbar = () => {
-  const { isAuthenticated, user, signOut, loading } = useAuth();
+  const { isAuthenticated, user, signOut, loading: authContextLoading } = useAuth(); // Renamed loading
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -50,7 +50,7 @@ const Navbar = () => {
   };
 
   const AuthActions = ({ isMobile = false }: { isMobile?: boolean }) => {
-    if (loading) {
+    if (authContextLoading) { // Use renamed variable
       return isMobile ? (
         <div className="space-y-2">
           <Button variant="ghost" disabled className="w-full justify-start">Loading...</Button>
@@ -64,7 +64,7 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className={isMobile ? "w-full justify-start px-2 py-2 text-lg" : "rounded-full p-0 h-9 w-9 sm:h-10 sm:w-10"}>
               <Avatar className={isMobile ? "h-7 w-7 mr-2" : "h-8 w-8 sm:h-9 sm:w-9"}>
-                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person avatar" />
+                <AvatarImage src={user.avatar_url || undefined} alt={user.name} data-ai-hint="person avatar" />
                 <AvatarFallback>
                   {user.name ? user.name.substring(0, 2).toUpperCase() : <UserCircle className="h-5 w-5"/>}
                 </AvatarFallback>
@@ -85,7 +85,7 @@ const Navbar = () => {
             <DropdownMenuSeparator />
             <Link href={getDashboardPath()} passHref legacyBehavior>
               <DropdownMenuItem asChild onClick={closeMobileMenu} className="cursor-pointer">
-                <a> {/* Ensure 'a' tag for legacyBehavior */}
+                <a>
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   <span>Dashboard</span>
                 </a>
@@ -126,7 +126,7 @@ const Navbar = () => {
           {navLinks.map(link => (
             <Link key={link.href} href={link.href} passHref legacyBehavior>
               <Button variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
-                <a className="flex items-center"> {/* Ensure 'a' tag for legacyBehavior */}
+                <a className="flex items-center">
                   <span>{link.label}</span>
                 </a>
               </Button>
@@ -154,7 +154,7 @@ const Navbar = () => {
                {navLinks.map(link => (
                   <Link key={link.href} href={link.href} passHref legacyBehavior>
                     <Button variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
-                      <a className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group"> {/* Ensure 'a' tag for legacyBehavior */}
+                      <a className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
                           <span>{link.label}</span>
                       </a>
                     </Button>
@@ -173,3 +173,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
