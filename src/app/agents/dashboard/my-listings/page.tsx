@@ -103,7 +103,7 @@ function MyListingsPageComponent() {
 
 
   const fetchAgentProperties = useCallback(async (agentId: string) => {
-    // console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`); // Essential log
+    // console.log(`[MyListingsPage] fetchAgentProperties called for agentId: ${agentId}`);
     setPageLoading(true);
     const { data, error } = await supabase
       .from('properties')
@@ -128,7 +128,7 @@ function MyListingsPageComponent() {
         promotion_expires_at: p.promotion_expires_at,
       })) as Property[];
       setAgentProperties(formattedProperties);
-      // console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`); // Essential log
+      // console.log(`[MyListingsPage] Successfully fetched ${formattedProperties.length} properties.`);
     }
     setPageLoading(false);
   }, [toast]);
@@ -145,17 +145,17 @@ function MyListingsPageComponent() {
 
   const handleVerifyPayment = useCallback(async (reference: string) => {
     if (!reference) return;
-    console.log(`[MyListingsPage] handleVerifyPayment called with reference: ${reference}`);
+    // console.log(`[MyListingsPage] handleVerifyPayment called with reference: ${reference}`);
     setIsProcessingPayment(true);
     toast({ title: 'Verifying Payment...', description: `Checking status for transaction: ${reference}` });
     try {
       const response = await verifyPayment({ reference });
-      console.log(`[MyListingsPage] verifyPayment server action response:`, response);
+      // console.log(`[MyListingsPage] verifyPayment server action response:`, response);
 
       if (response.success && response.paymentSuccessful) {
         toast({ title: 'Promotion Activated!', description: response.message || `Property promotion is now active. Refreshing listings...`, variant: 'default', duration: 7000 });
         if (user && user.role === 'agent') {
-          console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
+          // console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
           fetchAgentProperties(user.id);
         }
       } else {
@@ -167,7 +167,7 @@ function MyListingsPageComponent() {
     } finally {
       setIsProcessingPayment(false);
       const currentPath = window.location.pathname;
-      router.replace(currentPath, { scroll: false });
+      router.replace(currentPath, { scroll: false }); // Remove query params
     }
   }, [toast, fetchAgentProperties, user, router]);
 
@@ -178,7 +178,6 @@ function MyListingsPageComponent() {
     const paymentReferenceFromUrl = referenceFromUrl || trxrefFromUrl;
 
     if (paymentReferenceFromUrl && !isProcessingPayment && !isVerifyingViaUrl) {
-      // console.log(`[MyListingsPage] useEffect detected payment reference in URL: ${paymentReferenceFromUrl}`); // Debug log
       setIsVerifyingViaUrl(true);
       handleVerifyPayment(paymentReferenceFromUrl).finally(() => {
         setIsVerifyingViaUrl(false);
@@ -271,11 +270,11 @@ function MyListingsPageComponent() {
       metadata: metadataForPaystack,
       callbackUrl: `${window.location.origin}/agents/dashboard/my-listings`
     };
-    // console.log("[MyListingsPage] Payment details for server action (initializePayment):", JSON.stringify(paymentDetailsForServerAction, null, 2)); // Debug log
+    // console.log("[MyListingsPage] Payment details for server action (initializePayment):", JSON.stringify(paymentDetailsForServerAction, null, 2));
 
     try {
       const initResponse = await initializePayment(paymentDetailsForServerAction);
-      // console.log("[MyListingsPage] initializePayment server action response:", initResponse); // Debug log
+      // console.log("[MyListingsPage] initializePayment server action response:", initResponse);
 
       if (!initResponse.success || !initResponse.data?.reference) {
         toast({ title: 'Payment Initialization Failed', description: initResponse.message || "Could not get payment reference.", variant: 'destructive' });
@@ -286,7 +285,7 @@ function MyListingsPageComponent() {
       const paymentReferenceFromServer = initResponse.data.reference;
 
       if (window.PaystackPop) {
-        setIsPromoteDialogOpen(false); // Close dialog before opening Paystack popup
+        setIsPromoteDialogOpen(false); 
         const handler = window.PaystackPop.setup({
           key: PAYSTACK_PUBLIC_KEY,
           email: user.email,
@@ -296,11 +295,10 @@ function MyListingsPageComponent() {
           metadata: metadataForPaystack,
           channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
           callback: function(response: { reference: string }) {
-            console.log('Paystack popup success callback. Reference:', response.reference); // Essential log
+            // console.log('Paystack popup success callback. Reference:', response.reference);
             handleVerifyPayment(response.reference);
           },
           onClose: function() {
-            // console.log('Paystack popup closed by user.'); // Debug log
             toast({ title: 'Payment Cancelled', description: 'You closed the payment popup.', variant: 'default' });
             setIsProcessingPayment(false);
           }

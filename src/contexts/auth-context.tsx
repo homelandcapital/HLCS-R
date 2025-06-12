@@ -46,20 +46,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
     if (!isMountedRef.current) return null;
-    console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id} at ${new Date().toISOString()}`);
-    const functionStartTime = Date.now();
+    // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id}`);
 
     let profile: AuthenticatedUser | null = null;
     try {
-      console.log(`[AuthContext] fetchUserProfileAndRelatedData: Querying 'users' table for ${supabaseUser.id} at ${new Date().toISOString()}`);
-      const usersQueryStartTime = Date.now();
+      // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Querying 'users' table for ${supabaseUser.id}`);
       const { data: userProfilesData, error: profileQueryError } = await supabase
         .from('users')
         .select('*')
         .eq('id', supabaseUser.id);
-      const usersQueryEndTime = Date.now();
-      console.log(`[AuthContext] fetchUserProfileAndRelatedData: 'users' table query for ${supabaseUser.id} completed in ${usersQueryEndTime - usersQueryStartTime}ms.`);
-      console.log('[AuthContext] userProfilesData:', userProfilesData);
+      // console.log('[AuthContext] userProfilesData:', userProfilesData);
 
 
       if (profileQueryError) {
@@ -84,14 +80,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let authenticatedUser: AuthenticatedUser;
 
       if (baseProfile.role === 'user') {
-        console.log(`[AuthContext] fetchUserProfileAndRelatedData: User role is 'user'. Querying 'saved_properties' for ${baseProfile.id} at ${new Date().toISOString()}`);
-        const savedPropsQueryStartTime = Date.now();
+        // console.log(`[AuthContext] fetchUserProfileAndRelatedData: User role is 'user'. Querying 'saved_properties' for ${baseProfile.id}`);
         const { data: savedPropsData, error: savedPropsError } = await supabase
           .from('saved_properties')
           .select('property_id')
           .eq('user_id', baseProfile.id);
-        const savedPropsQueryEndTime = Date.now();
-        console.log(`[AuthContext] fetchUserProfileAndRelatedData: 'saved_properties' query for ${baseProfile.id} completed in ${savedPropsQueryEndTime - savedPropsQueryStartTime}ms.`);
 
         if (savedPropsError) console.error('[AuthContext] fetchUserProfileAndRelatedData: Error fetching saved properties:', savedPropsError.message);
         const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
@@ -111,11 +104,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMountedRef.current) toast({ title: 'Profile Processing Error', description: `An unexpected error occurred: ${error.message}`, variant: 'destructive'});
         return null;
     } finally {
-        const functionEndTime = Date.now();
         if (profile) {
-            console.log(`[AuthContext] fetchUserProfileAndRelatedData: Successfully fetched and processed profile for ${supabaseUser.id} in ${functionEndTime - functionStartTime}ms.`);
+            // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Successfully fetched and processed profile for ${supabaseUser.id}.`);
         } else {
-            console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished with no profile for ${supabaseUser.id} in ${functionEndTime - functionStartTime}ms.`);
+            // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Finished with no profile for ${supabaseUser.id}.`);
         }
     }
     return profile;
@@ -123,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const performInitialAuthCheckInternal = useCallback(async (): Promise<{ user: AuthenticatedUser | null, session: Session | null, errorOccurred: boolean }> => {
-    console.log("[AuthContext] performInitialAuthCheckInternal: Starting...");
+    // console.log("[AuthContext] performInitialAuthCheckInternal: Starting...");
     try {
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
       if (!isMountedRef.current) return { user: null, session: null, errorOccurred: true };
@@ -134,11 +126,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (initialSession?.user) {
-        console.log(`[AuthContext] performInitialAuthCheckInternal: Initial session found. Fetching profile for user: ${initialSession.user.id}`);
+        // console.log(`[AuthContext] performInitialAuthCheckInternal: Initial session found. Fetching profile for user: ${initialSession.user.id}`);
         const profile = await fetchUserProfileAndRelatedData(initialSession.user);
         return { user: profile, session: initialSession, errorOccurred: !profile };
       } else {
-        console.log("[AuthContext] performInitialAuthCheckInternal: No initial session found.");
+        // console.log("[AuthContext] performInitialAuthCheckInternal: No initial session found.");
         return { user: null, session: initialSession, errorOccurred: false };
       }
     } catch (error: any) {
@@ -149,11 +141,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!initialCheckPerformedRef.current) {
-      console.log("[AuthContext] useEffect: Mounting and performing initial auth check.");
+      // console.log("[AuthContext] useEffect: Mounting and performing initial auth check.");
       setLoading(true);
       performInitialAuthCheckInternal()
         .then(result => {
-          console.log('[AuthContext] performInitialAuthCheckInternal.then result:', { result, isMountedRef: isMountedRef.current });
+          // console.log('[AuthContext] performInitialAuthCheckInternal.then result:', { result, isMountedRef: isMountedRef.current });
           if (isMountedRef.current) {
             setUser(result.user);
             setSession(result.session);
@@ -168,7 +160,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
         .finally(() => {
           if (isMountedRef.current) {
-            console.log("[AuthContext] useEffect: Initial auth check complete. setLoading(false).");
+            // console.log("[AuthContext] useEffect: Initial auth check complete. setLoading(false).");
             setLoading(false);
             initialCheckPerformedRef.current = true;
           }
@@ -178,16 +170,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentEventSession: Session | null) => {
         if (!isMountedRef.current) {
-          console.log("[AuthContext] onAuthStateChange: Unmounted, skipping event:", event);
+          // console.log("[AuthContext] onAuthStateChange: Unmounted, skipping event:", event);
           return;
         }
-        console.log(`[AuthContext] onAuthStateChange: Event: ${event}, Event Session: ${!!currentEventSession}, User in Event Session: ${currentEventSession?.user?.id || 'N/A'}, Time: ${new Date().toISOString()}`);
+        console.log(`[AuthContext] onAuthStateChange: Event: ${event}, User: ${currentEventSession?.user?.id || 'N/A'}`);
         
         setSession(currentEventSession); 
 
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
           if (isMountedRef.current) {
-             console.log(`[AuthContext] onAuthStateChange: Event ${event}. Attempting to verify session with supabase.auth.getUser().`);
+             // console.log(`[AuthContext] onAuthStateChange: Event ${event}. Attempting to verify session with supabase.auth.getUser().`);
              setLoading(true);
           }
           try {
@@ -205,7 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
             } else if (verifiedUser) {
-              console.log(`[AuthContext] onAuthStateChange: supabase.auth.getUser() successful after ${event}. User: ${verifiedUser.id}. Fetching profile.`);
+              // console.log(`[AuthContext] onAuthStateChange: supabase.auth.getUser() successful after ${event}. User: ${verifiedUser.id}. Fetching profile.`);
               const profile = await fetchUserProfileAndRelatedData(verifiedUser);
               if (isMountedRef.current) {
                 setUser(profile);
@@ -216,7 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
               }
             } else { 
-              console.log(`[AuthContext] onAuthStateChange: supabase.auth.getUser() returned no user after ${event}. Treating as signed out.`);
+              // console.log(`[AuthContext] onAuthStateChange: supabase.auth.getUser() returned no user after ${event}. Treating as signed out.`);
               if (isMountedRef.current) setUser(null);
             }
           } catch (e: any) {
@@ -224,34 +216,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (isMountedRef.current) setUser(null);
           } finally {
             if (isMountedRef.current) {
-              console.log(`[AuthContext] onAuthStateChange: Finished processing ${event}. setLoading(false).`);
+              // console.log(`[AuthContext] onAuthStateChange: Finished processing ${event}. setLoading(false).`);
               setLoading(false);
             }
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) {
-            console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event. Updating state and navigating.");
+            // console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event. Updating state and navigating.");
             setUser(null);
             setSession(null);
             setLoading(false); 
             toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
             router.push('/');
           } else {
-            console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event, but component unmounted. Skipping state updates and navigation via AuthContext.");
+            // console.log("[AuthContext] onAuthStateChange: SIGNED_OUT event, but component unmounted. Skipping state updates and navigation via AuthContext.");
           }
         } else if (event === 'PASSWORD_RECOVERY') {
           if (isMountedRef.current) {
-            console.log("[AuthContext] onAuthStateChange: PASSWORD_RECOVERY event. User should check email.");
+            // console.log("[AuthContext] onAuthStateChange: PASSWORD_RECOVERY event. User should check email.");
             setLoading(false);
           }
         } else if (event === 'INITIAL_SESSION') {
-           console.log("[AuthContext] onAuthStateChange: INITIAL_SESSION event. Handled by performInitialAuthCheck or subsequent SIGNED_IN/TOKEN_REFRESHED.");
+           // console.log("[AuthContext] onAuthStateChange: INITIAL_SESSION event. Handled by performInitialAuthCheck or subsequent SIGNED_IN/TOKEN_REFRESHED.");
         }
       }
     );
 
     return () => {
-      console.log("[AuthContext] useEffect: Cleaning up auth listener.");
+      // console.log("[AuthContext] useEffect: Cleaning up auth listener.");
       isMountedRef.current = false;
       authListener?.subscription.unsubscribe();
     };
@@ -330,32 +322,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async (): Promise<void> => {
-    console.log("[AuthContext] signOut: Initiating sign out.");
-    // setLoading(true) should be called immediately to reflect the start of the logout process.
-    // The onAuthStateChange handler for SIGNED_OUT will set setLoading(false) upon completion.
-    setLoading(true);
+    // console.log("[AuthContext] signOut: Initiating sign out.");
+    setLoading(true); 
 
     try {
       const { error: signOutServiceError } = await supabase.auth.signOut();
-
-      // If supabase.auth.signOut() itself returns an error, it means the call failed.
-      // The onAuthStateChange listener might not fire or might also reflect an error.
       if (signOutServiceError) {
         console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError.message);
-        if (isMountedRef.current) { // Check if component is still mounted before updating state
+        if (isMountedRef.current) { 
           toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
-          // Reset loading state here because onAuthStateChange might not fire to do it.
           setLoading(false);
         }
       }
-      // If supabase.auth.signOut() is successful (no error), onAuthStateChange('SIGNED_OUT')
-      // is responsible for all subsequent state updates (setUser, setSession, setLoading(false), toast, navigation).
     } catch (thrownError: any) {
-      // Catch any exceptions thrown by supabase.auth.signOut() itself.
       console.error("[AuthContext] signOut: Exception during Supabase signOut call:", thrownError.message);
-      if (isMountedRef.current) { // Check if component is still mounted
+      if (isMountedRef.current) { 
         toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred during logout.', variant: 'destructive' });
-        // Reset loading state here.
         setLoading(false);
       }
     }
@@ -390,6 +372,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (isMountedRef.current) toast({ title: 'Password Update Failed', description: updateError.message, variant: 'destructive' });
       } else {
         if (isMountedRef.current) {
+          // Sign out after successful password update, onAuthStateChange will handle redirect.
           await supabase.auth.signOut();
         }
       }
@@ -490,5 +473,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-      

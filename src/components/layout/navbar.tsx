@@ -50,7 +50,6 @@ const Navbar = () => {
   };
 
   const AuthActions = ({ isMobile = false }: { isMobile?: boolean }) => {
-    console.log({ isMobile , loading })
     if (loading) {
       return isMobile ? (
         <div className="space-y-2">
