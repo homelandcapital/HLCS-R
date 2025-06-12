@@ -325,13 +325,16 @@ export default function MyListingsPage() {
         )}
 
         {agentProperties.length === 0 ? (
-          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg">
-            <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
-              <a>
-                <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing</span>
-              </a>
-            </Link>
-          </Button> </CardContent> </Card>
+          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> 
+            <Button asChild size="lg">
+                <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
+                  <a>
+                    <span className="inline-flex items-center">
+                        <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing
+                    </span>
+                  </a>
+                </Link>
+            </Button> </CardContent> </Card>
         ) : (
           <div className={cn( viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4' )}>
             {agentProperties.map(property =>

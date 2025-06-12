@@ -8,8 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_CALLBACK_URL = process.env.PAYSTACK_CALLBACK_URL;
-const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL; // For service client
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // For service client
+const NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL; 
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; 
 
 // Default Supabase client (uses anon key, RLS will apply if not overridden)
 import { supabase } from '@/lib/supabaseClient';
@@ -18,19 +18,19 @@ import { supabase } from '@/lib/supabaseClient';
 const CustomFieldSchema = z.object({
   display_name: z.string(),
   variable_name: z.string(),
-  value: z.string(), // All values in custom_fields are strings from Paystack
+  value: z.string(), 
 });
 
 const MetadataSchema = z.object({
   custom_fields: z.array(CustomFieldSchema),
-  property_title_for_display: z.string().optional(), // For display if needed
+  property_title_for_display: z.string().optional(), 
 });
 
 const InitializePaymentInputSchema = z.object({
   email: z.string().email(),
   amountInKobo: z.number().positive(),
   reference: z.string().min(1),
-  metadata: MetadataSchema, // Expects custom_fields directly
+  metadata: MetadataSchema, 
   callbackUrl: z.string().url().optional(),
 });
 export type InitializePaymentInput = z.infer<typeof InitializePaymentInputSchema>;
@@ -67,11 +67,10 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     amount: amountInKobo,
     reference,
     callback_url: callbackUrl || PAYSTACK_CALLBACK_URL,
-    metadata: metadata, // Pass the already structured metadata
+    metadata: metadata, 
   };
 
   try {
-    // console.log('[PaystackActions] initializePayment: Sending to Paystack:', JSON.stringify(payload, null, 2));
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
@@ -82,7 +81,6 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
     });
 
     const responseData = await response.json();
-    // console.log('[PaystackActions] initializePayment: Response from Paystack:', JSON.stringify(responseData, null, 2));
 
     if (!response.ok || !responseData.status) {
       return { success: false, message: responseData.message || 'Failed to initialize Paystack transaction.' };
@@ -98,7 +96,7 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
 interface VerifyPaymentResponse {
   success: boolean;
   message: string;
-  data?: any; // Could be more specific based on what Paystack returns
+  data?: any; 
   paymentSuccessful?: boolean;
 }
 
@@ -109,14 +107,12 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
   }
 
   try {
-    // console.log(`[PaystackActions] verifyPayment: Verifying reference ${reference} with Paystack.`);
     const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
       headers: {
         Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
       },
     });
     const paymentData = await response.json();
-    // console.log('[PaystackActions] verifyPayment: Full paymentData from Paystack:', JSON.stringify(paymentData, null, 2));
 
     if (!paymentData.status || paymentData.data.status !== 'success') {
       return { success: false, message: paymentData.data.gateway_response || 'Payment verification failed.', paymentSuccessful: false };
@@ -130,10 +126,9 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
     const property_id = getCustomFieldValue('property_id');
     const tier_id = getCustomFieldValue('tier_id');
     const tier_name = getCustomFieldValue('tier_name');
-    const tier_duration_from_meta = getCustomFieldValue('tier_duration'); // This will be a string
+    const tier_duration_from_meta = getCustomFieldValue('tier_duration'); 
     const purposeFromMeta = getCustomFieldValue('purpose');
 
-    // console.log(`[PaystackActions] verifyPayment: Extracted metadata values - property_id: ${property_id}, tier_id: ${tier_id}, tier_name: ${tier_name}, tier_duration_from_meta: ${tier_duration_from_meta}, purpose: ${purposeFromMeta}`);
 
     const isSuccessful = paymentData.data.status === 'success';
 
@@ -153,17 +148,15 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
           updated_at: formatISO(new Date()),
         };
         
-        // console.log('[PaystackActions] verifyPayment: Preparing to update Supabase with payload:', JSON.stringify(updatePayload, null, 2));
-
         let dbClient = supabase; // Default to anon key client
         const supabaseServiceKey = SUPABASE_SERVICE_ROLE_KEY;
         const supabaseUrl = NEXT_PUBLIC_SUPABASE_URL;
 
-        if (supabaseServiceKey && supabaseUrl && supabaseServiceKey.startsWith('ey')) {
-          // console.log('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY found. Using admin client for DB updates.');
+        if (supabaseServiceKey && supabaseServiceKey.startsWith('ey') && supabaseUrl) {
+          console.log('[PaystackActions] verifyPayment: Using admin client for DB updates.');
           dbClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
         } else if (supabaseServiceKey && supabaseUrl) {
-           console.warn('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY is present BUT DOES NOT LOOK VALID. Using default client.');
+           console.warn('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY is present BUT DOES NOT LOOK VALID. Using default (anon) client. DB update might fail.');
         }
         else {
           console.warn('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY or SUPABASE_URL is NOT SET for admin client. Using default (anon) client. DB update might fail due to RLS.');
@@ -178,17 +171,14 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
           console.error(`[PaystackActions] verifyPayment: Supabase update error for property ${property_id}:`, JSON.stringify(updateError, null, 2));
           return { success: true, message: `Payment verified, but DB update failed: ${updateError.message}`, data: paymentData.data, paymentSuccessful: true };
         }
-        // console.log(`[PaystackActions] verifyPayment: Property ${property_id} successfully promoted in Supabase.`);
         return { success: true, message: `Payment verified and property ${property_id} successfully promoted.`, data: paymentData.data, paymentSuccessful: true };
       } else {
         console.warn(`[PaystackActions] verifyPayment: Payment successful for promotion, but essential details (property_id, tier_id, tier_name, or tier_duration) were missing/invalid from metadata. Property ID: ${property_id}, Tier ID: ${tier_id}, Tier Name: ${tier_name}, Tier Duration: ${tier_duration}`);
         return { success: true, message: `Payment verified, but essential details (property_id: ${property_id}, tier_id: ${tier_id}, tier_name: ${tier_name}, tier_duration: ${tier_duration}) were missing/invalid. Promotion not applied.`, data: paymentData.data, paymentSuccessful: true };
       }
     } else if (isSuccessful) {
-      // console.log(`[PaystackActions] verifyPayment: Payment for reference ${reference} was successful but purpose was not 'property_promotion' (was '${purposeFromMeta}'). No property promotion applied.`);
       return { success: true, message: `Payment verified, but purpose was '${purposeFromMeta}', not 'property_promotion'.`, data: paymentData.data, paymentSuccessful: true };
     } else {
-      // console.log(`[PaystackActions] verifyPayment: Payment for reference ${reference} was not successful according to Paystack. Status: ${paymentData.data.status}`);
       return { success: false, message: paymentData.data.gateway_response || 'Payment not successful.', data: paymentData.data, paymentSuccessful: false };
     }
 
