@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, BedDouble, Bath, Building2, Maximize, Eye, Edit3, Trash2, Star, AlertTriangle, CheckCircle, XCircle, MessageSquare, Hash, ListChecks, LayoutGrid } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, Eye, Edit3, Trash2, Star, AlertTriangle, CheckCircle, XCircle, MessageSquare, Hash, ListChecks, LayoutGrid, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -102,8 +102,9 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
           <div className="mt-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
               <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
-                {/* This Link already had a single child <Eye />, so it should be fine */}
-                <Eye className="h-4 w-4" />
+                <span className="flex items-center justify-center">
+                  <Eye className="h-4 w-4" />
+                </span>
               </Link>
             </Button>
             <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled>
@@ -132,7 +133,7 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
             )}
              <Button asChild variant="default" size="sm" className="w-full sm:w-auto">
               <Link href={`/properties/${property.id}`}>
-                <span className="inline-flex items-center"> {/* Wrapper span */}
+                <span className="inline-flex items-center">
                   View Details <ArrowRight className="ml-2 h-4 w-4" />
                 </span>
               </Link>
@@ -145,4 +146,3 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
 };
 
 export default AgentPropertyListItem;
-
