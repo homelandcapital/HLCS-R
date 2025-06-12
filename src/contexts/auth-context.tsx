@@ -31,7 +31,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true); // This is the main loading state for initial auth determination
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -39,16 +39,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    // console.log('[AuthContext] Component mounted.');
     return () => {
       isMountedRef.current = false;
-      // console.log('[AuthContext] Component unmounted.');
     };
   }, []);
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
-    // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Called for user ${supabaseUser.id}.`);
-
     const { data: userProfilesData, error: profileQueryError } = await supabase
       .from('users')
       .select('*')
@@ -58,13 +54,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (profileQueryError) {
       const pgError = profileQueryError as PostgrestError;
-      console.error('[AuthContext] fetchUserProfileAndRelatedData: Error fetching profile.', pgError.message);
+      console.error('[AuthContext] Error fetching profile:', pgError.message);
       toast({ title: 'Profile Error', description: `Could not load your profile data. ${pgError.message || 'Please check console.'}`, variant: 'destructive'});
       return null;
     }
 
     if (!userProfilesData || userProfilesData.length === 0) {
-      console.warn('[AuthContext] fetchUserProfileAndRelatedData: User profile not found for id:', supabaseUser.id);
       const { data: { session: activeSession } } = await supabase.auth.getSession();
       if (activeSession) {
          toast({ title: 'Profile Not Found', description: 'Your user profile could not be found. Please contact support.', variant: 'destructive'});
@@ -72,8 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
     if (userProfilesData.length > 1) {
-      console.error('[AuthContext] fetchUserProfileAndRelatedData: Multiple user profiles found for id:', supabaseUser.id);
-      // This shouldn't happen with unique constraints but good to log.
+      console.error('[AuthContext] Multiple user profiles found for id:', supabaseUser.id);
       return null;
     }
 
@@ -86,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('property_id')
         .eq('user_id', baseProfile.id);
       if (!isMountedRef.current) return null;
-      if (savedPropsError) console.error('[AuthContext] fetchUserProfileAndRelatedData: Error fetching saved properties:', savedPropsError.message);
+      if (savedPropsError) console.error('[AuthContext] Error fetching saved properties:', savedPropsError.message);
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
       authenticatedUserToSet = { ...baseProfile, role: 'user', savedPropertyIds } as GeneralUser;
     } else if (baseProfile.role === 'agent') {
@@ -94,101 +88,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else if (baseProfile.role === 'platform_admin') {
       authenticatedUserToSet = { ...baseProfile, role: 'platform_admin' } as PlatformAdmin;
     } else {
-      console.error('[AuthContext] fetchUserProfileAndRelatedData: Unknown user role in profile:', baseProfile.role);
+      console.error('[AuthContext] Unknown user role in profile:', baseProfile.role);
       return null;
     }
-    // console.log(`[AuthContext] fetchUserProfileAndRelatedData: Successfully fetched profile for ${supabaseUser.id}.`);
     return authenticatedUserToSet;
   }, [toast]);
 
 
   useEffect(() => {
-    // This effect handles the initial authentication check and sets up the listener.
-    const performInitialAuthAndSetupListener = async () => {
+    // This effect handles the initial authentication check.
+    const checkInitialSession = async () => {
       if (!isMountedRef.current) return;
-      // console.log('[AuthContext] InitialEffect: Starting initial auth check and listener setup.');
-      setLoading(true);
-
-      // 1. Perform initial session check
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-
       if (!isMountedRef.current) { setLoading(false); return; }
 
       if (sessionError) {
-        console.error("[AuthContext] InitialEffect: Error getting initial session:", sessionError.message);
+        console.error("[AuthContext] Error getting initial session:", sessionError.message);
         setUser(null);
         setSession(null);
       } else if (initialSession?.user) {
-        // console.log('[AuthContext] InitialEffect: Initial session found. User:', initialSession.user.id);
         setSession(initialSession);
         const profile = await fetchUserProfileAndRelatedData(initialSession.user);
         if (isMountedRef.current) setUser(profile);
       } else {
-        // console.log('[AuthContext] InitialEffect: No initial session.');
         setUser(null);
         setSession(null);
       }
-
-      if (isMountedRef.current) {
-        setLoading(false); // Initial auth determination complete
-        // console.log('[AuthContext] InitialEffect: Initial auth check complete. loading: false.');
-      }
-
-      // 2. Setup Auth State Change Listener
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event: AuthChangeEvent, currentSession: Session | null) => {
-          if (!isMountedRef.current) return;
-          // console.log(`[AuthContext] onAuthStateChange: Event: ${event}, CurrentSession: ${!!currentSession}, User: ${currentSession?.user?.id || 'N/A'}`);
-          
-          setSession(currentSession); // Always update session state
-
-          if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-            if (currentSession?.user) {
-              // console.log(`[AuthContext] onAuthStateChange (${event}): User ${currentSession.user.id} present. Fetching/updating profile.`);
-              const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-              if (isMountedRef.current) {
-                setUser(profile);
-                if (event === 'SIGNED_IN' && profile) {
-                  // console.log(`[AuthContext] onAuthStateChange: SIGNED_IN successful for role ${profile.role}, redirecting...`);
-                  if (profile.role === 'agent') router.push('/agents/dashboard');
-                  else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
-                  else router.push('/users/dashboard');
-                }
-              }
-            } else {
-              if (isMountedRef.current) setUser(null);
-            }
-          } else if (event === 'SIGNED_OUT') {
-            if (isMountedRef.current) setUser(null);
-            // Navigation is handled by the signOut function itself
-          } else if (event === 'TOKEN_REFRESHED') {
-              if (currentSession?.user && currentSession.user.id !== user?.id) {
-                  // console.log(`[AuthContext] onAuthStateChange (TOKEN_REFRESHED): User ID changed to ${currentSession.user.id}. Re-fetching profile.`);
-                  const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-                   if (isMountedRef.current) setUser(profile);
-              } else if (!currentSession?.user && user) { // User was present, but now session has no user
-                  // console.log(`[AuthContext] onAuthStateChange (TOKEN_REFRESHED): No user in refreshed session. Clearing local user.`);
-                  if (isMountedRef.current) setUser(null);
-              }
-          }
-          // No primary setLoading toggles here after initial load.
-        }
-      );
-      return () => {
-        // console.log('[AuthContext] Cleaning up auth listener.');
-        authListener?.subscription.unsubscribe();
-      };
+      if (isMountedRef.current) setLoading(false);
     };
 
-    performInitialAuthAndSetupListener();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchUserProfileAndRelatedData, router]); // user?.id was removed to prevent loops on user object change itself.
-                                                // fetchUserProfileAndRelatedData and router are stable.
+    checkInitialSession();
 
-  // This effect handles redirection IF a user is already logged in and tries to access auth pages.
+    // This effect sets up the onAuthStateChange listener.
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, currentSession: Session | null) => {
+        if (!isMountedRef.current) return;
+        setSession(currentSession);
+
+        if (event === 'INITIAL_SESSION' && currentSession?.user) {
+          // Already handled by checkInitialSession if it ran first, but good as a fallback.
+          // No need to set loading here as checkInitialSession would have done it.
+          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+          if (isMountedRef.current) setUser(profile);
+        } else if (event === 'SIGNED_IN' && currentSession?.user) {
+          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+          if (isMountedRef.current) {
+            setUser(profile);
+            if (profile) {
+              if (profile.role === 'agent') router.push('/agents/dashboard');
+              else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
+              else router.push('/users/dashboard');
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          if (isMountedRef.current) setUser(null);
+          // Navigation for explicit sign out is handled in signOutUser
+        } else if (event === 'USER_UPDATED' && currentSession?.user) {
+          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+          if (isMountedRef.current) setUser(profile);
+        } else if (event === 'TOKEN_REFRESHED') {
+            if (currentSession?.user && currentSession.user.id !== user?.id) {
+                const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+                 if (isMountedRef.current) setUser(profile);
+            } else if (!currentSession?.user && user) {
+                if (isMountedRef.current) setUser(null);
+            }
+        }
+      }
+    );
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [fetchUserProfileAndRelatedData, router, user?.id]); // Added user.id to deps for TOKEN_REFRESHED case
+
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
-      // console.log(`[AuthContext] RedirectEffect: User is authenticated and on auth page. Redirecting.`);
       if (user.role === 'agent') router.push('/agents/dashboard');
       else if (user.role === 'platform_admin') router.push('/admin/dashboard');
       else router.push('/users/dashboard');
@@ -201,7 +175,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
-    // On success, onAuthStateChange will update user/session and handle navigation.
     return { error };
   };
 
@@ -237,13 +210,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const pgError = profileError as PostgrestError;
         console.error("[AuthContext] commonSignUp: Error creating profile.", pgError.message);
         
-        if (pgError.code === '23505') { // Unique violation
+        if (pgError.code === '23505') {
           toast({ title: 'Email Already Registered', description: 'This email address is already in use.', variant: 'destructive' });
         } else {
           toast({ title: 'Profile Creation Failed', description: `Contact support: ${pgError.message}.`, variant: 'destructive' });
         }
         
-        // Attempt to clean up the auth user if profile creation failed
         supabase.auth.signOut().then(() => supabase.auth.admin.deleteUser(signUpData.user!.id)).catch(delErr => {
             console.error("[AuthContext] commonSignUp: Error during cleanup after profile creation failure:", delErr);
         });
@@ -253,7 +225,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.`, duration: 9000 });
       }
-      // If session is present (auto-verification or already verified), onAuthStateChange handles it.
     } else {
       toast({ title: 'Registration Issue', description: 'Could not complete registration. Please try again.', variant: 'destructive' });
       return { error: new Error("User data not returned from signup"), data: null };
@@ -271,32 +242,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOutUser = async (): Promise<void> => {
     if (!isMountedRef.current) return Promise.resolve();
-    // console.log('[AuthContext] signOut: Initiating sign out.');
-    // setLoading(true); // No, main loading is for initial app load. SignOut is an action.
 
-    try {
-      const { error: signOutServiceError } = await supabase.auth.signOut();
-      if (signOutServiceError) {
-        console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError);
-        // Don't necessarily show error if already signed out or session missing
-        if (!(signOutServiceError.message.includes("Auth session missing") || signOutServiceError.message.includes("No active session"))) {
+    const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
+
+    if (currentAuthSession) {
+      try {
+        const { error: signOutServiceError } = await supabase.auth.signOut();
+        if (signOutServiceError) {
+          // Only toast if it's not an "Auth session missing" error, which we are trying to avoid
+          if (!(signOutServiceError.message.includes("Auth session missing") || signOutServiceError.message.includes("No active session"))) {
+            console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError);
             toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
+          }
         }
+      } catch (thrownError: any) {
+         if (!(thrownError.message.includes("Auth session missing") || thrownError.message.includes("No active session"))) {
+            console.error("[AuthContext] signOut: Exception during Supabase signOut:", thrownError);
+            toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred.', variant: 'destructive' });
+         }
       }
-       // Toast for successful logout can be here or after state update
-    } catch (thrownError: any) {
-      console.error("[AuthContext] signOut: Exception during Supabase signOut:", thrownError);
-      if (!(thrownError.message.includes("Auth session missing") || thrownError.message.includes("No active session"))) {
-        toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred.', variant: 'destructive' });
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setUser(null);
-        setSession(null);
-        router.push('/'); // Navigate after state is cleared
+    }
+    // Always perform local cleanup and navigation
+    if (isMountedRef.current) {
+      setUser(null);
+      setSession(null);
+      router.push('/');
+      // Only show success toast if there was potentially a session to sign out from,
+      // or if the user object was previously non-null, indicating they were logged in.
+      if (user || currentAuthSession) {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        // setLoading(false); // No, main loading is for initial app load.
-        // console.log('[AuthContext] signOut: Complete.');
       }
     }
   };
@@ -317,9 +291,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Password Update Failed', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Password Updated', description: 'Please log in with your new password.' });
-      // onAuthStateChange will trigger SIGNED_OUT effectively if the session is invalidated by password change
-      // or force a sign out to ensure clean state
-      await supabase.auth.signOut();
+      await supabase.auth.signOut(); // This will trigger SIGNED_OUT event
     }
     return { error };
   };
@@ -357,7 +329,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       if (isMountedRef.current) setUser({ ...generalUser, savedPropertyIds: updatedSavedIds });
     } catch (error: any) {
-      console.error('[AuthContext] toggleSaveProperty: Error:', error.message);
+      console.error('[AuthContext] Error toggling save property:', error.message);
       toast({ title: 'Error Saving Property', description: error.message, variant: 'destructive' });
     }
   }, [user, router, toast]);
@@ -389,4 +361,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
