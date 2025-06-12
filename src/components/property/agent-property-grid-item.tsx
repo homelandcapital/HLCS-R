@@ -34,7 +34,7 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
   const getStatusIcon = (status: Property['status']) => {
     switch (status) {
       case 'pending': return <AlertTriangle className="h-3 w-3 mr-1" />;
-      case 'approved': return <CheckCircle className="h-3 w-3 mr-1 text-green-600" />; // Adjusted color for visibility
+      case 'approved': return <CheckCircle className="h-3 w-3 mr-1 text-green-600" />;
       case 'rejected': return <XCircle className="h-3 w-3 mr-1" />;
       default: return null;
     }
@@ -106,8 +106,10 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
       </CardContent>
       <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
         <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
-            <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
+            <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
+                <span className="flex items-center"> {/* Ensures Link has a single child */}
+                    <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
+                </span>
             </Link>
         </Button>
         <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled className="flex items-center">
