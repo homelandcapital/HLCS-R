@@ -25,7 +25,7 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { isAuthenticated, user, loading, signOut } = useAuth(); // Changed logout to signOut
+  const { isAuthenticated, user, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
   
-  const currentAgent = user as Agent; // Safe to cast here due to the effect and conditional rendering
+  const currentAgent = user as Agent; 
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -73,15 +73,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="w-full justify-start"
                 asChild
               >
-                <a> {/* Ensure 'a' tag for legacyBehavior */}
-                  {item.icon}
-                  <span className="ml-2">{item.label}</span>
+                <a>
+                  <span className="flex items-center"> {/* Added span wrapper */}
+                    {item.icon}
+                    <span className="ml-2">{item.label}</span>
+                  </span>
                 </a>
               </Button>
             </Link>
           ))}
         </nav>
-        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}> {/* Changed logout to signOut */}
+        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}>
           <LogOut className="h-5 w-5" />
           <span className="ml-2">Logout</span>
         </Button>

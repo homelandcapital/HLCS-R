@@ -26,7 +26,7 @@ const navItems = [
 ];
 
 export default function UserDashboardLayout({ children }: UserDashboardLayoutProps) {
-  const { isAuthenticated, user, loading, signOut } = useAuth(); // Changed logout to signOut
+  const { isAuthenticated, user, loading, signOut } = useAuth(); 
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -50,13 +50,7 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
       inquiries.forEach(inq => {
         if (inq.conversation && inq.conversation.length > 0) {
           const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          // Check if the latest message in the conversation is from 'platform_admin'
-          // This logic assumes we only count if the *last* message is from admin.
-          // A more sophisticated approach might track read receipts or last_read_timestamp.
           if (sortedConversation[0]?.sender_role === 'platform_admin') {
-            // This simple check might increment count even if user has seen it.
-            // For a true unread count, a more complex system is needed (e.g., tracking last read message per inquiry).
-            // For now, this indicates an admin has replied.
             count++;
           }
         }
@@ -69,9 +63,8 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'user') {
       fetchUnreadCount();
-       // Consider Supabase real-time subscription here too.
     }
-  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); // Re-fetch on pathname change
+  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); 
 
 
   useEffect(() => {
@@ -127,25 +120,23 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
                   className="w-full justify-start"
                   asChild
                 >
-                  <a className="flex items-center justify-between w-full"> {/* Ensure 'a' tag for legacyBehavior */}
-                    <>
-                      <div className="flex items-center">
-                          {item.icon}
-                          <span className="ml-2">{item.label}</span>
-                      </div>
-                      {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
-                          <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                            {unreadUserMessagesCount}
-                          </Badge>
-                      )}
-                    </>
+                  <a className="flex items-center justify-between w-full">
+                    <span className="flex items-center"> {/* Added span wrapper */}
+                        {item.icon}
+                        <span className="ml-2">{item.label}</span>
+                    </span>
+                    {isMyInquiriesItem && unreadUserMessagesCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
+                          {unreadUserMessagesCount}
+                        </Badge>
+                    )}
                   </a>
                 </Button>
               </Link>
             );
           })}
         </nav>
-        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}> {/* Changed logout to signOut */}
+        <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}>
           <LogOut className="h-5 w-5" />
           <span className="ml-2">Logout</span>
         </Button>

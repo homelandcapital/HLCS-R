@@ -121,18 +121,16 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
                   className="w-full justify-start"
                   asChild
                 >
-                  <a> {/* Ensure 'a' tag for legacyBehavior */}
-                    <>
-                      <div className="flex items-center"> 
-                        {item.icon}
-                        <span className="ml-2">{item.label}</span>
-                      </div>
-                      {isMailItem && unreadAdminMessagesCount > 0 && (
-                        <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-xs rounded-full">
-                          {unreadAdminMessagesCount}
-                        </Badge>
-                      )}
-                    </>
+                  <a className="flex items-center justify-between w-full">
+                    <span className="flex items-center"> {/* Added span wrapper */}
+                      {item.icon}
+                      <span className="ml-2">{item.label}</span>
+                    </span>
+                    {isMailItem && unreadAdminMessagesCount > 0 && (
+                      <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
+                        {unreadAdminMessagesCount}
+                      </Badge>
+                    )}
                   </a>
                 </Button>
               </Link>
