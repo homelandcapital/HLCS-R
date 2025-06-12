@@ -4,6 +4,8 @@
 import { z } from 'zod';
 import { supabase } from '@/lib/supabaseClient'; 
 import { addDays } from 'date-fns';
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -15,14 +17,14 @@ const CustomFieldSchema = z.object({
 
 const MetadataSchema = z.object({
   custom_fields: z.array(CustomFieldSchema).min(1, "custom_fields array cannot be empty"),
-}).passthrough(); // .passthrough() allows other top-level keys if needed for display
+}).passthrough();
 
 const InitializePaymentInputSchema = z.object({
   email: z.string().email({ message: 'A valid email is required.' }),
   amountInKobo: z.coerce.number().int().positive({ message: 'Amount must be a positive integer in Kobo.' }),
   reference: z.string().min(1, { message: 'A unique payment reference is required.'}),
   callbackUrl: z.string().url().optional().describe('Optional: URL to redirect to after payment for server-to-server. Not primary for inline.'),
-  metadata: MetadataSchema, // Expects metadata to be { custom_fields: [...] }
+  metadata: MetadataSchema, 
 });
 export type InitializePaymentInput = z.infer<typeof InitializePaymentInputSchema>;
 
@@ -64,8 +66,8 @@ export async function initializePayment(input: InitializePaymentInput): Promise<
         email,
         amount: amountInKobo,
         reference,
-        callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL, // For server-to-server if inline fails or for Paystack's records
-        metadata: metadata, // Pass the already structured metadata directly
+        callback_url: callbackUrl || process.env.PAYSTACK_CALLBACK_URL, 
+        metadata: metadata, 
       }),
     });
 
@@ -105,7 +107,6 @@ export interface PaystackVerifiedPaymentData {
   ip_address: string | null;
   metadata: {
     custom_fields?: Array<{ display_name: string; variable_name: string; value: any }>;
-    // Allow other direct properties for flexibility, though custom_fields is preferred
     [key: string]: any; 
   };
   customer: {
@@ -152,13 +153,26 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
   
   const { reference } = validation.data;
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   if (!secretKey) {
     console.error('[PaystackActions] Paystack secret key is not configured for verification.');
     return { success: false, message: 'Payment service is not configured on the server.' };
   }
+   if (!supabaseUrl) {
+    console.error('[PaystackActions] NEXT_PUBLIC_SUPABASE_URL is not configured.');
+    return { success: false, message: 'Database service URL is not configured on the server.' };
+  }
 
   console.log(`[PaystackActions] Verifying payment for reference: ${reference}`);
+  if (supabaseServiceKey && supabaseServiceKey.startsWith('ey')) { // Basic check for JWT like structure
+    console.log('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY is present and seems valid. Using admin client for DB updates.');
+  } else if (supabaseServiceKey) {
+    console.warn('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY is present BUT DOES NOT LOOK LIKE A VALID KEY. Using default (anon) client. DB update might fail.');
+  } else {
+    console.warn('[PaystackActions] verifyPayment: SUPABASE_SERVICE_ROLE_KEY is NOT SET. Using default (anon) client for DB update. This might fail due to RLS if not configured correctly.');
+  }
 
   try {
     const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
@@ -210,8 +224,7 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
         tier_duration_from_meta = customFields.find(f => f.variable_name === 'tier_duration')?.value;
       } else {
         console.warn('[PaystackActions] verifyPayment: custom_fields array not found or not an array in metadata. This might cause issues if data is only in custom_fields.');
-        // Fallback to direct metadata properties (less reliable for custom data from Paystack)
-        property_id = paymentData.metadata.property_id; // This might be undefined if data is only in custom_fields
+        property_id = paymentData.metadata.property_id; 
         tier_id = paymentData.metadata.tier_id;
         tier_name = paymentData.metadata.tier_name;
         tier_duration_from_meta = paymentData.metadata.tier_duration;
@@ -240,7 +253,15 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
         };
         console.log('[PaystackActions] verifyPayment: Supabase update payload:', JSON.stringify(updatePayload, null, 2));
         
-        const { error: updateError } = await supabase
+        let dbClient = supabase; 
+        if (supabaseServiceKey && supabaseUrl && supabaseServiceKey.startsWith('ey')) {
+            dbClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+            console.log('[PaystackActions] verifyPayment: Using Supabase admin client for DB update.');
+        } else {
+            console.warn('[PaystackActions] verifyPayment: Supabase service key not found or invalid. Using default client. DB update might fail due to RLS policies.');
+        }
+
+        const { error: updateError } = await dbClient
           .from('properties')
           .update(updatePayload)
           .eq('id', property_id);
@@ -295,3 +316,4 @@ export async function verifyPayment(input: VerifyPaymentInput): Promise<VerifyPa
     return { success: false, message: `An unexpected error occurred during verification: ${error.message}` };
   }
 }
+

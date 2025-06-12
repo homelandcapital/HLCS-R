@@ -153,15 +153,13 @@ function MyListingsPageComponent() {
       console.log(`[MyListingsPage] verifyPayment server action response:`, response);
 
       if (response.success && response.paymentSuccessful) {
-        toast({ title: 'Promotion Activated!', description: `Property promotion for property ID ending ...${response.data?.metadata?.custom_fields?.find(f => f.variable_name === 'property_id')?.value?.slice(-8) || 'N/A'} is now active. Refreshing listings...`, variant: 'default', duration: 7000 });
+        toast({ title: 'Promotion Activated!', description: response.message || `Property promotion is now active. Refreshing listings...`, variant: 'default', duration: 7000 });
         if (user && user.role === 'agent') {
           console.log(`[MyListingsPage] Payment successful, fetching agent properties for user: ${user.id}`);
           fetchAgentProperties(user.id); 
         }
-      } else if (response.success && !response.paymentSuccessful) {
-        toast({ title: 'Payment Not Successful', description: response.message || `Paystack reported transaction ${reference} as ${response.data?.status}.`, variant: 'default', duration: 7000 });
       } else {
-        toast({ title: 'Verification Failed', description: response.message || 'Could not verify payment.', variant: 'destructive', duration: 7000 });
+        toast({ title: 'Verification Issue', description: response.message || 'Could not verify payment or payment was not successful.', variant: response.success ? 'default' : 'destructive', duration: 7000 });
       }
     } catch (error: any) {
       console.error(`[MyListingsPage] Error in handleVerifyPayment client-side:`, error);
@@ -169,7 +167,7 @@ function MyListingsPageComponent() {
     } finally {
       setIsProcessingPayment(false);
       const currentPath = window.location.pathname;
-      router.replace(currentPath, { scroll: false });
+      router.replace(currentPath, { scroll: false }); // Remove query params from URL
     }
   }, [toast, fetchAgentProperties, user, router]);
 
@@ -275,7 +273,6 @@ function MyListingsPageComponent() {
     };
     console.log("[MyListingsPage] Payment details for server action (initializePayment):", JSON.stringify(paymentDetailsForServerAction, null, 2));
 
-
     try {
       const initResponse = await initializePayment(paymentDetailsForServerAction);
       console.log("[MyListingsPage] initializePayment server action response:", initResponse);
@@ -289,7 +286,7 @@ function MyListingsPageComponent() {
       const paymentReferenceFromServer = initResponse.data.reference; 
       
       if (window.PaystackPop) {
-        setIsPromoteDialogOpen(false); // Close dialog before opening Paystack popup
+        setIsPromoteDialogOpen(false);
         const handler = window.PaystackPop.setup({
           key: PAYSTACK_PUBLIC_KEY,
           email: user.email,
@@ -297,6 +294,7 @@ function MyListingsPageComponent() {
           ref: paymentReferenceFromServer, 
           currency: 'NGN', 
           metadata: metadataForPaystack, 
+          channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
           callback: function(response: { reference: string }) {
             console.log('Paystack popup success callback. Reference:', response.reference);
             handleVerifyPayment(response.reference);
