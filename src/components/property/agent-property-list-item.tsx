@@ -102,6 +102,7 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
           <div className="mt-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
               <Link href={`/properties/${property.id}`} target="_blank" rel="noopener noreferrer">
+                {/* This Link already had a single child <Eye />, so it should be fine */}
                 <Eye className="h-4 w-4" />
               </Link>
             </Button>
@@ -129,6 +130,13 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
                 <Star className="h-4 w-4 mr-1.5" /> Promote
               </Button>
             )}
+             <Button asChild variant="default" size="sm" className="w-full sm:w-auto">
+              <Link href={`/properties/${property.id}`}>
+                <span className="inline-flex items-center"> {/* Wrapper span */}
+                  View Details <ArrowRight className="ml-2 h-4 w-4" />
+                </span>
+              </Link>
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -137,3 +145,4 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
 };
 
 export default AgentPropertyListItem;
+
