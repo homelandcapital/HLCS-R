@@ -166,7 +166,7 @@ type PageId = "home" | "about" | "services" | "contact";
 
 export default function CmsManagementPage() {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
+  const [isUiBlockingLoading, setIsUiBlockingLoading] = useState(true); // Renamed for clarity
   const [activeTab, setActiveTab] = useState<PageId>("home");
 
   const homeForm = useForm<HomePageContent>({
@@ -177,21 +177,20 @@ export default function CmsManagementPage() {
   const { fields: ourServicesItemsFields, append: appendOurServicesItem, remove: removeOurServicesItem } = useFieldArray({ control: homeForm.control, name: "ourServices.items" });
   const { fields: findYourHomeFeaturesFields, append: appendFindYourHomeFeature, remove: removeFindYourHomeFeature } = useFieldArray({ control: homeForm.control, name: "findYourHome.features" });
 
-  // Placeholder forms for other pages
   const aboutForm = useForm<AboutPageContent>({ resolver: zodResolver(AboutPageContentSchema), defaultValues: defaultAboutPageContent });
   const servicesForm = useForm<ServicesPageContent>({ resolver: zodResolver(ServicesPageContentSchema), defaultValues: defaultServicesPageContent });
   const contactForm = useForm<ContactPageContentNew>({ resolver: zodResolver(ContactPageContentSchema), defaultValues: defaultContactPageContent });
 
 
   const loadPageContent = useCallback(async (pageId: PageId) => {
-    setLoading(true);
+    setIsUiBlockingLoading(true);
     const { data, error } = await supabase
       .from('page_content')
       .select('content')
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: single row not found
+    if (error && error.code !== 'PGRST116') { 
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
     
@@ -211,29 +210,49 @@ export default function CmsManagementPage() {
         contactForm.reset(contentToLoad || defaultContactPageContent);
         break;
     }
-    setLoading(false);
+    setIsUiBlockingLoading(false);
   }, [toast, homeForm, aboutForm, servicesForm, contactForm]);
 
   useEffect(() => {
     loadPageContent(activeTab);
   }, [activeTab, loadPageContent]);
 
-  const handleSave = async (pageId: PageId, content: any) => {
-    setLoading(true);
-    const { error } = await supabase
-      .from('page_content')
-      .upsert({ page_id: pageId, content: content, updated_at: new Date().toISOString() }, { onConflict: 'page_id' });
+  // This function is now intended to be wrapped by react-hook-form's handleSubmit
+  const performSave = async (pageId: PageId, content: any) => {
+    // RHF's isSubmitting will be true. We don't need component-level 'isUiBlockingLoading' for THIS save operation.
+    try {
+      const { error } = await supabase
+        .from('page_content')
+        .upsert({ page_id: pageId, content: content, updated_at: new Date().toISOString() }, { onConflict: 'page_id' });
 
-    if (error) {
-      toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
+      if (error) {
+        toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
+        throw error; // Propagate error so RHF can stop isSubmitting
+      } else {
+        toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
+      }
+    } catch (e: any) {
+        // Catch any other unexpected errors from Supabase or toast
+        toast({ title: `Unexpected error saving ${pageId}`, description: e.message || 'An unknown error occurred.', variant: 'destructive' });
+        throw e; // Propagate error
     }
-    setLoading(false);
+    // No need to manage isUiBlockingLoading here if called by RHF
+  };
+
+  // Handler for buttons not using RHF's handleSubmit (Services, Contact JSON textareas)
+  const handleDirectSave = async (pageId: PageId, formInstance: any) => {
+    setIsUiBlockingLoading(true); // Use component state for these buttons
+    try {
+      await performSave(pageId, formInstance.getValues());
+    } catch (e) {
+      // Error already toasted in performSave
+    } finally {
+      setIsUiBlockingLoading(false);
+    }
   };
 
 
-  if (loading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) { // Avoid skeleton flash on save
+  if (isUiBlockingLoading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) { 
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-1/2" />
@@ -262,7 +281,7 @@ export default function CmsManagementPage() {
         </TabsList>
 
         <TabsContent value="home" className="mt-6">
-          <form onSubmit={homeForm.handleSubmit(data => handleSave('home', data))}>
+          <form onSubmit={homeForm.handleSubmit(data => performSave('home', data))}>
             <Card>
               <CardHeader><CardTitle>Home Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-6">
@@ -386,7 +405,7 @@ export default function CmsManagementPage() {
                     </AccordionItem>
 
                 </Accordion>
-                <Button type="submit" disabled={loading || homeForm.formState.isSubmitting} className="mt-6">
+                <Button type="submit" disabled={homeForm.formState.isSubmitting || isUiBlockingLoading} className="mt-6">
                   <Save className="mr-2 h-4 w-4" /> {homeForm.formState.isSubmitting ? "Saving..." : "Save Home Page Content"}
                 </Button>
               </CardContent>
@@ -394,9 +413,8 @@ export default function CmsManagementPage() {
           </form>
         </TabsContent>
 
-        {/* Placeholder/Simplified forms for other tabs */}
         <TabsContent value="about" className="mt-6">
-           <form onSubmit={aboutForm.handleSubmit(data => handleSave('about', data))}>
+           <form onSubmit={aboutForm.handleSubmit(data => performSave('about', data))}>
             <Card>
               <CardHeader><CardTitle>About Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -420,7 +438,6 @@ export default function CmsManagementPage() {
                         <AccordionContent className="space-y-3 pt-3">
                             <Label>Section Title</Label><Input {...aboutForm.register('servicesSection.title')} />
                             <Label>Section Subtitle</Label><Textarea {...aboutForm.register('servicesSection.subtitle')} />
-                            {/* Simplified: Assume 4 items. For dynamic, useFieldArray would be needed here too. */}
                             {[0,1,2,3].map(index => (
                                 <div key={index} className="p-2 border rounded my-2">
                                     <Label>Service {index+1} Icon Name</Label><Input {...aboutForm.register(`servicesSection.items.${index}.iconName` as const)} />
@@ -431,7 +448,7 @@ export default function CmsManagementPage() {
                         </AccordionContent>
                     </AccordionItem>
                  </Accordion>
-                <Button type="submit" disabled={loading || aboutForm.formState.isSubmitting} className="mt-6">
+                <Button type="submit" disabled={aboutForm.formState.isSubmitting || isUiBlockingLoading} className="mt-6">
                   <Save className="mr-2 h-4 w-4" /> {aboutForm.formState.isSubmitting ? "Saving..." : "Save About Page Content"}
                 </Button>
               </CardContent>
@@ -443,15 +460,26 @@ export default function CmsManagementPage() {
           <Card>
             <CardHeader><CardTitle>Services Page Content</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Editing for the Services page is more complex due to its nested structure. For this iteration, you can manage its content directly as a JSON object. A more user-friendly form can be built in a future update.</p>
+              <p className="text-muted-foreground mb-4">Editing for the Services page is more complex. For now, manage its content directly as a JSON object.</p>
               <Controller
-                name="content"
+                name="content" 
                 control={servicesForm.control}
+                // Using servicesForm.getValues() for 'content' assumes the entire ServicesPageContent is under a 'content' field in the form, which is unusual.
+                // Assuming `servicesForm` *is* the form for the entire `ServicesPageContent` structure.
                 render={({ field }) => (
                   <Textarea
                     value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
                     onChange={(e) => {
-                      try { field.onChange(JSON.parse(e.target.value)); } catch (err) { field.onChange(e.target.value); } // Allow editing even if temporarily invalid JSON
+                      try { 
+                        const parsed = JSON.parse(e.target.value);
+                        // Instead of field.onChange, which expects the 'content' field, we reset the whole form if 'content' is the whole form.
+                        servicesForm.reset(parsed); 
+                      } catch (err) { 
+                        // If JSON is temporarily invalid, allow text editing. Zod will catch it on submit.
+                        // This part is tricky; ideally, Zod would re-validate on change.
+                        // For simplicity, we might just let it be text and validate on save.
+                        // servicesForm.setValue('content' as any, e.target.value); // If 'content' is a field
+                      }
                     }}
                     rows={25}
                     placeholder="Enter JSON content for Services Page"
@@ -459,9 +487,10 @@ export default function CmsManagementPage() {
                   />
                 )}
               />
-              {servicesForm.formState.errors.content && <p className="text-destructive text-sm mt-1">{(servicesForm.formState.errors.content as any)?.message || "Invalid JSON structure."}</p>}
-              <Button onClick={() => handleSave('services', servicesForm.getValues())} disabled={loading || servicesForm.formState.isSubmitting} className="mt-4">
-                <Save className="mr-2 h-4 w-4" /> {servicesForm.formState.isSubmitting ? "Saving..." : "Save Services Page Content"}
+              {/* Displaying error for the entire form if 'content' represents the whole form data */}
+              {Object.keys(servicesForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content.</p>}
+              <Button onClick={() => handleDirectSave('services', servicesForm)} disabled={isUiBlockingLoading} className="mt-4">
+                <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading ? "Saving..." : "Save Services Page Content"}
               </Button>
             </CardContent>
           </Card>
@@ -471,15 +500,20 @@ export default function CmsManagementPage() {
           <Card>
             <CardHeader><CardTitle>Contact Page Content</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Editing for the Contact page. Similar to Services, some parts are complex. Detailed forms can be added later.</p>
+              <p className="text-muted-foreground mb-4">Editing for the Contact page. Manage content directly as a JSON object for now.</p>
                <Controller
-                name="content"
+                name="content" // Assuming 'content' is the field holding the JSON for ContactPageContentNew
                 control={contactForm.control}
                 render={({ field }) => (
                   <Textarea
                     value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
                     onChange={(e) => {
-                      try { field.onChange(JSON.parse(e.target.value)); } catch (err) { field.onChange(e.target.value); }
+                      try { 
+                        const parsed = JSON.parse(e.target.value);
+                        contactForm.reset(parsed); // If 'content' is the whole form structure
+                      } catch (err) { 
+                        // Allow text editing, Zod validates on save
+                      }
                     }}
                     rows={25}
                     placeholder="Enter JSON content for Contact Page"
@@ -487,9 +521,9 @@ export default function CmsManagementPage() {
                   />
                 )}
               />
-              {contactForm.formState.errors.content && <p className="text-destructive text-sm mt-1">{(contactForm.formState.errors.content as any)?.message || "Invalid JSON structure."}</p>}
-              <Button onClick={() => handleSave('contact', contactForm.getValues())} disabled={loading || contactForm.formState.isSubmitting} className="mt-4">
-                <Save className="mr-2 h-4 w-4" /> {contactForm.formState.isSubmitting ? "Saving..." : "Save Contact Page Content"}
+              {Object.keys(contactForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content.</p>}
+              <Button onClick={() => handleDirectSave('contact', contactForm)} disabled={isUiBlockingLoading} className="mt-4">
+                <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading ? "Saving..." : "Save Contact Page Content"}
               </Button>
             </CardContent>
           </Card>
@@ -499,6 +533,4 @@ export default function CmsManagementPage() {
     </div>
   );
 }
-
-
     

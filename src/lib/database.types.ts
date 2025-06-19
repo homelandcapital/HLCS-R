@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -10,24 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      page_content: { // New table for CMS
-        Row: {
-          page_id: string // "home", "about", "services", "contact"
-          content: Json // Will hold HomePageContent, AboutPageContent etc.
-          updated_at: string
-        }
-        Insert: {
-          page_id: string
-          content: Json
-          updated_at?: string
-        }
-        Update: {
-          page_id?: string
-          content?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       inquiries: {
         Row: {
           created_at: string
@@ -107,6 +88,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      page_content: {
+        Row: {
+          content: Json
+          page_id: string
+          updated_at: string
+        }
+        Insert: {
+          content: Json
+          page_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          page_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_settings: {
         Row: {
@@ -480,7 +479,7 @@ export type CompositeTypes<
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
@@ -540,5 +539,3 @@ export const Constants = {
     },
   },
 } as const
-
-    
