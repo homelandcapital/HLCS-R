@@ -26,7 +26,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Zod Schemas for Validation
+// Zod Schemas for Validation (ensure these are complete and correct)
 const CmsLinkSchema = z.object({ text: z.string().min(1), href: z.string().min(1) });
 const HeroSlideSchema = z.object({
   titleLines: z.array(z.string().min(1)).min(1),
@@ -179,9 +179,7 @@ export default function CmsManagementPage() {
   const { fields: propertyVerificationItemsFields, append: appendPropertyVerificationItem, remove: removePropertyVerificationItem } = useFieldArray({ control: servicesForm.control, name: "propertyVerificationSection.items" });
   const { fields: detailedVerificationItemsFields, append: appendDetailedVerificationItem, remove: removeDetailedVerificationItem } = useFieldArray({ control: servicesForm.control, name: "detailedVerificationSection.items" });
 
-
   const contactForm = useForm<ContactPageContentNew>({ resolver: zodResolver(ContactPageContentSchema), defaultValues: defaultContactPageContent });
-
 
   const loadPageContent = useCallback(async (pageId: PageId) => {
     setIsUiBlockingLoading(true);
@@ -191,7 +189,7 @@ export default function CmsManagementPage() {
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: row not found, which is fine
+    if (error && error.code !== 'PGRST116') {
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
 
@@ -218,38 +216,67 @@ export default function CmsManagementPage() {
     loadPageContent(activeTab);
   }, [activeTab, loadPageContent]);
 
-  const performSave = async (pageId: PageId, content: any) => {
-    try {
-      const { data: upsertData, error } = await supabase
-        .from('page_content')
-        .upsert({ page_id: pageId, content: content, updated_at: new Date().toISOString() }, { onConflict: 'page_id' })
-        .select() // Select the upserted row
-        .single(); // Expect a single row
+  // Lean function for DB operation only. Throws error on failure.
+  const performSaveOnlyDb = async (pageId: PageId, content: any) => {
+    const { data: upsertData, error } = await supabase
+      .from('page_content')
+      .upsert({ page_id: pageId, content: content, updated_at: new Date().toISOString() }, { onConflict: 'page_id' })
+      .select()
+      .single();
 
-      if (error) {
-        console.error(`Error saving ${pageId} content to Supabase:`, error);
-        toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
-        throw error; // Re-throw to allow react-hook-form to handle isSubmitting
-      } else {
-        toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
-        return upsertData; // Resolve with data for react-hook-form
-      }
-    } catch (e: any) {
-        console.error(`Caught an exception in performSave for ${pageId}:`, e);
-        // Ensure a toast if not already shown (e.g., network error before Supabase error object)
-        if (!e.message?.includes('PostgrestError') && !e.message?.includes('supabase')) { 
-            toast({ title: `Unexpected error during ${pageId} save operation`, description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-        }
-        throw e; // IMPORTANT: Re-throw ANY caught error so handleSubmit knows the promise rejected.
+    if (error) {
+      console.error(`Error saving ${pageId} content to Supabase:`, error);
+      throw error; // Crucial for RHF to know the promise rejected
+    }
+    return upsertData; // Success
+  };
+
+  // Form-specific submit handlers
+  const onHomeSubmit = async (data: HomePageContent) => {
+    try {
+      await performSaveOnlyDb('home', data);
+      toast({ title: `Home Page Content Saved`, description: 'Your changes have been successfully saved.' });
+      homeForm.reset(data); // Optional: reset form with current data to clear dirty state
+    } catch (error: any) {
+      toast({ title: `Error saving Home Page content`, description: error.message, variant: 'destructive' });
     }
   };
 
-  const handleDirectSave = async (pageId: PageId, formInstance: any) => {
+  const onAboutSubmit = async (data: AboutPageContent) => {
+    try {
+      await performSaveOnlyDb('about', data);
+      toast({ title: `About Page Content Saved`, description: 'Your changes have been successfully saved.' });
+      aboutForm.reset(data);
+    } catch (error: any) {
+      toast({ title: `Error saving About Page content`, description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const onServicesSubmit = async (data: ServicesPageContent) => {
+    try {
+      await performSaveOnlyDb('services', data);
+      toast({ title: `Services Page Content Saved`, description: 'Your changes have been successfully saved.' });
+      servicesForm.reset(data);
+    } catch (error: any) {
+      toast({ title: `Error saving Services Page content`, description: error.message, variant: 'destructive' });
+    }
+  };
+  
+  const handleDirectSaveForContact = async () => {
     setIsUiBlockingLoading(true);
     try {
-      await performSave(pageId, formInstance.getValues());
-    } catch (e) {
-      // Error already toasted in performSave
+      // Validate before getting values for direct save
+      const isValid = await contactForm.trigger();
+      if (!isValid) {
+        toast({ title: "Validation Error", description: "Please check the contact form for errors.", variant: "destructive"});
+        setIsUiBlockingLoading(false);
+        return;
+      }
+      await performSaveOnlyDb('contact', contactForm.getValues());
+      toast({ title: `Contact Page Content Saved`, description: 'Your changes have been successfully saved.' });
+      contactForm.reset(contactForm.getValues());
+    } catch (error: any) {
+      toast({ title: `Error saving Contact Page content`, description: error.message, variant: 'destructive' });
     } finally {
       setIsUiBlockingLoading(false);
     }
@@ -265,7 +292,6 @@ export default function CmsManagementPage() {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-8">
@@ -285,7 +311,7 @@ export default function CmsManagementPage() {
         </TabsList>
 
         <TabsContent value="home" className="mt-6">
-          <form onSubmit={homeForm.handleSubmit(data => performSave('home', data))}>
+          <form onSubmit={homeForm.handleSubmit(onHomeSubmit)}>
             <Card>
               <CardHeader><CardTitle>Home Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-6">
@@ -409,7 +435,7 @@ export default function CmsManagementPage() {
         </TabsContent>
 
         <TabsContent value="about" className="mt-6">
-           <form onSubmit={aboutForm.handleSubmit(data => performSave('about', data))}>
+           <form onSubmit={aboutForm.handleSubmit(onAboutSubmit)}>
             <Card>
               <CardHeader><CardTitle>About Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -432,7 +458,8 @@ export default function CmsManagementPage() {
                         <AccordionContent className="space-y-3 pt-3">
                             <Label>Section Title</Label><Input {...aboutForm.register('servicesSection.title')} />
                             <Label>Section Subtitle</Label><Textarea {...aboutForm.register('servicesSection.subtitle')} />
-                            {[0,1,2,3].map(index => ( // Assuming a fixed number of 4 service items for About page based on default data
+                            {/* Assuming a fixed number of 4 service items based on default data */}
+                            {(defaultAboutPageContent.servicesSection.items).map((_, index) => (
                                 <Card key={index} className="p-3 space-y-2 bg-muted/50 my-2">
                                     <Label>Service {index+1} Icon Name</Label><Input {...aboutForm.register(`servicesSection.items.${index}.iconName` as const)} />
                                     <Label>Service {index+1} Title</Label><Input {...aboutForm.register(`servicesSection.items.${index}.title` as const)} />
@@ -451,7 +478,7 @@ export default function CmsManagementPage() {
         </TabsContent>
 
         <TabsContent value="services" className="mt-6">
-          <form onSubmit={servicesForm.handleSubmit(data => performSave('services', data))}>
+          <form onSubmit={servicesForm.handleSubmit(onServicesSubmit)}>
             <Card>
               <CardHeader><CardTitle>Services Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-6">
@@ -537,24 +564,19 @@ export default function CmsManagementPage() {
             <CardContent>
               <p className="text-muted-foreground mb-4">Editing for the Contact page. Manage content directly as a JSON object for now.</p>
                <Controller
-                name="content" // This should ideally be specific to contactForm's structure
-                control={contactForm.control} // Use contactForm.control
+                name="content" 
+                control={contactForm.control}
                 // @ts-ignore
-                defaultValue={JSON.stringify(defaultContactPageContent, null, 2)} // Ensure it's stringified
+                defaultValue={JSON.stringify(defaultContactPageContent, null, 2)}
                 render={({ field }) => (
                   <Textarea
                     value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
                     onChange={(e) => {
                       try {
                         const parsed = JSON.parse(e.target.value);
-                        // This is tricky; directly setting field.value might not be enough if not registered.
-                        // Best to use form.reset or form.setValue if you parse it.
-                        contactForm.reset(parsed); // Reset the whole form with new parsed data
+                        contactForm.reset(parsed); 
                       } catch (err) {
-                        // If JSON is invalid, let Zod catch it on submit.
-                        // You might want to provide instant feedback here too.
-                        // For now, allow text editing. Zod validates on save.
-                         field.onChange(e.target.value); // Allow raw text editing
+                         field.onChange(e.target.value); 
                       }
                     }}
                     rows={25}
@@ -564,7 +586,7 @@ export default function CmsManagementPage() {
                 )}
               />
               {Object.keys(contactForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content. Please check your input.</p>}
-              <Button onClick={() => handleDirectSave('contact', contactForm)} disabled={isUiBlockingLoading || contactForm.formState.isSubmitting} className="mt-4">
+              <Button onClick={handleDirectSaveForContact} disabled={isUiBlockingLoading || contactForm.formState.isSubmitting} className="mt-4">
                 <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading || contactForm.formState.isSubmitting ? "Saving..." : "Save Contact Page Content"}
               </Button>
             </CardContent>
