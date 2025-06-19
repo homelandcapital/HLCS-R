@@ -122,37 +122,43 @@ const ServicesPageContentSchema = z.object({
 });
 
 const OfficeDetailsSchema = z.object({
-    tabName: z.string().min(1),
-    name: z.string().min(1),
-    address: z.string().min(1),
-    phone: z.string().min(1),
-    email: z.string().email(),
-    mapCoordinates: z.object({ lat: z.number(), lng: z.number() }),
-    mapTitle: z.string().min(1),
+    tabName: z.string().min(1, "Tab name is required"),
+    name: z.string().min(1, "Office name is required"),
+    address: z.string().min(1, "Address is required"),
+    phone: z.string().min(1, "Phone number is required"),
+    email: z.string().email("Invalid email address"),
+    mapCoordinates: z.object({ 
+        lat: z.coerce.number().min(-90, "Invalid latitude").max(90, "Invalid latitude"), 
+        lng: z.coerce.number().min(-180, "Invalid longitude").max(180, "Invalid longitude") 
+    }),
+    mapTitle: z.string().min(1, "Map title is required"),
 });
 
 const ContactPageContentSchema = z.object({
-    pageTitle: z.string().min(1),
-    headerTitle: z.string().min(1),
-    headerSubtitle: z.string().min(1),
+    pageTitle: z.string().min(1, "Page title is required"),
+    headerTitle: z.string().min(1, "Header title is required"),
+    headerSubtitle: z.string().min(1, "Header subtitle is required"),
     formSection: z.object({
-        title: z.string().min(1),
-        inquiryTypes: z.array(z.string().min(1)).min(1),
+        title: z.string().min(1, "Form section title is required"),
+        inquiryTypes: z.array(z.string().min(1, "Inquiry type cannot be empty")).min(1, "At least one inquiry type is required"),
     }),
     officesSection: z.object({
-        title: z.string().min(1),
+        title: z.string().min(1, "Offices section title is required"),
         headquarters: OfficeDetailsSchema,
         regionalOffice: OfficeDetailsSchema.optional(),
     }),
     businessHoursSection: z.object({
-        title: z.string().min(1),
-        hours: z.array(z.object({ day: z.string().min(1), time: z.string().min(1) })).min(1),
+        title: z.string().min(1, "Business hours title is required"),
+        hours: z.array(z.object({ 
+            day: z.string().min(1, "Day is required"), 
+            time: z.string().min(1, "Time is required") 
+        })).min(1, "At least one business hour entry is required"),
     }),
     investorRelationsSection: z.object({
-        title: z.string().min(1),
-        description: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().min(1),
+        title: z.string().min(1, "Investor relations title is required"),
+        description: z.string().min(1, "Description is required"),
+        email: z.string().email("Invalid email for investor relations"),
+        phone: z.string().min(1, "Phone number for investor relations is required"),
     }),
 });
 
@@ -180,6 +186,9 @@ export default function CmsManagementPage() {
   const { fields: detailedVerificationItemsFields, append: appendDetailedVerificationItem, remove: removeDetailedVerificationItem } = useFieldArray({ control: servicesForm.control, name: "detailedVerificationSection.items" });
 
   const contactForm = useForm<ContactPageContentNew>({ resolver: zodResolver(ContactPageContentSchema), defaultValues: defaultContactPageContent });
+  const { fields: inquiryTypesFields, append: appendInquiryType, remove: removeInquiryType } = useFieldArray({ control: contactForm.control, name: "formSection.inquiryTypes" });
+  const { fields: businessHoursFields, append: appendBusinessHour, remove: removeBusinessHour } = useFieldArray({ control: contactForm.control, name: "businessHoursSection.hours" });
+
 
   const loadPageContent = useCallback(async (pageId: PageId) => {
     setIsUiBlockingLoading(true);
@@ -216,8 +225,6 @@ export default function CmsManagementPage() {
     loadPageContent(activeTab);
   }, [activeTab, loadPageContent]);
 
-  // Lean function for DB operation only. Throws error on failure.
-  // Returns the saved data (or input data as fallback) on success.
   const performSaveOnlyDb = async (pageId: PageId, content: any) => {
     const { data: upsertData, error } = await supabase
       .from('page_content')
@@ -227,54 +234,30 @@ export default function CmsManagementPage() {
 
     if (error) {
       console.error(`Error saving ${pageId} content to Supabase:`, error);
-      throw error; // Crucial for RHF/calling function to know the promise rejected
+      throw error;
     }
-    return upsertData || content; // Return upserted data, or the input content as fallback
+    return upsertData || content; 
   };
   
   const handleSubmitLogic = async ( pageId: PageId, data: any, formInstance: any ) => {
     try {
-      // Perform the save but we might not use its direct return value for reset if 'data' is preferred
       await performSaveOnlyDb(pageId, data); 
-      
-      // Defer toast and reset to allow RHF to finish its cycle
       setTimeout(() => {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Page Content Saved`, description: 'Your changes have been successfully saved.' });
-        formInstance.reset(data); // Reset with the data that was just submitted and validated by RHF
+        formInstance.reset(data); 
       }, 0);
     } catch (error: any) {
-      // Defer error toast
       setTimeout(() => {
         toast({ title: `Error saving ${pageId} page content`, description: error.message, variant: 'destructive' });
       }, 0);
-      throw error; // Re-throw to ensure RHF's handleSubmit sees the failure
+      throw error; 
     }
   };
 
-  // Form-specific submit handlers that use the generalized logic
   const onHomeSubmit = (data: HomePageContent) => handleSubmitLogic('home', data, homeForm);
   const onAboutSubmit = (data: AboutPageContent) => handleSubmitLogic('about', data, aboutForm);
   const onServicesSubmit = (data: ServicesPageContent) => handleSubmitLogic('services', data, servicesForm);
-  
-  const handleDirectSaveForContact = async () => {
-    setIsUiBlockingLoading(true);
-    try {
-      const isValid = await contactForm.trigger();
-      if (!isValid) {
-        toast({ title: "Validation Error", description: "Please check the contact form for errors.", variant: "destructive"});
-        setIsUiBlockingLoading(false);
-        return;
-      }
-      const currentContactData = contactForm.getValues();
-      await performSaveOnlyDb('contact', currentContactData);
-      toast({ title: `Contact Page Content Saved`, description: 'Your changes have been successfully saved.' });
-      contactForm.reset(currentContactData); // Reset with the data just saved
-    } catch (error: any) {
-      toast({ title: `Error saving Contact Page content`, description: error.message, variant: 'destructive' });
-    } finally {
-      setIsUiBlockingLoading(false);
-    }
-  };
+  const onContactSubmit = (data: ContactPageContentNew) => handleSubmitLogic('contact', data, contactForm);
 
 
   if (isUiBlockingLoading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) {
@@ -459,7 +442,6 @@ export default function CmsManagementPage() {
                         <AccordionContent className="space-y-3 pt-3">
                             <Label>Page Title (Meta)</Label><Input {...aboutForm.register('pageTitle')} />
                             <Label>Hero Title</Label><Textarea {...aboutForm.register('heroSection.title')} rows={3} />
-                            {/* Handling paragraphs array */}
                             {(aboutForm.getValues().heroSection.paragraphs || defaultAboutPageContent.heroSection.paragraphs).map((_, index) => (
                               <div key={index} className="space-y-1">
                                 <Label>Paragraph {index + 1}</Label>
@@ -576,45 +558,113 @@ export default function CmsManagementPage() {
         </TabsContent>
 
         <TabsContent value="contact" className="mt-6">
-          <Card>
-            <CardHeader><CardTitle>Contact Page Content</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Edit content for the Contact page. Ensure the JSON is valid before saving.</p>
-               <Controller
-                name="officesSection" // Example: binding to a part of the form if needed, or simply manage string
-                control={contactForm.control} // This control is for the whole ContactPageContentNew
-                render={({ field, fieldState }) => ( // fieldState for potential local error display
-                  <Textarea
-                    value={typeof contactForm.getValues() === 'object' ? JSON.stringify(contactForm.getValues(), null, 2) : contactForm.getValues() || ''}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        contactForm.reset(parsed); 
-                      } catch (err) {
-                        // Allow typing invalid JSON temporarily, validation will catch on submit
-                      }
-                    }}
-                    rows={25}
-                    placeholder="Enter JSON content for Contact Page"
-                    className="font-mono text-xs"
-                  />
-                )}
-              />
-              {Object.keys(contactForm.formState.errors).length > 0 && 
-                <p className="text-destructive text-sm mt-1">
-                  Invalid JSON structure or content based on schema. Please check your input.
-                  (Errors: {JSON.stringify(contactForm.formState.errors)})
-                </p>
-              }
-              <Button onClick={handleDirectSaveForContact} disabled={isUiBlockingLoading || contactForm.formState.isSubmitting} className="mt-4">
-                <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading || contactForm.formState.isSubmitting ? "Saving..." : "Save Contact Page Content"}
-              </Button>
-            </CardContent>
-          </Card>
+           <form onSubmit={contactForm.handleSubmit(onContactSubmit)}>
+            <Card>
+              <CardHeader><CardTitle>Contact Page Content</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <Accordion type="single" collapsible defaultValue="contact-header" className="w-full">
+                  <AccordionItem value="contact-header">
+                    <AccordionTrigger className="text-lg font-semibold">Header &amp; Meta</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>Page Title (Meta)</Label><Input {...contactForm.register('pageTitle')} placeholder="Contact Page Title" />
+                      <Label>Header Title</Label><Input {...contactForm.register('headerTitle')} placeholder="Main Title on Page" />
+                      <Label>Header Subtitle</Label><Textarea {...contactForm.register('headerSubtitle')} placeholder="Subtitle below main title" />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="contact-form-section">
+                    <AccordionTrigger className="text-lg font-semibold">Form Section</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>Section Title</Label><Input {...contactForm.register('formSection.title')} placeholder="Form Section Title" />
+                      <h4 className="font-medium pt-2">Inquiry Types:</h4>
+                      {inquiryTypesFields.map((itemField, index) => (
+                        <Card key={itemField.id} className="p-3 space-y-2 bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            <Input {...contactForm.register(`formSection.inquiryTypes.${index}` as const)} placeholder="e.g., General Inquiry" className="flex-grow" />
+                            <Button type="button" variant="destructive" size="icon" onClick={() => removeInquiryType(index)}><Trash2 className="h-4 w-4"/></Button>
+                          </div>
+                        </Card>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => appendInquiryType("New Inquiry Type")}><PlusCircle className="mr-2 h-4 w-4" /> Add Inquiry Type</Button>
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                  <AccordionItem value="contact-offices-section">
+                    <AccordionTrigger className="text-lg font-semibold">Offices Section</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-3">
+                      <Label>Section Title</Label><Input {...contactForm.register('officesSection.title')} placeholder="Offices Section Title" />
+                      
+                      <Accordion type="single" collapsible defaultValue="contact-hq" className="w-full space-y-3">
+                        <AccordionItem value="contact-hq">
+                          <AccordionTrigger className="text-md font-medium bg-muted/70 px-3 py-2 rounded-md">Headquarters Details</AccordionTrigger>
+                          <AccordionContent className="p-3 border rounded-md mt-2 space-y-2">
+                            <Label>Tab Name</Label><Input {...contactForm.register('officesSection.headquarters.tabName')} />
+                            <Label>Office Name</Label><Input {...contactForm.register('officesSection.headquarters.name')} />
+                            <Label>Address (use new lines for formatting)</Label><Textarea {...contactForm.register('officesSection.headquarters.address')} rows={3} />
+                            <Label>Phone</Label><Input {...contactForm.register('officesSection.headquarters.phone')} />
+                            <Label>Email</Label><Input type="email" {...contactForm.register('officesSection.headquarters.email')} />
+                            <Label>Map Latitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.headquarters.mapCoordinates.lat')} />
+                            <Label>Map Longitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.headquarters.mapCoordinates.lng')} />
+                            <Label>Map Title</Label><Input {...contactForm.register('officesSection.headquarters.mapTitle')} />
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="contact-regional">
+                          <AccordionTrigger className="text-md font-medium bg-muted/70 px-3 py-2 rounded-md">Regional Office Details (Optional)</AccordionTrigger>
+                          <AccordionContent className="p-3 border rounded-md mt-2 space-y-2">
+                            <p className="text-xs text-muted-foreground mb-2">Fill these fields if you have a regional office. Leave blank if not applicable.</p>
+                            <Label>Tab Name</Label><Input {...contactForm.register('officesSection.regionalOffice.tabName')} />
+                            <Label>Office Name</Label><Input {...contactForm.register('officesSection.regionalOffice.name')} />
+                            <Label>Address (use new lines for formatting)</Label><Textarea {...contactForm.register('officesSection.regionalOffice.address')} rows={3} />
+                            <Label>Phone</Label><Input {...contactForm.register('officesSection.regionalOffice.phone')} />
+                            <Label>Email</Label><Input type="email" {...contactForm.register('officesSection.regionalOffice.email')} />
+                            <Label>Map Latitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.regionalOffice.mapCoordinates.lat')} />
+                            <Label>Map Longitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.regionalOffice.mapCoordinates.lng')} />
+                            <Label>Map Title</Label><Input {...contactForm.register('officesSection.regionalOffice.mapTitle')} />
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="contact-business-hours">
+                    <AccordionTrigger className="text-lg font-semibold">Business Hours Section</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                        <Label>Section Title</Label><Input {...contactForm.register('businessHoursSection.title')} placeholder="Business Hours Title" />
+                        <h4 className="font-medium pt-2">Hours:</h4>
+                        {businessHoursFields.map((itemField, index) => (
+                            <Card key={itemField.id} className="p-3 space-y-2 bg-muted/50">
+                                <div className="grid grid-cols-2 gap-2 items-center">
+                                    <Input {...contactForm.register(`businessHoursSection.hours.${index}.day` as const)} placeholder="e.g., Monday - Friday" />
+                                    <Input {...contactForm.register(`businessHoursSection.hours.${index}.time` as const)} placeholder="e.g., 9:00 AM - 5:00 PM" />
+                                </div>
+                                <Button type="button" variant="destructive" size="sm" onClick={() => removeBusinessHour(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Hour Entry</Button>
+                            </Card>
+                        ))}
+                        <Button type="button" variant="outline" onClick={() => appendBusinessHour({ day: "New Day", time: "Time Range" })}><PlusCircle className="mr-2 h-4 w-4" /> Add Hour Entry</Button>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="contact-investor-relations">
+                    <AccordionTrigger className="text-lg font-semibold">Investor Relations Section</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                        <Label>Section Title</Label><Input {...contactForm.register('investorRelationsSection.title')} />
+                        <Label>Description</Label><Textarea {...contactForm.register('investorRelationsSection.description')} rows={2} />
+                        <Label>Email</Label><Input type="email" {...contactForm.register('investorRelationsSection.email')} />
+                        <Label>Phone</Label><Input {...contactForm.register('investorRelationsSection.phone')} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                </Accordion>
+                <Button type="submit" disabled={contactForm.formState.isSubmitting || isUiBlockingLoading} className="mt-6">
+                  <Save className="mr-2 h-4 w-4" /> {contactForm.formState.isSubmitting ? "Saving..." : "Save Contact Page Content"}
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
         </TabsContent>
 
       </Tabs>
     </div>
   );
 }
-
