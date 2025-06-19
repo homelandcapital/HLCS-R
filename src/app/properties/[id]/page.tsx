@@ -250,7 +250,6 @@ export default function PropertyDetailsPage() {
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   style={{objectFit:"cover"}}
                   className="transition-opacity duration-300 ease-in-out"
-                  data-ai-hint="property interior detail"
                   priority={true}
                 />
                 {images.length > 1 && (
@@ -262,7 +261,7 @@ export default function PropertyDetailsPage() {
               </>
             ) : (
               <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
-                <Image src={defaultImage} alt="No image available" fill style={{objectFit:"contain"}} data-ai-hint="placeholder image"/>
+                <Image src={defaultImage} alt="No image available" fill style={{objectFit:"contain"}} />
                 <p className="absolute bottom-4 text-muted-foreground">No images available</p>
               </div>
             )}
@@ -328,7 +327,7 @@ export default function PropertyDetailsPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-center text-center space-y-3">
               <Avatar className="w-24 h-24 border-2 border-primary">
-                <AvatarImage src="https://placehold.co/100x100/4DB6AC/FFFFFF.png?text=HC" alt="Homeland Capital" data-ai-hint="company logo"/>
+                <AvatarImage src="https://placehold.co/100x100/4DB6AC/FFFFFF.png?text=HC" alt="Homeland Capital" />
                 <AvatarFallback><Building className="h-10 w-10"/></AvatarFallback>
               </Avatar>
               <h3 className="text-xl font-semibold text-foreground">Homeland Capital</h3>
@@ -376,4 +375,3 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
-

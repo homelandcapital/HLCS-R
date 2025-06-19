@@ -14,7 +14,6 @@ export let homePageContentData: HomePageContent = {
         cta: { text: "Explore Real Estate", href: "/properties" },
         backgroundImageUrl: "https://placehold.co/1920x1080.png",
         backgroundImageAlt: "Modern cityscape with green spaces",
-        backgroundImageAiHint: "cityscape modern green",
       },
       {
         titleLines: ["Power Your Projects"],
@@ -22,7 +21,6 @@ export let homePageContentData: HomePageContent = {
         cta: { text: "Explore Machinery", href: "/services#machinery" },
         backgroundImageUrl: "https://placehold.co/1920x1081.png",
         backgroundImageAlt: "Heavy construction machinery at a site",
-        backgroundImageAiHint: "construction machinery heavy",
       },
       {
         titleLines: ["Building the Future, Together"],
@@ -30,7 +28,6 @@ export let homePageContentData: HomePageContent = {
         cta: { text: "View Developments", href: "/services#development" },
         backgroundImageUrl: "https://placehold.co/1920x1082.png",
         backgroundImageAlt: "Architectural model of a new development",
-        backgroundImageAiHint: "architectural model development",
       },
       {
         titleLines: ["Investing in Our Communities"],
@@ -38,7 +35,6 @@ export let homePageContentData: HomePageContent = {
         cta: { text: "Learn About Community", href: "/services#community" },
         backgroundImageUrl: "https://placehold.co/1920x1083.png",
         backgroundImageAlt: "Community members working together on a project",
-        backgroundImageAiHint: "community project people",
       }
     ]
   },
@@ -78,7 +74,6 @@ export let homePageContentData: HomePageContent = {
     ],
     imageUrl: "https://placehold.co/600x450.png",
     imageAlt: "Construction worker on site with concrete slabs",
-    imageAiHint: "construction worker site",
     cta: { text: "Search Properties", href: "/properties" }
   },
   developmentProjects: {
@@ -87,7 +82,6 @@ export let homePageContentData: HomePageContent = {
     description: "We expertly manage development projects for various sectors, agriculture, and manufacturing, ensuring proficient planning, timely execution, and adherence to quality and budget standards.",
     imageUrl: "https://placehold.co/600x400.png",
     imageAlt: "Architectural blueprints and plans",
-    imageAiHint: "architect blueprints plans",
     cta: { text: "Explore Projects", href: "/services#development" },
     imagePosition: 'right',
   },
@@ -97,7 +91,6 @@ export let homePageContentData: HomePageContent = {
     description: "At Homeland Capital, we are dedicated to community development that drives meaningful long-term growth and impacts the lives of the communities we serve.",
     imageUrl: "https://placehold.co/600x400.png",
     imageAlt: "Row of yellow construction tractors",
-    imageAiHint: "construction machinery tractors",
     cta: { text: "Explore Projects", href: "/services#community" },
     imagePosition: 'left',
   }
@@ -180,7 +173,6 @@ export let aboutPageContentData: AboutPageContent = {
     ],
     imageUrl: "https://placehold.co/800x600.png",
     imageAlt: "Modern building architecture",
-    imageAiHint: "modern architecture building",
     badgeText: "99%\nTop Sales"
   },
   servicesSection: {
@@ -228,16 +220,16 @@ export let contactPageContentData: ContactPageContentNew = {
       address: "123 Finance Street, Suite 500\nNew York, NY 10001\nUnited States",
       phone: "+1 (212) 555-7890",
       email: "info@homelandcapitalsolution.com",
-      mapCoordinates: { lat: 40.7061, lng: -74.0088 }, 
+      mapCoordinates: { lat: 40.7061, lng: -74.0088 },
       mapTitle: "Homeland Capital HQ"
     },
     regionalOffice: {
       tabName: "Regional Office",
-      name: "Downtown Conference Center", 
+      name: "Downtown Conference Center",
       address: "157 William St, New York, NY 10038\nUnited States",
-      phone: "+1 (212) 555-1234", 
-      email: "regional@homelandcapitalsolution.com", 
-      mapCoordinates: { lat: 40.7095, lng: -74.0055 }, 
+      phone: "+1 (212) 555-1234",
+      email: "regional@homelandcapitalsolution.com",
+      mapCoordinates: { lat: 40.7095, lng: -74.0055 },
       mapTitle: "Downtown Conference Center"
     }
   },
@@ -289,4 +281,3 @@ export let footerContentData: FooterContent = {
   copyrightText: `© ${new Date().getFullYear()} Homeland Capital. All rights reserved.`,
   builtWithText: ""
 };
-

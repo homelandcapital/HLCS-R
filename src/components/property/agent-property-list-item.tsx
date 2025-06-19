@@ -54,7 +54,6 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
                 layout="fill"
                 objectFit="cover"
                 className="hover:scale-105 transition-transform"
-                data-ai-hint="house exterior building"
               />
             </a>
           </Link>
@@ -106,7 +105,7 @@ const AgentPropertyListItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
           <div className="mt-auto flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
               <Link href={`/properties/${property.id}`} legacyBehavior passHref>
-                <a target="_blank" rel="noopener noreferrer">
+                <a>
                   <span className="flex items-center justify-center"> <Eye className="h-4 w-4" /> </span>
                 </a>
               </Link>

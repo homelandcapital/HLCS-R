@@ -63,7 +63,7 @@ export default function UserProfilePage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-6 space-y-4 sm:space-y-0">
             <Avatar className="h-28 w-28 border-2 border-primary">
-              <AvatarImage src={generalUser.avatarUrl || 'https://placehold.co/128x128.png'} alt={generalUser.name} data-ai-hint="person avatar" />
+              <AvatarImage src={generalUser.avatar_url || 'https://placehold.co/128x128.png'} alt={generalUser.name} />
               <AvatarFallback>{generalUser.name.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
@@ -79,7 +79,7 @@ export default function UserProfilePage() {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">

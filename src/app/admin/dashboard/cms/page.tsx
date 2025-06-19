@@ -26,7 +26,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, ServerCrash } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Zod Schemas for Validation (simplified for brevity, can be expanded)
+// Zod Schemas for Validation
 const CmsLinkSchema = z.object({ text: z.string().min(1), href: z.string().min(1) });
 const HeroSlideSchema = z.object({
   titleLines: z.array(z.string().min(1)).min(1),
@@ -34,7 +34,6 @@ const HeroSlideSchema = z.object({
   cta: CmsLinkSchema,
   backgroundImageUrl: z.string().url(),
   backgroundImageAlt: z.string().min(1),
-  backgroundImageAiHint: z.string(),
 });
 const HomePageServiceItemSchema = z.object({
   iconName: z.string().min(1),
@@ -52,7 +51,6 @@ const HomePageProjectSectionSchema = z.object({
     description: z.string().min(1),
     imageUrl: z.string().url(),
     imageAlt: z.string().min(1),
-    imageAiHint: z.string(),
     cta: CmsLinkSchema,
     imagePosition: z.enum(['left', 'right']),
 });
@@ -70,14 +68,12 @@ const HomePageContentSchema = z.object({
     features: z.array(HomePageFindHomeFeatureSchema).min(1),
     imageUrl: z.string().url(),
     imageAlt: z.string().min(1),
-    imageAiHint: z.string(),
     cta: CmsLinkSchema,
   }),
   developmentProjects: HomePageProjectSectionSchema,
   communityOutreach: HomePageProjectSectionSchema,
 });
 
-// Simplified schemas for other pages for this iteration
 const AboutPageContentSchema = z.object({
   pageTitle: z.string().min(1),
   heroSection: z.object({
@@ -85,7 +81,6 @@ const AboutPageContentSchema = z.object({
     paragraphs: z.array(z.string().min(1)).min(1),
     imageUrl: z.string().url(),
     imageAlt: z.string().min(1),
-    imageAiHint: z.string(),
     badgeText: z.string().min(1),
   }),
   servicesSection: z.object({
@@ -166,7 +161,7 @@ type PageId = "home" | "about" | "services" | "contact";
 
 export default function CmsManagementPage() {
   const { toast } = useToast();
-  const [isUiBlockingLoading, setIsUiBlockingLoading] = useState(true); // Renamed for clarity
+  const [isUiBlockingLoading, setIsUiBlockingLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<PageId>("home");
 
   const homeForm = useForm<HomePageContent>({
@@ -190,10 +185,10 @@ export default function CmsManagementPage() {
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { 
+    if (error && error.code !== 'PGRST116') {
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
-    
+
     const contentToLoad = data?.content as any;
 
     switch (pageId) {
@@ -217,9 +212,7 @@ export default function CmsManagementPage() {
     loadPageContent(activeTab);
   }, [activeTab, loadPageContent]);
 
-  // This function is now intended to be wrapped by react-hook-form's handleSubmit
   const performSave = async (pageId: PageId, content: any) => {
-    // RHF's isSubmitting will be true. We don't need component-level 'isUiBlockingLoading' for THIS save operation.
     try {
       const { error } = await supabase
         .from('page_content')
@@ -227,21 +220,18 @@ export default function CmsManagementPage() {
 
       if (error) {
         toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
-        throw error; // Propagate error so RHF can stop isSubmitting
+        throw error;
       } else {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
       }
     } catch (e: any) {
-        // Catch any other unexpected errors from Supabase or toast
         toast({ title: `Unexpected error saving ${pageId}`, description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-        throw e; // Propagate error
+        throw e;
     }
-    // No need to manage isUiBlockingLoading here if called by RHF
   };
 
-  // Handler for buttons not using RHF's handleSubmit (Services, Contact JSON textareas)
   const handleDirectSave = async (pageId: PageId, formInstance: any) => {
-    setIsUiBlockingLoading(true); // Use component state for these buttons
+    setIsUiBlockingLoading(true);
     try {
       await performSave(pageId, formInstance.getValues());
     } catch (e) {
@@ -252,7 +242,7 @@ export default function CmsManagementPage() {
   };
 
 
-  if (isUiBlockingLoading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) { 
+  if (isUiBlockingLoading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-1/2" />
@@ -261,7 +251,7 @@ export default function CmsManagementPage() {
       </div>
     );
   }
-  
+
 
   return (
     <div className="space-y-8">
@@ -299,16 +289,15 @@ export default function CmsManagementPage() {
                           <Label>CTA Link</Label><Input {...homeForm.register(`hero.slides.${index}.cta.href` as const)} placeholder="/properties" />
                           <Label>Background Image URL</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageUrl` as const)} placeholder="https://placehold.co/..." />
                           <Label>Image Alt Text</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageAlt` as const)} placeholder="Alt text for image" />
-                          <Label>Image AI Hint</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageAiHint` as const)} placeholder="modern city" />
                           <Button type="button" variant="destructive" size="sm" onClick={() => removeHeroSlide(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Slide</Button>
                         </Card>
                       ))}
-                      <Button type="button" variant="outline" onClick={() => appendHeroSlide({ titleLines: ['New Slide Title'], subtitle: '', cta: { text: 'Learn More', href: '#' }, backgroundImageUrl: 'https://placehold.co/1920x1080.png', backgroundImageAlt: 'Placeholder', backgroundImageAiHint: 'placeholder image' })}>
+                      <Button type="button" variant="outline" onClick={() => appendHeroSlide({ titleLines: ['New Slide Title'], subtitle: '', cta: { text: 'Learn More', href: '#' }, backgroundImageUrl: 'https://placehold.co/1920x1080.png', backgroundImageAlt: 'Placeholder' })}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Hero Slide
                       </Button>
                     </AccordionContent>
                   </AccordionItem>
-                  
+
                   {/* Our Services Section */}
                   <AccordionItem value="our-services">
                     <AccordionTrigger className="text-lg font-semibold">"Our Services" Section</AccordionTrigger>
@@ -336,7 +325,6 @@ export default function CmsManagementPage() {
                         <Label>Section Subtitle</Label><Textarea {...homeForm.register('findYourHome.subtitle')} />
                         <Label>Image URL</Label><Input {...homeForm.register('findYourHome.imageUrl')} />
                         <Label>Image Alt Text</Label><Input {...homeForm.register('findYourHome.imageAlt')} />
-                        <Label>Image AI Hint</Label><Input {...homeForm.register('findYourHome.imageAiHint')} />
                         <Label>CTA Text</Label><Input {...homeForm.register('findYourHome.cta.text')} />
                         <Label>CTA Link</Label><Input {...homeForm.register('findYourHome.cta.href')} />
                         <h4 className="font-medium pt-2">Features:</h4>
@@ -361,7 +349,6 @@ export default function CmsManagementPage() {
                             <Label>Description</Label><Textarea {...homeForm.register('developmentProjects.description')} rows={3} />
                             <Label>Image URL</Label><Input {...homeForm.register('developmentProjects.imageUrl')} />
                             <Label>Image Alt Text</Label><Input {...homeForm.register('developmentProjects.imageAlt')} />
-                            <Label>Image AI Hint</Label><Input {...homeForm.register('developmentProjects.imageAiHint')} />
                             <Label>CTA Text</Label><Input {...homeForm.register('developmentProjects.cta.text')} />
                             <Label>CTA Link</Label><Input {...homeForm.register('developmentProjects.cta.href')} />
                             <Label>Image Position</Label>
@@ -387,7 +374,6 @@ export default function CmsManagementPage() {
                             <Label>Description</Label><Textarea {...homeForm.register('communityOutreach.description')} rows={3} />
                             <Label>Image URL</Label><Input {...homeForm.register('communityOutreach.imageUrl')} />
                             <Label>Image Alt Text</Label><Input {...homeForm.register('communityOutreach.imageAlt')} />
-                            <Label>Image AI Hint</Label><Input {...homeForm.register('communityOutreach.imageAiHint')} />
                             <Label>CTA Text</Label><Input {...homeForm.register('communityOutreach.cta.text')} />
                             <Label>CTA Link</Label><Input {...homeForm.register('communityOutreach.cta.href')} />
                              <Label>Image Position</Label>
@@ -429,7 +415,6 @@ export default function CmsManagementPage() {
                             <Label>Paragraph 3</Label><Textarea {...aboutForm.register('heroSection.paragraphs.2')} rows={4} />
                             <Label>Image URL</Label><Input {...aboutForm.register('heroSection.imageUrl')} />
                             <Label>Image Alt Text</Label><Input {...aboutForm.register('heroSection.imageAlt')} />
-                            <Label>Image AI Hint</Label><Input {...aboutForm.register('heroSection.imageAiHint')} />
                             <Label>Badge Text (use \n for new line)</Label><Input {...aboutForm.register('heroSection.badgeText')} />
                         </AccordionContent>
                     </AccordionItem>
@@ -462,23 +447,17 @@ export default function CmsManagementPage() {
             <CardContent>
               <p className="text-muted-foreground mb-4">Editing for the Services page is more complex. For now, manage its content directly as a JSON object.</p>
               <Controller
-                name="content" 
+                name="content"
                 control={servicesForm.control}
-                // Using servicesForm.getValues() for 'content' assumes the entire ServicesPageContent is under a 'content' field in the form, which is unusual.
-                // Assuming `servicesForm` *is* the form for the entire `ServicesPageContent` structure.
                 render={({ field }) => (
                   <Textarea
                     value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
                     onChange={(e) => {
-                      try { 
+                      try {
                         const parsed = JSON.parse(e.target.value);
-                        // Instead of field.onChange, which expects the 'content' field, we reset the whole form if 'content' is the whole form.
-                        servicesForm.reset(parsed); 
-                      } catch (err) { 
-                        // If JSON is temporarily invalid, allow text editing. Zod will catch it on submit.
-                        // This part is tricky; ideally, Zod would re-validate on change.
-                        // For simplicity, we might just let it be text and validate on save.
-                        // servicesForm.setValue('content' as any, e.target.value); // If 'content' is a field
+                        servicesForm.reset(parsed);
+                      } catch (err) {
+                        // Allow text editing, Zod validates on save
                       }
                     }}
                     rows={25}
@@ -487,7 +466,6 @@ export default function CmsManagementPage() {
                   />
                 )}
               />
-              {/* Displaying error for the entire form if 'content' represents the whole form data */}
               {Object.keys(servicesForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content.</p>}
               <Button onClick={() => handleDirectSave('services', servicesForm)} disabled={isUiBlockingLoading} className="mt-4">
                 <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading ? "Saving..." : "Save Services Page Content"}
@@ -502,16 +480,16 @@ export default function CmsManagementPage() {
             <CardContent>
               <p className="text-muted-foreground mb-4">Editing for the Contact page. Manage content directly as a JSON object for now.</p>
                <Controller
-                name="content" // Assuming 'content' is the field holding the JSON for ContactPageContentNew
+                name="content"
                 control={contactForm.control}
                 render={({ field }) => (
                   <Textarea
                     value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
                     onChange={(e) => {
-                      try { 
+                      try {
                         const parsed = JSON.parse(e.target.value);
-                        contactForm.reset(parsed); // If 'content' is the whole form structure
-                      } catch (err) { 
+                        contactForm.reset(parsed);
+                      } catch (err) {
                         // Allow text editing, Zod validates on save
                       }
                     }}
@@ -533,4 +511,3 @@ export default function CmsManagementPage() {
     </div>
   );
 }
-    

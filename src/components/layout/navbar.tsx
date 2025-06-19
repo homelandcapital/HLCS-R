@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Users, Building, Mail } from "lucide-react"; 
+import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Users, Building, Mail } from "lucide-react";
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 import type { SectorKey } from '@/lib/types';
@@ -37,7 +37,7 @@ const Navbar = () => {
     { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, // UserCircle as placeholder
     { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, // Mail as placeholder
   ];
-  
+
   const visibleNavLinks = React.useMemo(() => {
     return baseNavLinks.filter(link => {
       if (link.alwaysVisible) return true;
@@ -48,7 +48,7 @@ const Navbar = () => {
         const defaultVisibility = link.sectorKey === 'realEstate' ? true : false;
         return platformSettings?.sector_visibility?.[link.sectorKey] ?? defaultVisibility;
       }
-      return false; 
+      return false;
     });
   }, [platformSettings, baseNavLinks]);
 
@@ -70,7 +70,7 @@ const Navbar = () => {
   };
 
   const AuthActions = ({ isMobile = false }: { isMobile?: boolean }) => {
-    if (authContextLoading) { 
+    if (authContextLoading) {
       return isMobile ? (
         <div className="space-y-2">
           <Button variant="ghost" disabled className="w-full justify-start">Loading...</Button>
@@ -84,7 +84,7 @@ const Navbar = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className={isMobile ? "w-full justify-start px-2 py-2 text-lg" : "rounded-full p-0 h-9 w-9 sm:h-10 sm:w-10"}>
               <Avatar className={isMobile ? "h-7 w-7 mr-2" : "h-8 w-8 sm:h-9 sm:w-9"}>
-                <AvatarImage src={user.avatar_url || undefined} alt={user.name} data-ai-hint="person avatar" />
+                <AvatarImage src={user.avatar_url || undefined} alt={user.name} />
                 <AvatarFallback>
                   {user.name ? user.name.substring(0, 2).toUpperCase() : <UserCircle className="h-5 w-5"/>}
                 </AvatarFallback>
@@ -167,7 +167,7 @@ const Navbar = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] bg-background p-6 flex flex-col">
               <SheetHeader className="mb-6 text-left">
-                <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle> 
+                <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
                 <Logo />
               </SheetHeader>
               <nav className="flex flex-col space-y-1 mb-auto">

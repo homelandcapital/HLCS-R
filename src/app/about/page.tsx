@@ -65,9 +65,8 @@ export default async function AboutPage() {
             <Image
               src={content.heroSection.imageUrl}
               alt={content.heroSection.imageAlt}
-              fill // Changed layout="fill" to fill
-              style={{objectFit:"cover"}} // Added style for objectFit
-              data-ai-hint={content.heroSection.imageAiHint}
+              fill
+              style={{objectFit:"cover"}}
               priority
             />
             <div className="absolute bottom-4 right-4 bg-yellow-400 text-yellow-900 p-4 rounded-lg shadow-lg text-center">
@@ -120,5 +119,3 @@ export default async function AboutPage() {
     </div>
   );
 }
-
-    

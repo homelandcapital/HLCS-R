@@ -69,7 +69,6 @@ export default async function HomePageRedesigned() {
                     style={{ objectFit: "cover" }}
                     className="absolute inset-0 z-0"
                     sizes="100vw"
-                    data-ai-hint={slide.backgroundImageAiHint}
                     priority={index === 0}
                   />
                   <div className="absolute inset-0 bg-black/50 z-10"></div>
@@ -130,7 +129,6 @@ export default async function HomePageRedesigned() {
               fill
               style={{ objectFit: "cover" }}
               sizes="(max-width: 768px) 100vw, 50vw"
-              data-ai-hint={content.findYourHome.imageAiHint}
             />
           </div>
           <div className="space-y-6">
@@ -186,7 +184,6 @@ export default async function HomePageRedesigned() {
               fill
               style={{ objectFit: "cover" }}
               sizes="(max-width: 768px) 100vw, 50vw"
-              data-ai-hint={content.developmentProjects.imageAiHint}
             />
           </div>
         </div>
@@ -218,7 +215,6 @@ export default async function HomePageRedesigned() {
               fill
               style={{ objectFit: "cover" }}
               sizes="(max-width: 768px) 100vw, 50vw"
-              data-ai-hint={content.communityOutreach.imageAiHint}
             />
           </div>
         </div>
@@ -226,5 +222,3 @@ export default async function HomePageRedesigned() {
     </div>
   );
 }
-
-    

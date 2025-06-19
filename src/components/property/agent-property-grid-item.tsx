@@ -53,7 +53,6 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
               layout="fill"
               objectFit="cover"
               className="group-hover:scale-105 transition-transform"
-              data-ai-hint="house exterior building"
             />
           </a>
         </Link>
@@ -111,7 +110,7 @@ const AgentPropertyGridItem = ({ property, onOpenDeleteDialog, onOpenPromoteDial
       <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
         <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={property.status !== 'approved'}>
             <Link href={`/properties/${property.id}`} legacyBehavior passHref>
-                <a target="_blank" rel="noopener noreferrer">
+                <a>
                     <span className="flex items-center">
                         <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
                     </span>

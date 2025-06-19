@@ -2,7 +2,7 @@
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
-  id: string; 
+  id: string;
   name: string;
   email: string;
   avatar_url?: string | null; // Changed from avatarUrl to match DB
@@ -81,7 +81,7 @@ export interface Property {
   year_built?: number | null; // INT
   coordinates_lat?: number | null; // DOUBLE PRECISION
   coordinates_lng?: number | null; // DOUBLE PRECISION
-  
+
   agent_id: string | null; // UUID, FK to users.id
   agent?: Agent | null; // For populated agent data
 
@@ -93,7 +93,7 @@ export interface Property {
   promotion_tier_name?: string | null; // TEXT
   promoted_at?: string | null; // TIMESTAMPTZ (ISO string)
   promotion_expires_at?: string | null; // TIMESTAMPTZ (ISO string)
-  
+
   created_at: string; // TIMESTAMPTZ (ISO string)
   updated_at: string; // TIMESTAMPTZ (ISO string)
 
@@ -105,27 +105,27 @@ export type InquiryStatus = Database['public']['Enums']['inquiry_status'];
 export const inquiryStatuses: InquiryStatus[] = ['new', 'contacted', 'resolved', 'archived'];
 
 export interface InquiryMessage {
-  id: string; 
-  inquiry_id: string; 
-  sender_id: string | null; 
+  id: string;
+  inquiry_id: string;
+  sender_id: string | null;
   sender_role: UserRole;
-  sender_name: string; 
+  sender_name: string;
   content: string;
-  timestamp: string; 
+  timestamp: string;
 }
 
 export interface Inquiry {
-  id: string; 
-  property_id: string; 
+  id: string;
+  property_id: string;
   property_name: string;
   inquirer_name: string;
   inquirer_email: string;
   inquirer_phone?: string | null;
-  initial_message: string; 
-  created_at: string; 
-  updated_at?: string | null; 
+  initial_message: string;
+  created_at: string;
+  updated_at?: string | null;
   status: InquiryStatus;
-  user_id?: string | null; 
+  user_id?: string | null;
   conversation?: InquiryMessage[];
 }
 
@@ -151,7 +151,6 @@ interface HeroSlide {
   cta: CmsLink;
   backgroundImageUrl: string;
   backgroundImageAlt: string;
-  backgroundImageAiHint: string;
 }
 
 interface HomePageHeroSection {
@@ -182,7 +181,6 @@ interface HomePageFindHomeSection {
   features: HomePageFindHomeFeature[];
   imageUrl: string;
   imageAlt: string;
-  imageAiHint: string;
   cta: CmsLink;
 }
 
@@ -192,7 +190,6 @@ interface HomePageProjectSection {
   description: string;
   imageUrl: string;
   imageAlt: string;
-  imageAiHint: string;
   cta: CmsLink;
   imagePosition: 'left' | 'right';
 }
@@ -228,8 +225,8 @@ export interface ServicesPageContent {
     items: ServiceGridItem[];
   };
   detailedVerificationSection: {
-    title: string; 
-    subtitle: string; 
+    title: string;
+    subtitle: string;
     items: ServiceGridItem[];
   };
   cta: CmsLink;
@@ -241,7 +238,6 @@ export interface AboutPageHeroSection {
   paragraphs: string[];
   imageUrl: string;
   imageAlt: string;
-  imageAiHint: string;
   badgeText: string;
 }
 

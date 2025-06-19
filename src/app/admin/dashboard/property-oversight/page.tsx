@@ -48,7 +48,7 @@ export default function PropertyOversightPage() {
     const { data, error } = await supabase
       .from('properties')
       .select('*, agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)')
-      .order('status', { ascending: true }) 
+      .order('status', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -59,10 +59,10 @@ export default function PropertyOversightPage() {
       const formattedProperties = data.map(p => ({
         ...p,
         agent: p.agent ? {
-            ...(p.agent as any), 
-            role: 'agent' as UserRole, 
-            id: p.agent.id!, 
-        } as Agent : undefined, 
+            ...(p.agent as any),
+            role: 'agent' as UserRole,
+            id: p.agent.id!,
+        } as Agent : undefined,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         amenities: p.amenities ? (Array.isArray(p.amenities) ? p.amenities : JSON.parse(String(p.amenities))) : [],
         property_type: p.property_type as string, // Ensure property_type is string
@@ -134,7 +134,7 @@ export default function PropertyOversightPage() {
       return false;
     }
     toast({ title: `Property ${newStatus}`, description: `The property listing status has been updated.` });
-    fetchProperties(); 
+    fetchProperties();
     return true;
   };
 
@@ -187,7 +187,7 @@ export default function PropertyOversightPage() {
     downloadCSV(csvString, 'homeland-capital-properties.csv');
     toast({ title: 'Export Started', description: 'Property data CSV download has started.' });
   };
-  
+
   if (authLoading || pageLoading) {
     return (
       <div className="space-y-8">
@@ -201,7 +201,7 @@ export default function PropertyOversightPage() {
       </div>
     );
   }
-  
+
   if (adminUser?.role !== 'platform_admin') {
      return (
         <div className="text-center py-12">
@@ -279,7 +279,7 @@ export default function PropertyOversightPage() {
                 {filteredProperties.map((property) => (
                   <TableRow key={property.id}>
                     <TableCell>
-                      <Image src={(property.images && property.images.length > 0) ? property.images[0] : 'https://placehold.co/64x64.png'} alt={property.title} width={64} height={64} className="rounded-md object-cover" data-ai-hint="house exterior thumbnail"/>
+                      <Image src={(property.images && property.images.length > 0) ? property.images[0] : 'https://placehold.co/64x64.png'} alt={property.title} width={64} height={64} className="rounded-md object-cover" />
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{property.title}</div>
@@ -301,7 +301,7 @@ export default function PropertyOversightPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                         {property.agent?.avatar_url && <img src={property.agent.avatar_url} alt={property.agent.name} className="w-6 h-6 rounded-full mr-2 object-cover" data-ai-hint="professional person" />}
+                         {property.agent?.avatar_url && <img src={property.agent.avatar_url} alt={property.agent.name} className="w-6 h-6 rounded-full mr-2 object-cover" />}
                          {!property.agent?.avatar_url && property.agent && <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 text-muted-foreground text-xs">{property.agent.name.substring(0,2).toUpperCase()}</span>}
                          {!property.agent && <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center mr-2 text-muted-foreground text-xs">N/A</span>}
                         <div> <div>{property.agent?.name || 'N/A'}</div> <div className="text-xs text-muted-foreground">{property.agent?.email || 'N/A'}</div> </div>
