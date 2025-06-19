@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, ServerCrash } from 'lucide-react';
+import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Zod Schemas for Validation
@@ -226,17 +226,16 @@ export default function CmsManagementPage() {
 
       if (error) {
         toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
-        throw error; // Propagate error for RHF
+        throw error; 
       } else {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
       }
     } catch (e: any) {
         toast({ title: `Unexpected error saving ${pageId}`, description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-        throw e; // Propagate error for RHF
+        throw e; 
     }
   };
 
-  // Used for forms not managed by react-hook-form's handleSubmit directly (e.g., raw JSON textareas)
   const handleDirectSave = async (pageId: PageId, formInstance: any) => {
     setIsUiBlockingLoading(true);
     try {
@@ -282,8 +281,7 @@ export default function CmsManagementPage() {
             <Card>
               <CardHeader><CardTitle>Home Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-6">
-                <Accordion type="multiple" defaultValue={['hero-slides']} className="w-full">
-                  {/* Hero Section */}
+                <Accordion type="single" collapsible defaultValue="hero-slides" className="w-full">
                   <AccordionItem value="hero-slides">
                     <AccordionTrigger className="text-lg font-semibold">Hero Section Slides</AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-3">
@@ -305,7 +303,6 @@ export default function CmsManagementPage() {
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Our Services Section */}
                   <AccordionItem value="our-services">
                     <AccordionTrigger className="text-lg font-semibold">"Our Services" Section</AccordionTrigger>
                     <AccordionContent className="space-y-3 pt-3">
@@ -324,7 +321,6 @@ export default function CmsManagementPage() {
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Find Your Home Section */}
                   <AccordionItem value="find-your-home">
                      <AccordionTrigger className="text-lg font-semibold">"Find Your Home" Section</AccordionTrigger>
                      <AccordionContent className="space-y-3 pt-3">
@@ -347,7 +343,6 @@ export default function CmsManagementPage() {
                      </AccordionContent>
                   </AccordionItem>
 
-                  {/* Development Projects Section */}
                     <AccordionItem value="development-projects">
                         <AccordionTrigger className="text-lg font-semibold">"Development Projects" Section</AccordionTrigger>
                         <AccordionContent className="space-y-3 pt-3">
@@ -372,7 +367,6 @@ export default function CmsManagementPage() {
                         </AccordionContent>
                     </AccordionItem>
 
-                    {/* Community Outreach Section */}
                     <AccordionItem value="community-outreach">
                         <AccordionTrigger className="text-lg font-semibold">"Community Outreach" Section</AccordionTrigger>
                         <AccordionContent className="space-y-3 pt-3">
@@ -411,7 +405,7 @@ export default function CmsManagementPage() {
             <Card>
               <CardHeader><CardTitle>About Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-4">
-                 <Accordion type="single" collapsible className="w-full">
+                 <Accordion type="single" collapsible defaultValue="hero" className="w-full">
                     <AccordionItem value="hero">
                         <AccordionTrigger className="text-lg font-semibold">Hero Section</AccordionTrigger>
                         <AccordionContent className="space-y-3 pt-3">
@@ -453,9 +447,9 @@ export default function CmsManagementPage() {
             <Card>
               <CardHeader><CardTitle>Services Page Content</CardTitle></CardHeader>
               <CardContent className="space-y-6">
-                <Accordion type="multiple" defaultValue={['services-header']} className="w-full">
+                <Accordion type="single" collapsible defaultValue="services-header" className="w-full">
                   <AccordionItem value="services-header">
-                    <AccordionTrigger className="text-lg font-semibold">Header & Meta</AccordionTrigger>
+                    <AccordionTrigger className="text-lg font-semibold">Header &amp; Meta</AccordionTrigger>
                     <AccordionContent className="space-y-3 pt-3">
                       <Label>Page Title (Meta)</Label><Input {...servicesForm.register('pageTitle')} placeholder="Services Page Title" />
                       <Label>Header Title</Label><Input {...servicesForm.register('headerTitle')} placeholder="Main Title on Page" />
