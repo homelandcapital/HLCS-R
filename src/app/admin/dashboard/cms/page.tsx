@@ -232,14 +232,15 @@ export default function CmsManagementPage() {
     return upsertData || content; // Return upserted data, or the input content as fallback
   };
   
-  // Generalized submit logic for forms using react-hook-form's handleSubmit
   const handleSubmitLogic = async ( pageId: PageId, data: any, formInstance: any ) => {
     try {
-      const savedData = await performSaveOnlyDb(pageId, data);
+      // Perform the save but we might not use its direct return value for reset if 'data' is preferred
+      await performSaveOnlyDb(pageId, data); 
+      
       // Defer toast and reset to allow RHF to finish its cycle
       setTimeout(() => {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Page Content Saved`, description: 'Your changes have been successfully saved.' });
-        formInstance.reset(savedData); // Reset with data from DB or submitted data
+        formInstance.reset(data); // Reset with the data that was just submitted and validated by RHF
       }, 0);
     } catch (error: any) {
       // Defer error toast
@@ -255,7 +256,6 @@ export default function CmsManagementPage() {
   const onAboutSubmit = (data: AboutPageContent) => handleSubmitLogic('about', data, aboutForm);
   const onServicesSubmit = (data: ServicesPageContent) => handleSubmitLogic('services', data, servicesForm);
   
-  // Direct save for JSON textareas (Contact page)
   const handleDirectSaveForContact = async () => {
     setIsUiBlockingLoading(true);
     try {
@@ -585,25 +585,13 @@ export default function CmsManagementPage() {
                 control={contactForm.control} // This control is for the whole ContactPageContentNew
                 render={({ field, fieldState }) => ( // fieldState for potential local error display
                   <Textarea
-                    // Manage the value as a string representation of the whole form
                     value={typeof contactForm.getValues() === 'object' ? JSON.stringify(contactForm.getValues(), null, 2) : contactForm.getValues() || ''}
                     onChange={(e) => {
                       try {
                         const parsed = JSON.parse(e.target.value);
-                        contactForm.reset(parsed); // Attempt to reset the entire form with parsed JSON
+                        contactForm.reset(parsed); 
                       } catch (err) {
-                        // If JSON is invalid, keep the string in the textarea for correction
-                        // Optionally, set a local error state here to inform user of invalid JSON
-                        // For now, Zod validation on submit will catch structural issues.
-                        // To allow typing, we might need a local string state for the textarea
-                        // and only call contactForm.reset on valid parse or on blur.
-                        // This simplistic onChange might cause issues if the form is complex and user types invalid JSON.
-                        // A more robust solution would be a dedicated JSON editor component or stricter onChange handling.
-                        
-                        // Fallback: try to update the field if "content" was intended, though direct reset is better.
-                        // This is tricky as the controller is bound to `officesSection` but we edit the whole form.
-                        // A simpler `defaultValue` for the form and letting direct edits update `contactForm` state
-                        // is often how such textareas are handled outside a Controller for the whole JSON.
+                        // Allow typing invalid JSON temporarily, validation will catch on submit
                       }
                     }}
                     rows={25}
@@ -612,7 +600,6 @@ export default function CmsManagementPage() {
                   />
                 )}
               />
-              {/* Display Zod validation errors for the entire contactForm */}
               {Object.keys(contactForm.formState.errors).length > 0 && 
                 <p className="text-destructive text-sm mt-1">
                   Invalid JSON structure or content based on schema. Please check your input.
@@ -630,3 +617,4 @@ export default function CmsManagementPage() {
     </div>
   );
 }
+
