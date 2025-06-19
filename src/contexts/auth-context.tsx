@@ -14,8 +14,8 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthenticatedUser | null;
-  platformSettings: PlatformSettings | null; // Added platformSettings
-  loading: boolean; 
+  platformSettings: PlatformSettings | null;
+  loading: boolean;
   isPropertySaved: (propertyId: string) => boolean;
   toggleSaveProperty: (propertyId: string) => void;
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -25,6 +25,7 @@ interface AuthContextType {
   sendPasswordResetEmail: (email: string) => Promise<{ error: Error | null }>;
   updateUserPassword: (newPassword: string) => Promise<{ error: Error | null }>;
   getSupabaseSession: () => Session | null;
+  refreshPlatformSettings: () => Promise<void>; // Added this
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const fetchPlatformSettings = useCallback(async (): Promise<PlatformSettings | null> => {
+  const fetchPlatformSettingsInternal = useCallback(async (): Promise<PlatformSettings | null> => {
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
@@ -57,12 +58,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (error) {
       console.error('[AuthContext] Error fetching platform settings:', error.message);
-      // Optionally, toast for critical settings fetch failure, or handle silently
-      // toast({ title: 'Settings Error', description: `Could not load platform settings. Some features might be affected.`, variant: 'destructive'});
       return null;
     }
     return data as PlatformSettings | null;
   }, []);
+
+  const refreshPlatformSettings = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    // console.log('[AuthContext] Refreshing platform settings...'); // Optional: for debugging
+    // setLoading(true); // You might want to show a loading state briefly
+    const newSettings = await fetchPlatformSettingsInternal();
+    if (isMountedRef.current) {
+      setPlatformSettings(newSettings);
+      // setLoading(false);
+      // console.log('[AuthContext] Platform settings refreshed:', newSettings); // Optional
+    }
+  }, [fetchPlatformSettingsInternal]);
 
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
@@ -120,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuthAndSettings = async () => {
       if (!isMountedRef.current) return;
 
-      const fetchedSettings = await fetchPlatformSettings();
+      const fetchedSettings = await fetchPlatformSettingsInternal();
       if (isMountedRef.current) {
         setPlatformSettings(fetchedSettings);
       }
@@ -157,10 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) {
             setUser(profile);
-            // Fetch/refresh platform settings on sign-in as well, in case they are user-dependent (though not in this design)
-            // or just to ensure they are fresh.
-            const refreshedSettings = await fetchPlatformSettings();
-            if(isMountedRef.current) setPlatformSettings(refreshedSettings);
+            await refreshPlatformSettings(); // Refresh settings on sign-in
 
             if (profile) {
               if (profile.role === 'agent') router.push('/agents/dashboard');
@@ -173,8 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) setUser(profile);
-           const refreshedSettings = await fetchPlatformSettings(); // Also refresh settings if user updates
-           if(isMountedRef.current) setPlatformSettings(refreshedSettings);
+           await refreshPlatformSettings(); // Also refresh settings if user updates
         } else if (event === 'TOKEN_REFRESHED') {
             if (currentSession?.user && currentSession.user.id !== user?.id) {
                 const profile = await fetchUserProfileAndRelatedData(currentSession.user);
@@ -188,7 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettings, router, user?.id]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, user?.id]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -204,7 +211,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
-    // On success, onAuthStateChange handles profile fetching and redirection
     return { error };
   };
 
@@ -240,13 +246,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const pgError = profileError as PostgrestError;
         console.error("[AuthContext] commonSignUp: Error creating profile.", pgError.message);
         
-        if (pgError.code === '23505') { // Unique constraint violation
+        if (pgError.code === '23505') {
           toast({ title: 'Email Already Registered', description: 'This email address is already in use. Please try logging in or use a different email.', variant: 'destructive' });
         } else {
           toast({ title: 'Profile Creation Failed', description: `There was an issue setting up your profile. Please contact support. Error: ${pgError.message}.`, variant: 'destructive' });
         }
         
-        // Attempt to clean up the auth user if profile creation failed
         supabase.auth.signOut().then(() => supabase.auth.admin.deleteUser(signUpData.user!.id)).catch(delErr => {
             console.error("[AuthContext] commonSignUp: Error during cleanup after profile creation failure:", delErr);
         });
@@ -256,7 +261,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.`, duration: 9000 });
       }
-      // If session is present, onAuthStateChange will handle profile loading and redirection
     } else {
       toast({ title: 'Registration Issue', description: 'Could not complete registration. User data not returned. Please try again.', variant: 'destructive' });
       return { error: new Error("User data not returned from signup"), data: null };
@@ -274,7 +278,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOutUser = async (): Promise<void> => {
     if (!isMountedRef.current) return Promise.resolve();
-
     const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
 
     if (currentAuthSession) {
@@ -296,7 +299,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isMountedRef.current) {
       setUser(null);
       setSession(null);
-      // Platform settings can remain, they are not user-specific
       router.push('/');
       if (user || currentAuthSession) {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
@@ -320,7 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ title: 'Password Update Failed', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Password Updated', description: 'Please log in with your new password.' });
-      await supabase.auth.signOut(); // This will trigger SIGNED_OUT event
+      await supabase.auth.signOut();
     }
     return { error };
   };
@@ -377,7 +379,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signOut: signOutUser,
       sendPasswordResetEmail,
       updateUserPassword,
-      getSupabaseSession
+      getSupabaseSession,
+      refreshPlatformSettings // Provide the new function
     }}>
       {children}
     </AuthContext.Provider>

@@ -23,11 +23,12 @@ import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
+import { useAuth } from '@/contexts/auth-context'; // Import useAuth
 
 interface AdminPromotionTier {
   id: string;
   name: string;
-  icon: React.ReactNode; // Keep icon for UI only, not saved to DB
+  icon: React.ReactNode;
   fee: string;
   duration: string;
   description: string;
@@ -39,7 +40,6 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
 ];
 
-// Configuration for sector toggles
 const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnabled: boolean, icon: React.ReactNode }> = [
   { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
   { key: 'machinery', label: 'Machinery Marketplace Sector', defaultEnabled: false, icon: <Package className="h-5 w-5"/> },
@@ -50,9 +50,9 @@ const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnable
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
+  const { refreshPlatformSettings } = useAuth(); // Get the refresh function
   const [loading, setLoading] = useState(true);
 
-  // States for settings
   const [siteName, setSiteName] = useState('Homeland Capital');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('NGN');
@@ -66,10 +66,10 @@ export default function PlatformSettingsPage() {
 
   const [sectorVisibility, setSectorVisibility] = useState<SectorVisibility>({});
 
-  const fetchPlatformSettings = useCallback(async () => {
+  const fetchLocalPageSettings = useCallback(async () => { // Renamed to avoid confusion with context's fetch
     setLoading(true);
     const { data, error } = await supabase
-      .from('platform_settings') // Corrected table name
+      .from('platform_settings')
       .select('*')
       .eq('id', 1)
       .single();
@@ -89,7 +89,7 @@ export default function PlatformSettingsPage() {
       setPredefinedAmenities((data.predefined_amenities as string || "Pool,Garage,Gym"));
       setPropertyTypes((data.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
 
-      setPromotionsEnabled(data.promotions_enabled ?? true); // Use nullish coalescing for boolean
+      setPromotionsEnabled(data.promotions_enabled ?? true);
       if (data.promotion_tiers) {
         const dbTiers = data.promotion_tiers as PromotionTierConfig[];
         const uiTiers = initialAdminPromotionTiersUI.map(uiTier => {
@@ -116,8 +116,8 @@ export default function PlatformSettingsPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchPlatformSettings();
-  }, [fetchPlatformSettings]);
+    fetchLocalPageSettings();
+  }, [fetchLocalPageSettings]);
 
 
   const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'icon'>, value: string) => {
@@ -134,7 +134,7 @@ export default function PlatformSettingsPage() {
 
   const handleSaveChanges = async () => {
     const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility'> & { promotion_tiers: PromotionTierConfig[], property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
-      id: 1, // For upsert
+      id: 1,
       site_name: siteName,
       maintenance_mode: maintenanceMode,
       default_currency: defaultCurrency,
@@ -153,14 +153,15 @@ export default function PlatformSettingsPage() {
     };
 
     const { error } = await supabase
-      .from('platform_settings') // Corrected table name
+      .from('platform_settings')
       .upsert(settingsToSave, { onConflict: 'id' });
 
     if (error) {
       toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
-      fetchPlatformSettings();
+      await refreshPlatformSettings(); // Refresh context settings
+      fetchLocalPageSettings(); // Refresh local page settings (optional, but good for consistency if there are derived states)
     }
   };
 
@@ -169,7 +170,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-8">
             <Skeleton className="h-12 w-1/2 mb-2" />
             <Skeleton className="h-8 w-3/4 mb-6" />
-            {[...Array(4)].map((_, i) => ( // Increased skeleton count for new card
+            {[...Array(4)].map((_, i) => (
                 <Card key={i} className="shadow-xl mb-6">
                     <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
                     <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
