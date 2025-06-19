@@ -17,21 +17,41 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, UserCircle } from "lucide-react"; 
+import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Users, Building, Mail } from "lucide-react"; 
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
+import type { SectorKey } from '@/lib/types';
+
 
 const Navbar = () => {
-  const { isAuthenticated, user, signOut, loading: authContextLoading } = useAuth(); // Renamed loading
+  const { isAuthenticated, user, signOut, loading: authContextLoading, platformSettings } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/properties', label: 'Properties' },
-    { href: '/services', label: 'Services' },
-    { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' },
+  const baseNavLinks = [
+    { href: '/', label: 'Home', alwaysVisible: true, icon: <Home className="h-5 w-5"/> },
+    { href: '/properties', label: 'Properties', sectorKey: 'realEstate' as SectorKey, icon: <Building className="h-5 w-5"/> },
+    { href: '/services', label: 'Services', alwaysVisible: true, icon: <Briefcase className="h-5 w-5"/> }, // Main Services page
+    { href: '/services#machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Briefcase className="h-5 w-5"/> }, // Using Briefcase as placeholder
+    { href: '/services#development', label: 'Development', sectorKey: 'development' as SectorKey, icon: <Zap className="h-5 w-5"/> },
+    { href: '/services#community', label: 'Community', sectorKey: 'community' as SectorKey, icon: <Users className="h-5 w-5"/> },
+    { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, // UserCircle as placeholder
+    { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, // Mail as placeholder
   ];
+  
+  const visibleNavLinks = React.useMemo(() => {
+    return baseNavLinks.filter(link => {
+      if (link.alwaysVisible) return true;
+      if (link.sectorKey) {
+        // Default to true if sector_visibility is null/undefined OR if the specific key is undefined (meaning show by default)
+        // Or default to false if you want sectors hidden by default unless explicitly enabled.
+        // For "Properties" (realEstate), let's default to true. For new sectors, default to false.
+        const defaultVisibility = link.sectorKey === 'realEstate' ? true : false;
+        return platformSettings?.sector_visibility?.[link.sectorKey] ?? defaultVisibility;
+      }
+      return false; 
+    });
+  }, [platformSettings, baseNavLinks]);
+
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -50,7 +70,7 @@ const Navbar = () => {
   };
 
   const AuthActions = ({ isMobile = false }: { isMobile?: boolean }) => {
-    if (authContextLoading) { // Use renamed variable
+    if (authContextLoading) { 
       return isMobile ? (
         <div className="space-y-2">
           <Button variant="ghost" disabled className="w-full justify-start">Loading...</Button>
@@ -123,7 +143,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Logo />
         <nav className="hidden md:flex items-center space-x-1">
-          {navLinks.map(link => (
+          {visibleNavLinks.map(link => (
             <Link key={link.href} href={link.href} passHref legacyBehavior>
               <Button variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
                 <a className="flex items-center">
@@ -151,10 +171,11 @@ const Navbar = () => {
                 <Logo />
               </SheetHeader>
               <nav className="flex flex-col space-y-1 mb-auto">
-               {navLinks.map(link => (
+               {visibleNavLinks.map(link => (
                   <Link key={link.href} href={link.href} passHref legacyBehavior>
                     <Button variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
                       <a className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
+                          {link.icon && React.cloneElement(link.icon, {className: "mr-2 h-5 w-5"})}
                           <span>{link.label}</span>
                       </a>
                     </Button>
@@ -173,4 +194,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

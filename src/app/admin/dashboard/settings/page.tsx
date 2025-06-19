@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -18,7 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
-import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType } from '@/lib/types';
+import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, SectorKey, SectorVisibility } from '@/lib/types';
+import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -37,6 +38,14 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
 ];
 
+// Configuration for sector toggles
+const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnabled: boolean, icon: React.ReactNode }> = [
+  { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
+  { key: 'machinery', label: 'Machinery Marketplace Sector', defaultEnabled: false, icon: <Package className="h-5 w-5"/> },
+  { key: 'development', label: 'Development Projects Sector', defaultEnabled: false, icon: <Zap className="h-5 w-5"/> }, // Using Zap as a placeholder
+  { key: 'community', label: 'Community Projects Sector', defaultEnabled: false, icon: <Users className="h-5 w-5"/> }, // Using Users as placeholder
+];
+
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
@@ -48,23 +57,29 @@ export default function PlatformSettingsPage() {
   const [defaultCurrency, setDefaultCurrency] = useState('NGN');
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
   
-  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym"); // Stored as comma-separated string
-  const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land"); // Stored as comma-separated string for Textarea
+  const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym");
+  const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land");
 
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
+
+  const [sectorVisibility, setSectorVisibility] = useState<SectorVisibility>({});
 
   const fetchPlatformSettings = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
-      .eq('id', 1) // Assuming there's only one row with id=1
+      .eq('id', 1) 
       .single();
 
     if (error) {
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults.`, variant: 'destructive' });
-      // Use defaults if fetch fails, already set in useState
+      const initialVisibility: SectorVisibility = {};
+      sectorConfigurations.forEach(sector => {
+        initialVisibility[sector.key] = sector.defaultEnabled;
+      });
+      setSectorVisibility(initialVisibility);
     } else if (data) {
       setSiteName(data.site_name || 'Homeland Capital');
       setMaintenanceMode(data.maintenance_mode || false);
@@ -73,22 +88,28 @@ export default function PlatformSettingsPage() {
       setPredefinedAmenities((data.predefined_amenities as string || "Pool,Garage,Gym"));
       setPropertyTypes((data.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
       
-      setPromotionsEnabled(data.promotions_enabled || true);
+      setPromotionsEnabled(data.promotions_enabled ?? true); // Use nullish coalescing for boolean
       if (data.promotion_tiers) {
         const dbTiers = data.promotion_tiers as PromotionTierConfig[];
-        // Map DB tiers to UI tiers, preserving icons
         const uiTiers = initialAdminPromotionTiersUI.map(uiTier => {
           const dbMatch = dbTiers.find(dbT => dbT.id === uiTier.id);
           return dbMatch ? {
-            ...uiTier, // Keep icon
+            ...uiTier, 
             name: dbMatch.name,
             fee: dbMatch.fee.toString(),
             duration: dbMatch.duration.toString(),
             description: dbMatch.description,
-          } : uiTier; // Fallback to initial UI tier if no DB match (e.g. new tier added to UI)
+          } : uiTier; 
         });
         setAdminPromotionTiers(uiTiers);
       }
+
+      const dbSectorVisibility = data.sector_visibility as SectorVisibility | null;
+      const initialVisibility: SectorVisibility = {};
+      sectorConfigurations.forEach(sector => {
+        initialVisibility[sector.key] = dbSectorVisibility?.[sector.key] ?? sector.defaultEnabled;
+      });
+      setSectorVisibility(initialVisibility);
     }
     setLoading(false);
   }, [toast]);
@@ -106,23 +127,28 @@ export default function PlatformSettingsPage() {
     );
   };
 
+  const handleSectorVisibilityChange = (sectorKey: SectorKey, checked: boolean) => {
+    setSectorVisibility(prev => ({ ...prev, [sectorKey]: checked }));
+  };
+
   const handleSaveChanges = async () => {
-    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers'> & { promotion_tiers: PromotionTierConfig[], property_types: string[] } & { id: number } = {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility'> & { promotion_tiers: PromotionTierConfig[], property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
       id: 1, // For upsert
       site_name: siteName,
       maintenance_mode: maintenanceMode,
       default_currency: defaultCurrency,
       notification_email: notificationEmail,
-      predefined_amenities: predefinedAmenities, // Save as comma-separated string
-      property_types: propertyTypes.split(',').map(pt => pt.trim()).filter(Boolean), // Save as array of strings
+      predefined_amenities: predefinedAmenities,
+      property_types: propertyTypes.split(',').map(pt => pt.trim()).filter(Boolean),
       promotions_enabled: promotionsEnabled,
-      promotion_tiers: adminPromotionTiers.map(tier => ({ // Convert UI string values to number for DB
+      promotion_tiers: adminPromotionTiers.map(tier => ({
         id: tier.id,
         name: tier.name,
         fee: parseFloat(tier.fee) || 0, 
         duration: parseInt(tier.duration, 10) || 0, 
         description: tier.description,
       })),
+      sector_visibility: sectorVisibility,
     };
     
     const { error } = await supabase
@@ -133,7 +159,7 @@ export default function PlatformSettingsPage() {
       toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
-      fetchPlatformSettings(); // Re-fetch to confirm and ensure UI consistency
+      fetchPlatformSettings(); 
     }
   };
 
@@ -142,7 +168,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-8">
             <Skeleton className="h-12 w-1/2 mb-2" />
             <Skeleton className="h-8 w-3/4 mb-6" />
-            {[...Array(3)].map((_, i) => (
+            {[...Array(4)].map((_, i) => ( // Increased skeleton count for new card
                 <Card key={i} className="shadow-xl mb-6">
                     <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
                     <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
@@ -209,6 +235,32 @@ export default function PlatformSettingsPage() {
               onCheckedChange={setMaintenanceMode}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Eye className="mr-2 h-5 w-5 text-muted-foreground" /> Navbar Sector Visibility
+          </CardTitle>
+          <CardDescription>Control which business sectors are visible in the main navigation bar.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {sectorConfigurations.map((sector) => (
+            <div key={sector.key} className="flex items-center justify-between space-x-2 p-4 border rounded-lg">
+              <div className="flex items-center">
+                {sector.icon && React.cloneElement(sector.icon as React.ReactElement, { className: "mr-2 h-5 w-5 text-muted-foreground"})}
+                <Label htmlFor={`sector-${sector.key}`} className="text-base">
+                  {sector.label}
+                </Label>
+              </div>
+              <Switch
+                id={`sector-${sector.key}`}
+                checked={sectorVisibility[sector.key] || false}
+                onCheckedChange={(checked) => handleSectorVisibilityChange(sector.key, checked)}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
 

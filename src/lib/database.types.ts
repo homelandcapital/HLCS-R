@@ -99,6 +99,7 @@ export type Database = {
           promotion_tiers: Json | null
           promotions_enabled: boolean | null
           property_types: string[] | null
+          sector_visibility: Json | null // Added sector_visibility
           site_name: string | null
           updated_at: string
         }
@@ -111,6 +112,7 @@ export type Database = {
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
           property_types?: string[] | null
+          sector_visibility?: Json | null // Added sector_visibility
           site_name?: string | null
           updated_at?: string
         }
@@ -123,6 +125,7 @@ export type Database = {
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
           property_types?: string[] | null
+          sector_visibility?: Json | null // Added sector_visibility
           site_name?: string | null
           updated_at?: string
         }

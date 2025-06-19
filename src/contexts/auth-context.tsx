@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole } from '@/lib/types';
+import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname }  from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,8 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthenticatedUser | null;
-  loading: boolean; // True ONLY during initial auth resolution
+  platformSettings: PlatformSettings | null; // Added platformSettings
+  loading: boolean; 
   isPropertySaved: (propertyId: string) => boolean;
   toggleSaveProperty: (propertyId: string) => void;
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -43,6 +45,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isMountedRef.current = false;
     };
   }, []);
+
+  const fetchPlatformSettings = useCallback(async (): Promise<PlatformSettings | null> => {
+    const { data, error } = await supabase
+      .from('platform_settings')
+      .select('*')
+      .eq('id', 1)
+      .single();
+
+    if (!isMountedRef.current) return null;
+
+    if (error) {
+      console.error('[AuthContext] Error fetching platform settings:', error.message);
+      // Optionally, toast for critical settings fetch failure, or handle silently
+      // toast({ title: 'Settings Error', description: `Could not load platform settings. Some features might be affected.`, variant: 'destructive'});
+      return null;
+    }
+    return data as PlatformSettings | null;
+  }, []);
+
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
     const { data: userProfilesData, error: profileQueryError } = await supabase
@@ -96,9 +117,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    // This effect handles the initial authentication check.
-    const checkInitialSession = async () => {
+    const initializeAuthAndSettings = async () => {
       if (!isMountedRef.current) return;
+
+      const fetchedSettings = await fetchPlatformSettings();
+      if (isMountedRef.current) {
+        setPlatformSettings(fetchedSettings);
+      }
+
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
       if (!isMountedRef.current) { setLoading(false); return; }
 
@@ -117,23 +143,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isMountedRef.current) setLoading(false);
     };
 
-    checkInitialSession();
+    initializeAuthAndSettings();
 
-    // This effect sets up the onAuthStateChange listener.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
         if (!isMountedRef.current) return;
         setSession(currentSession);
 
         if (event === 'INITIAL_SESSION' && currentSession?.user) {
-          // Already handled by checkInitialSession if it ran first, but good as a fallback.
-          // No need to set loading here as checkInitialSession would have done it.
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) setUser(profile);
         } else if (event === 'SIGNED_IN' && currentSession?.user) {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) {
             setUser(profile);
+            // Fetch/refresh platform settings on sign-in as well, in case they are user-dependent (though not in this design)
+            // or just to ensure they are fresh.
+            const refreshedSettings = await fetchPlatformSettings();
+            if(isMountedRef.current) setPlatformSettings(refreshedSettings);
+
             if (profile) {
               if (profile.role === 'agent') router.push('/agents/dashboard');
               else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
@@ -142,10 +170,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else if (event === 'SIGNED_OUT') {
           if (isMountedRef.current) setUser(null);
-          // Navigation for explicit sign out is handled in signOutUser
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) setUser(profile);
+           const refreshedSettings = await fetchPlatformSettings(); // Also refresh settings if user updates
+           if(isMountedRef.current) setPlatformSettings(refreshedSettings);
         } else if (event === 'TOKEN_REFRESHED') {
             if (currentSession?.user && currentSession.user.id !== user?.id) {
                 const profile = await fetchUserProfileAndRelatedData(currentSession.user);
@@ -159,7 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, router, user?.id]); // Added user.id to deps for TOKEN_REFRESHED case
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettings, router, user?.id]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -175,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
     }
+    // On success, onAuthStateChange handles profile fetching and redirection
     return { error };
   };
 
@@ -210,12 +240,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const pgError = profileError as PostgrestError;
         console.error("[AuthContext] commonSignUp: Error creating profile.", pgError.message);
         
-        if (pgError.code === '23505') {
-          toast({ title: 'Email Already Registered', description: 'This email address is already in use.', variant: 'destructive' });
+        if (pgError.code === '23505') { // Unique constraint violation
+          toast({ title: 'Email Already Registered', description: 'This email address is already in use. Please try logging in or use a different email.', variant: 'destructive' });
         } else {
-          toast({ title: 'Profile Creation Failed', description: `Contact support: ${pgError.message}.`, variant: 'destructive' });
+          toast({ title: 'Profile Creation Failed', description: `There was an issue setting up your profile. Please contact support. Error: ${pgError.message}.`, variant: 'destructive' });
         }
         
+        // Attempt to clean up the auth user if profile creation failed
         supabase.auth.signOut().then(() => supabase.auth.admin.deleteUser(signUpData.user!.id)).catch(delErr => {
             console.error("[AuthContext] commonSignUp: Error during cleanup after profile creation failure:", delErr);
         });
@@ -225,8 +256,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (signUpData.session === null && signUpData.user.identities && signUpData.user.identities.length > 0) {
         toast({ title: 'Registration Almost Complete!', description: `Welcome, ${profileSpecificData.name}! Please check your email (${email}) to verify your account.`, duration: 9000 });
       }
+      // If session is present, onAuthStateChange will handle profile loading and redirection
     } else {
-      toast({ title: 'Registration Issue', description: 'Could not complete registration. Please try again.', variant: 'destructive' });
+      toast({ title: 'Registration Issue', description: 'Could not complete registration. User data not returned. Please try again.', variant: 'destructive' });
       return { error: new Error("User data not returned from signup"), data: null };
     }
     return { error: null, data: signUpData };
@@ -249,7 +281,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { error: signOutServiceError } = await supabase.auth.signOut();
         if (signOutServiceError) {
-          // Only toast if it's not an "Auth session missing" error, which we are trying to avoid
           if (!(signOutServiceError.message.includes("Auth session missing") || signOutServiceError.message.includes("No active session"))) {
             console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError);
             toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
@@ -262,13 +293,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          }
       }
     }
-    // Always perform local cleanup and navigation
     if (isMountedRef.current) {
       setUser(null);
       setSession(null);
+      // Platform settings can remain, they are not user-specific
       router.push('/');
-      // Only show success toast if there was potentially a session to sign out from,
-      // or if the user object was previously non-null, indicating they were logged in.
       if (user || currentAuthSession) {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
       }
@@ -338,6 +367,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       isAuthenticated: !!user && !!session,
       user,
+      platformSettings,
       loading,
       isPropertySaved,
       toggleSaveProperty,

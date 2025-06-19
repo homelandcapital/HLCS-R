@@ -333,6 +333,11 @@ export interface FooterContent {
   builtWithText: string;
 }
 
+// Sector Management Types
+export const managedSectorKeys = ['realEstate', 'machinery', 'development', 'community'] as const;
+export type SectorKey = typeof managedSectorKeys[number];
+export type SectorVisibility = Partial<Record<SectorKey, boolean>>;
+
 export interface PlatformSettings {
   promotionsEnabled: boolean;
   promotionTiers: PromotionTierConfig[];
@@ -342,6 +347,7 @@ export interface PlatformSettings {
   notificationEmail: string;
   predefinedAmenities: string; // Stored as comma-separated string
   propertyTypes: string[]; // Stored as TEXT[] in DB
+  sector_visibility?: SectorVisibility | null; // Added for sector toggles
 }
 
 // Import Database type from supabase
