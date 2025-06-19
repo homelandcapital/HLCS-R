@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users } from 'lucide-react'; // Added Users
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -22,13 +22,14 @@ import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, Sec
 import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
+import React from 'react';
 
 interface AdminPromotionTier {
   id: string;
-  name: string; 
+  name: string;
   icon: React.ReactNode; // Keep icon for UI only, not saved to DB
-  fee: string; 
-  duration: string; 
+  fee: string;
+  duration: string;
   description: string;
 }
 
@@ -56,7 +57,7 @@ export default function PlatformSettingsPage() {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState('NGN');
   const [notificationEmail, setNotificationEmail] = useState('admin@homelandcapital.com');
-  
+
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym");
   const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land");
 
@@ -70,7 +71,7 @@ export default function PlatformSettingsPage() {
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
-      .eq('id', 1) 
+      .eq('id', 1)
       .single();
 
     if (error) {
@@ -87,19 +88,19 @@ export default function PlatformSettingsPage() {
       setNotificationEmail(data.notification_email || 'admin@homelandcapital.com');
       setPredefinedAmenities((data.predefined_amenities as string || "Pool,Garage,Gym"));
       setPropertyTypes((data.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
-      
+
       setPromotionsEnabled(data.promotions_enabled ?? true); // Use nullish coalescing for boolean
       if (data.promotion_tiers) {
         const dbTiers = data.promotion_tiers as PromotionTierConfig[];
         const uiTiers = initialAdminPromotionTiersUI.map(uiTier => {
           const dbMatch = dbTiers.find(dbT => dbT.id === uiTier.id);
           return dbMatch ? {
-            ...uiTier, 
+            ...uiTier,
             name: dbMatch.name,
             fee: dbMatch.fee.toString(),
             duration: dbMatch.duration.toString(),
             description: dbMatch.description,
-          } : uiTier; 
+          } : uiTier;
         });
         setAdminPromotionTiers(uiTiers);
       }
@@ -144,13 +145,13 @@ export default function PlatformSettingsPage() {
       promotion_tiers: adminPromotionTiers.map(tier => ({
         id: tier.id,
         name: tier.name,
-        fee: parseFloat(tier.fee) || 0, 
-        duration: parseInt(tier.duration, 10) || 0, 
+        fee: parseFloat(tier.fee) || 0,
+        duration: parseInt(tier.duration, 10) || 0,
         description: tier.description,
       })),
       sector_visibility: sectorVisibility,
     };
-    
+
     const { error } = await supabase
       .from('platform_settings')
       .upsert(settingsToSave, { onConflict: 'id' });
@@ -159,7 +160,7 @@ export default function PlatformSettingsPage() {
       toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
-      fetchPlatformSettings(); 
+      fetchPlatformSettings();
     }
   };
 
@@ -207,7 +208,7 @@ export default function PlatformSettingsPage() {
               placeholder="Your Platform Name"
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="defaultCurrency">Default Currency</Label>
             <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
@@ -343,7 +344,7 @@ export default function PlatformSettingsPage() {
                         value={tier.name}
                         onChange={(e) => handleTierChange(tier.id, 'name', e.target.value)}
                         placeholder="e.g., Basic Boost"
-                        className="text-lg font-headline mt-0.5" 
+                        className="text-lg font-headline mt-0.5"
                         disabled={!promotionsEnabled}
                       />
                     </div>
@@ -394,7 +395,7 @@ export default function PlatformSettingsPage() {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
@@ -445,7 +446,7 @@ export default function PlatformSettingsPage() {
             <Input
               id="dataRetention"
               placeholder="e.g., Keep user data for 5 years after inactivity"
-              disabled 
+              disabled
             />
              <p className="text-xs text-muted-foreground">This setting is a placeholder for a more complex feature.</p>
           </div>
