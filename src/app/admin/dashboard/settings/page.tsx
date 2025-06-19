@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users } from 'lucide-react'; // Added Users
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -43,8 +43,8 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
 const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnabled: boolean, icon: React.ReactNode }> = [
   { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
   { key: 'machinery', label: 'Machinery Marketplace Sector', defaultEnabled: false, icon: <Package className="h-5 w-5"/> },
-  { key: 'development', label: 'Development Projects Sector', defaultEnabled: false, icon: <Zap className="h-5 w-5"/> }, // Using Zap as a placeholder
-  { key: 'community', label: 'Community Projects Sector', defaultEnabled: false, icon: <Users className="h-5 w-5"/> }, // Using Users as placeholder
+  { key: 'development', label: 'Development Projects Sector', defaultEnabled: false, icon: <Zap className="h-5 w-5"/> },
+  { key: 'community', label: 'Community Projects Sector', defaultEnabled: false, icon: <Users className="h-5 w-5"/> },
 ];
 
 
@@ -69,7 +69,7 @@ export default function PlatformSettingsPage() {
   const fetchPlatformSettings = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('platform_settings')
+      .from('platform_settings') // Corrected table name
       .select('*')
       .eq('id', 1)
       .single();
@@ -153,7 +153,7 @@ export default function PlatformSettingsPage() {
     };
 
     const { error } = await supabase
-      .from('platform_settings')
+      .from('platform_settings') // Corrected table name
       .upsert(settingsToSave, { onConflict: 'id' });
 
     if (error) {
