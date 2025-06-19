@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -9,6 +10,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      page_content: { // New table for CMS
+        Row: {
+          page_id: string // "home", "about", "services", "contact"
+          content: Json // Will hold HomePageContent, AboutPageContent etc.
+          updated_at: string
+        }
+        Insert: {
+          page_id: string
+          content: Json
+          updated_at?: string
+        }
+        Update: {
+          page_id?: string
+          content?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inquiries: {
         Row: {
           created_at: string
@@ -99,7 +118,7 @@ export type Database = {
           promotion_tiers: Json | null
           promotions_enabled: boolean | null
           property_types: string[] | null
-          sector_visibility: Json | null // Added sector_visibility
+          sector_visibility: Json | null
           site_name: string | null
           updated_at: string
         }
@@ -112,7 +131,7 @@ export type Database = {
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
           property_types?: string[] | null
-          sector_visibility?: Json | null // Added sector_visibility
+          sector_visibility?: Json | null
           site_name?: string | null
           updated_at?: string
         }
@@ -125,7 +144,7 @@ export type Database = {
           promotion_tiers?: Json | null
           promotions_enabled?: boolean | null
           property_types?: string[] | null
-          sector_visibility?: Json | null // Added sector_visibility
+          sector_visibility?: Json | null
           site_name?: string | null
           updated_at?: string
         }
@@ -461,7 +480,7 @@ export type CompositeTypes<
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
@@ -521,3 +540,5 @@ export const Constants = {
     },
   },
 } as const
+
+    

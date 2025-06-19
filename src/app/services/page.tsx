@@ -1,11 +1,9 @@
 
-'use client';
-
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { servicesPageContentData as content } from '@/lib/cms-data';
+import { servicesPageContentData as defaultContent } from '@/lib/cms-data';
 import type { Metadata } from 'next';
 import {
   Briefcase, FileWarning, SearchX, ShieldOff, HardHat, Waves, KeyRound,
@@ -15,11 +13,24 @@ import {
   FileSignature, Library, ChevronRight, Server, HelpCircle, BarChart, Anchor, Lightbulb, Home, Wrench
 } from 'lucide-react';
 import type { Icon as LucideIcon } from 'lucide-react';
-import type { ServiceGridItem } from "@/lib/types";
+import type { ServiceGridItem, ServicesPageContent } from "@/lib/types";
+import { supabase } from '@/lib/supabaseClient';
+import { unstable_noStore as noStore } from 'next/cache';
 
-// export const metadata: Metadata = { // Cannot export metadata from client component
-//   title: content.pageTitle,
-// };
+
+export async function generateMetadata(): Promise<Metadata> {
+  noStore();
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'services')
+    .single();
+
+  const pageContent = data?.content as ServicesPageContent | undefined;
+  const title = pageContent?.pageTitle || defaultContent.pageTitle;
+  return { title };
+}
+
 
 const iconMap: { [key: string]: LucideIcon } = {
   Briefcase, FileWarning, SearchX, ShieldOff, HardHat, Waves, KeyRound,
@@ -35,7 +46,25 @@ const renderIcon = (iconName?: string, className?: string) => {
   return IconComponent ? <IconComponent className={className} /> : null;
 };
 
-export default function ServicesPage() {
+async function getServicesPageContent(): Promise<ServicesPageContent> {
+  noStore();
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'services')
+    .single();
+
+  if (error || !data) {
+    console.warn('Error fetching services page content or no content found, using default:', error?.message);
+    return defaultContent;
+  }
+  return data.content as ServicesPageContent || defaultContent;
+}
+
+
+export default async function ServicesPage() {
+  const content = await getServicesPageContent();
+
   return (
     <div className="container mx-auto px-4 py-12 space-y-16">
       {/* Header Section */}

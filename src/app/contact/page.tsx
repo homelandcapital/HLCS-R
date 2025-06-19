@@ -1,7 +1,7 @@
 
-'use client';
+'use client'; // Keep as client component due to form interactions
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,22 +10,54 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, MapPin, Send, Building, Briefcase, Clock, Users, ChevronRight } from 'lucide-react';
-import { contactPageContentData as content } from '@/lib/cms-data';
-import type { OfficeDetails } from '@/lib/types';
-import PropertyMap from '@/components/property/property-map'; // Assuming this can be reused
+import { contactPageContentData as defaultContent } from '@/lib/cms-data';
+import type { OfficeDetails, ContactPageContentNew } from '@/lib/types';
+import PropertyMap from '@/components/property/property-map';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseClient';
+import { Skeleton } from '@/components/ui/skeleton';
 
+
+async function getContactPageContent(): Promise<ContactPageContentNew> {
+  // noStore(); // Not available in client components. Fetching handled in useEffect.
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'contact')
+    .single();
+
+  if (error || !data) {
+    console.warn('Error fetching contact page content or no content found, using default:', error?.message);
+    return defaultContent;
+  }
+  return data.content as ContactPageContentNew || defaultContent;
+}
 
 export default function ContactPageRedesigned() {
+  const [content, setContent] = useState<ContactPageContentNew>(defaultContent);
+  const [loadingContent, setLoadingContent] = useState(true);
   const [inquiryType, setInquiryType] = useState(content.formSection.inquiryTypes[0]);
   const { toast } = useToast();
   const [activeOffice, setActiveOffice] = useState<OfficeDetails>(content.officesSection.headquarters);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      setLoadingContent(true);
+      const fetchedContent = await getContactPageContent();
+      setContent(fetchedContent);
+      setInquiryType(fetchedContent.formSection.inquiryTypes[0]);
+      setActiveOffice(fetchedContent.officesSection.headquarters);
+      setLoadingContent(false);
+    };
+    fetchContent();
+  }, []);
+
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    console.log({ ...data, inquiryType });
+    console.log({ ...data, inquiryType }); // Demo: Log form data
     toast({
       title: "Message Sent (Demo)",
       description: "Thank you for your message! We will get back to you soon. (This is a placeholder response)",
@@ -58,6 +90,18 @@ export default function ContactPageRedesigned() {
       </p>
     </div>
   );
+
+  if (loadingContent) {
+    return (
+      <div className="container mx-auto px-4 py-12 space-y-12">
+        <header className="text-center mb-12"><Skeleton className="h-12 w-3/4 mx-auto mb-4" /><Skeleton className="h-6 w-1/2 mx-auto" /></header>
+        <div className="grid lg:grid-cols-5 gap-12">
+          <div className="lg:col-span-3 space-y-8"> <Skeleton className="h-96 w-full" /> <div className="grid md:grid-cols-2 gap-8"> <Skeleton className="h-48 w-full" /> <Skeleton className="h-48 w-full" /> </div> </div>
+          <div className="lg:col-span-2 space-y-8"> <Skeleton className="h-80 w-full" /> </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-12">

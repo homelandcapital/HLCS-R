@@ -1,13 +1,11 @@
 
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, Home, Wrench, ClipboardList, Users, DollarSign, Search, KeyRound, Building } from 'lucide-react';
-import type { HomePageServiceItem, HomePageFindHomeFeature } from '@/lib/types';
-import { homePageContentData as content } from '@/lib/cms-data';
+import type { HomePageServiceItem, HomePageFindHomeFeature, HomePageContent } from '@/lib/types';
+import { homePageContentData as defaultContent } from '@/lib/cms-data';
 import type { Icon as LucideIcon } from 'lucide-react';
 import {
   Carousel,
@@ -15,19 +13,13 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"; 
+} from "@/components/ui/carousel";
+import { supabase } from '@/lib/supabaseClient';
+import { unstable_noStore as noStore } from 'next/cache';
 
-// Helper to map icon names to Lucide components
+
 const iconMap: { [key: string]: LucideIcon } = {
-  Home,
-  Wrench,
-  ClipboardList,
-  Users,
-  DollarSign,
-  Search,
-  KeyRound,
-  Building,
-  ArrowRight,
+  Home, Wrench, ClipboardList, Users, DollarSign, Search, KeyRound, Building, ArrowRight,
 };
 
 const renderIcon = (iconName?: string, className?: string) => {
@@ -36,8 +28,25 @@ const renderIcon = (iconName?: string, className?: string) => {
   return IconComponent ? <IconComponent className={className} /> : null;
 };
 
+async function getHomePageContent(): Promise<HomePageContent> {
+  noStore(); // Opt out of caching for this dynamic content
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'home')
+    .single();
 
-export default function HomePageRedesigned() {
+  if (error || !data) {
+    console.warn('Error fetching home page content or no content found, using default:', error?.message);
+    return defaultContent;
+  }
+  return data.content as HomePageContent || defaultContent;
+}
+
+
+export default async function HomePageRedesigned() {
+  const content = await getHomePageContent();
+
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Hero Section Carousel */}
@@ -61,9 +70,9 @@ export default function HomePageRedesigned() {
                     className="absolute inset-0 z-0"
                     sizes="100vw"
                     data-ai-hint={slide.backgroundImageAiHint}
-                    priority={index === 0} // Only prioritize the first image
+                    priority={index === 0}
                   />
-                  <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Dark overlay */}
+                  <div className="absolute inset-0 bg-black/50 z-10"></div>
                   <div className="relative z-20 p-6 container mx-auto">
                     {slide.titleLines.map((line, lineIndex) => (
                       <h1 key={lineIndex} className={`text-2xl md:text-4xl lg:text-5xl font-headline font-bold text-white ${lineIndex < slide.titleLines.length -1 ? 'mb-2 md:mb-3' : slide.subtitle ? 'mb-3 md:mb-4' : 'mb-8 md:mb-10'}`}>
@@ -155,7 +164,7 @@ export default function HomePageRedesigned() {
       <section className="container mx-auto px-4 py-12 md:py-16">
         <div className={`grid md:grid-cols-2 gap-10 md:gap-16 items-center`}>
           <div className={`space-y-6 ${content.developmentProjects.imagePosition === 'right' ? 'md:order-1' : 'md:order-2'}`}>
-            <h2 className="text-3xl md:text-4xl font-headline text-orange-500"> {/* Changed color for "Development" */}
+            <h2 className="text-3xl md:text-4xl font-headline text-orange-500">
               {content.developmentProjects.title}
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -187,7 +196,7 @@ export default function HomePageRedesigned() {
       <section className="container mx-auto px-4 py-12 md:py-16">
         <div className={`grid md:grid-cols-2 gap-10 md:gap-16 items-center`}>
           <div className={`space-y-6 ${content.communityOutreach.imagePosition === 'right' ? 'md:order-1' : 'md:order-2'}`}>
-            <h2 className="text-3xl md:text-4xl font-headline text-orange-500"> {/* Changed color for "Community" */}
+            <h2 className="text-3xl md:text-4xl font-headline text-orange-500">
               {content.communityOutreach.title}
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -218,3 +227,4 @@ export default function HomePageRedesigned() {
   );
 }
 
+    

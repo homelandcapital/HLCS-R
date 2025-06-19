@@ -2,19 +2,34 @@
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Home, Wrench, Building2, Users } from 'lucide-react';
-import { aboutPageContentData as content } from '@/lib/cms-data';
+import { aboutPageContentData as defaultContent } from '@/lib/cms-data';
 import type { Metadata } from 'next';
 import type { Icon as LucideIcon } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import type { AboutPageContent } from '@/lib/types';
+import { unstable_noStore as noStore } from 'next/cache';
 
-export const metadata: Metadata = {
-  title: content.pageTitle,
-};
+// export const metadata: Metadata = { // Cannot export metadata from client component if page is client
+//   title: defaultContent.pageTitle, // Fallback or dynamic title
+// };
+
+// Updated to fetch metadata dynamically
+export async function generateMetadata(): Promise<Metadata> {
+  noStore();
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'about')
+    .single();
+
+  const pageContent = data?.content as AboutPageContent | undefined;
+  const title = pageContent?.pageTitle || defaultContent.pageTitle;
+  return { title };
+}
+
 
 const iconMap: { [key: string]: LucideIcon } = {
-  Home,
-  Wrench,
-  Building2,
-  Users,
+  Home, Wrench, Building2, Users,
 };
 
 const renderIcon = (iconName?: string, className?: string) => {
@@ -23,7 +38,24 @@ const renderIcon = (iconName?: string, className?: string) => {
   return IconComponent ? <IconComponent className={className} /> : null;
 };
 
-export default function AboutPage() {
+async function getAboutPageContent(): Promise<AboutPageContent> {
+  noStore();
+  const { data, error } = await supabase
+    .from('page_content')
+    .select('content')
+    .eq('page_id', 'about')
+    .single();
+
+  if (error || !data) {
+    console.warn('Error fetching about page content or no content found, using default:', error?.message);
+    return defaultContent;
+  }
+  return data.content as AboutPageContent || defaultContent;
+}
+
+export default async function AboutPage() {
+  const content = await getAboutPageContent();
+
   return (
     <div className="space-y-16 md:space-y-24">
       {/* Hero Section */}
@@ -33,8 +65,8 @@ export default function AboutPage() {
             <Image
               src={content.heroSection.imageUrl}
               alt={content.heroSection.imageAlt}
-              layout="fill"
-              objectFit="cover"
+              fill // Changed layout="fill" to fill
+              style={{objectFit:"cover"}} // Added style for objectFit
               data-ai-hint={content.heroSection.imageAiHint}
               priority
             />
@@ -88,3 +120,5 @@ export default function AboutPage() {
     </div>
   );
 }
+
+    
