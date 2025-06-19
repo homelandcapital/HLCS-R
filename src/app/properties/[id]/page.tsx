@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Hash, AlertTriangle } from 'lucide-react';
+import { MapPin, BedDouble, Bath, Building2, Maximize, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, MailQuestion, ShieldAlert, EyeOff, Hash, AlertTriangle, Building } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -43,10 +43,10 @@ export default function PropertyDetailsPage() {
     // Fetch property regardless of status first
     const { data, error } = await supabase
       .from('properties')
-      .select(`
+      .select(\`
         *,
         agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      `)
+      \`)
       .eq('id', propertyId)
       .maybeSingle();
 
@@ -142,8 +142,6 @@ export default function PropertyDetailsPage() {
     );
   }
 
-
-  const { agent } = property;
   const images = property.images || [];
 
   const prevImage = () => {
@@ -185,7 +183,7 @@ export default function PropertyDetailsPage() {
                     </CardTitle>
                     <CardDescription className={cn("text-sm", property.status === 'pending' && "text-yellow-600", property.status === 'rejected' && "text-destructive-foreground/80")}>
                         {property.status === 'pending' && "Review the details below before approving or rejecting."}
-                        {property.status === 'rejected' && `Reason: ${property.rejection_reason || 'Not specified'}`}
+                        {property.status === 'rejected' && \`Reason: \${property.rejection_reason || 'Not specified'}\`}
                     </CardDescription>
                 </div>
             </CardContent>
@@ -226,7 +224,6 @@ export default function PropertyDetailsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-headline">Inquire about: {property.title}</DialogTitle>
-            {/* Using a regular p tag for description if DialogDescription is not explicitly imported/needed */}
             <p className="text-sm text-muted-foreground">
               Fill out the form below. Your details (if logged in) have been pre-filled. The platform admin will get in touch.
             </p>
@@ -249,7 +246,7 @@ export default function PropertyDetailsPage() {
               <>
                 <Image
                   src={mainDisplayImage}
-                  alt={`${property.title} - Image ${currentImageIndex + 1}`}
+                  alt={\`\${property.title} - Image \${currentImageIndex + 1}\`}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   style={{objectFit:"cover"}}
@@ -281,9 +278,9 @@ export default function PropertyDetailsPage() {
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
                       className={cn( "block rounded-md overflow-hidden w-20 h-14 md:w-24 md:h-16 relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-background", currentImageIndex === index ? "ring-2 ring-primary ring-offset-2" : "hover:opacity-75 transition-opacity" )}
-                      aria-label={`View image ${index + 1}`}
+                      aria-label={\`View image \${index + 1}\`}
                     >
-                      <Image src={img} alt={`Thumbnail ${property.title} ${index + 1}`} fill style={{objectFit:"cover"}} />
+                      <Image src={img} alt={\`Thumbnail \${property.title} \${index + 1}\`} fill style={{objectFit:"cover"}} />
                     </button>
                   ))}
                 </div>
@@ -303,7 +300,7 @@ export default function PropertyDetailsPage() {
                 <DetailItem icon={<Building2 />} label="Property Type" value={property.property_type} />
                 <DetailItem icon={<BedDouble />} label="Bedrooms" value={property.bedrooms.toString()} />
                 <DetailItem icon={<Bath />} label="Bathrooms" value={property.bathrooms.toString()} />
-                {property.area_sq_ft && <DetailItem icon={<Maximize />} label="Area" value={`${property.area_sq_ft} sq ft`} />}
+                {property.area_sq_ft && <DetailItem icon={<Maximize />} label="Area" value={\`\${property.area_sq_ft} sq ft\`} />}
                 {property.year_built && <DetailItem icon={<CalendarDays />} label="Year Built" value={property.year_built.toString()} />}
                 <DetailItem icon={<Tag />} label="Listing Type" value={property.listing_type} />
               </div>
@@ -326,28 +323,23 @@ export default function PropertyDetailsPage() {
           }
         </div>
         <div className="space-y-8">
-          {agent && (
-            <Card className="shadow-lg">
-              <CardHeader> <CardTitle className="font-headline">Listed By</CardTitle> </CardHeader>
-              <CardContent className="flex flex-col items-center text-center space-y-3">
-                <Avatar className="w-24 h-24 border-2 border-primary">
-                  <AvatarImage src={agent.avatar_url || `https://placehold.co/100x100.png`} alt={agent.name || 'Agent'} data-ai-hint="professional portrait" />
-                  <AvatarFallback>{agent.name ? agent.name.substring(0,2).toUpperCase() : 'AG'}</AvatarFallback>
-                </Avatar>
-                <h3 className="text-xl font-semibold text-foreground">{agent.name}</h3>
-                {agent.agency && <p className="text-sm text-muted-foreground">{agent.agency}</p>}
-                {agent.phone && <div className="flex items-center text-sm text-foreground"> <Phone className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.phone} </div> }
-                {agent.email && <div className="flex items-center text-sm text-foreground"> <Mail className="w-4 h-4 mr-2 text-muted-foreground" /> {agent.email} </div> }
-              </CardContent>
-            </Card>
-          )}
-          {/* Only show inquiry button if property is approved OR if admin is viewing */}
+          <Card className="shadow-lg">
+            <CardHeader> <CardTitle className="font-headline">Marketed by</CardTitle> </CardHeader>
+            <CardContent className="flex flex-col items-center text-center space-y-3">
+              <Avatar className="w-24 h-24 border-2 border-primary">
+                {/* You can replace this with a Homeland Capital logo if desired */}
+                <AvatarImage src="https://placehold.co/100x100/4DB6AC/FFFFFF.png?text=HC" alt="Homeland Capital" data-ai-hint="company logo" />
+                <AvatarFallback><Building className="h-10 w-10" /></AvatarFallback>
+              </Avatar>
+              <h3 className="text-xl font-semibold text-foreground">Homeland Capital</h3>
+            </CardContent>
+          </Card>
           { (property.status === 'approved' || isAdmin) && (
             <Card className="shadow-lg">
                 <CardHeader> <CardTitle className="font-headline">Interested?</CardTitle> </CardHeader>
                 <CardContent>
                     <Button variant="default" size="lg" className="w-full" onClick={handleInquireClick} disabled={authLoading}>
-                        <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : (property.status === 'approved' ? 'Inquire Now' : 'Contact Agent (Admin)')}
+                        <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : (property.status === 'approved' ? 'Inquire Now' : 'Contact (Admin)')}
                     </Button>
                      {property.status !== 'approved' && isAdmin &&
                         <p className="text-xs text-muted-foreground mt-2 text-center">Note: The "Inquire Now" button is typically available for approved properties. This admin view allows contact regardless of status.</p>
@@ -384,5 +376,3 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
-
-    
