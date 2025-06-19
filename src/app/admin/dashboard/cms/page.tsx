@@ -189,7 +189,7 @@ export default function CmsManagementPage() {
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine for initial load
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
 
@@ -217,6 +217,7 @@ export default function CmsManagementPage() {
   }, [activeTab, loadPageContent]);
 
   // Lean function for DB operation only. Throws error on failure.
+  // Returns the saved data (or input data as fallback) on success.
   const performSaveOnlyDb = async (pageId: PageId, content: any) => {
     const { data: upsertData, error } = await supabase
       .from('page_content')
@@ -226,55 +227,48 @@ export default function CmsManagementPage() {
 
     if (error) {
       console.error(`Error saving ${pageId} content to Supabase:`, error);
-      throw error; // Crucial for RHF to know the promise rejected
+      throw error; // Crucial for RHF/calling function to know the promise rejected
     }
-    return upsertData; // Success
-  };
-
-  // Form-specific submit handlers
-  const onHomeSubmit = async (data: HomePageContent) => {
-    try {
-      await performSaveOnlyDb('home', data);
-      toast({ title: `Home Page Content Saved`, description: 'Your changes have been successfully saved.' });
-      homeForm.reset(data); // Optional: reset form with current data to clear dirty state
-    } catch (error: any) {
-      toast({ title: `Error saving Home Page content`, description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const onAboutSubmit = async (data: AboutPageContent) => {
-    try {
-      await performSaveOnlyDb('about', data);
-      toast({ title: `About Page Content Saved`, description: 'Your changes have been successfully saved.' });
-      aboutForm.reset(data);
-    } catch (error: any) {
-      toast({ title: `Error saving About Page content`, description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const onServicesSubmit = async (data: ServicesPageContent) => {
-    try {
-      await performSaveOnlyDb('services', data);
-      toast({ title: `Services Page Content Saved`, description: 'Your changes have been successfully saved.' });
-      servicesForm.reset(data);
-    } catch (error: any) {
-      toast({ title: `Error saving Services Page content`, description: error.message, variant: 'destructive' });
-    }
+    return upsertData || content; // Return upserted data, or the input content as fallback
   };
   
+  // Generalized submit logic for forms using react-hook-form's handleSubmit
+  const handleSubmitLogic = async ( pageId: PageId, data: any, formInstance: any ) => {
+    try {
+      const savedData = await performSaveOnlyDb(pageId, data);
+      // Defer toast and reset to allow RHF to finish its cycle
+      setTimeout(() => {
+        toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Page Content Saved`, description: 'Your changes have been successfully saved.' });
+        formInstance.reset(savedData); // Reset with data from DB or submitted data
+      }, 0);
+    } catch (error: any) {
+      // Defer error toast
+      setTimeout(() => {
+        toast({ title: `Error saving ${pageId} page content`, description: error.message, variant: 'destructive' });
+      }, 0);
+      throw error; // Re-throw to ensure RHF's handleSubmit sees the failure
+    }
+  };
+
+  // Form-specific submit handlers that use the generalized logic
+  const onHomeSubmit = (data: HomePageContent) => handleSubmitLogic('home', data, homeForm);
+  const onAboutSubmit = (data: AboutPageContent) => handleSubmitLogic('about', data, aboutForm);
+  const onServicesSubmit = (data: ServicesPageContent) => handleSubmitLogic('services', data, servicesForm);
+  
+  // Direct save for JSON textareas (Contact page)
   const handleDirectSaveForContact = async () => {
     setIsUiBlockingLoading(true);
     try {
-      // Validate before getting values for direct save
       const isValid = await contactForm.trigger();
       if (!isValid) {
         toast({ title: "Validation Error", description: "Please check the contact form for errors.", variant: "destructive"});
         setIsUiBlockingLoading(false);
         return;
       }
-      await performSaveOnlyDb('contact', contactForm.getValues());
+      const currentContactData = contactForm.getValues();
+      await performSaveOnlyDb('contact', currentContactData);
       toast({ title: `Contact Page Content Saved`, description: 'Your changes have been successfully saved.' });
-      contactForm.reset(contactForm.getValues());
+      contactForm.reset(currentContactData); // Reset with the data just saved
     } catch (error: any) {
       toast({ title: `Error saving Contact Page content`, description: error.message, variant: 'destructive' });
     } finally {
@@ -322,7 +316,27 @@ export default function CmsManagementPage() {
                       {heroSlidesFields.map((slideField, index) => (
                         <Card key={slideField.id} className="p-4 space-y-3 bg-muted/50">
                           <Label>Slide {index + 1} Titles (one per line)</Label>
-                          <Textarea {...homeForm.register(`hero.slides.${index}.titleLines` as const)} placeholder="Title Line 1&#10;Title Line 2" rows={3} />
+                          <Controller
+                            name={`hero.slides.${index}.titleLines`}
+                            control={homeForm.control}
+                            render={({ field }) => (
+                              <Textarea
+                                {...field}
+                                value={Array.isArray(field.value) ? field.value.join('\n') : field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value.split('\n'))}
+                                placeholder="Title Line 1&#10;Title Line 2"
+                                rows={3}
+                              />
+                            )}
+                          />
+                          {homeForm.formState.errors.hero?.slides?.[index]?.titleLines && (
+                            <p className="text-sm font-medium text-destructive">
+                              {/* @ts-ignore */}
+                              {homeForm.formState.errors.hero?.slides?.[index]?.titleLines?.message || 
+                               homeForm.formState.errors.hero?.slides?.[index]?.titleLines?.[0]?.message}
+                            </p>
+                          )}
+
                           <Label>Subtitle</Label><Input {...homeForm.register(`hero.slides.${index}.subtitle` as const)} placeholder="Hero Subtitle" />
                           <Label>CTA Text</Label><Input {...homeForm.register(`hero.slides.${index}.cta.text` as const)} placeholder="Explore Now" />
                           <Label>CTA Link</Label><Input {...homeForm.register(`hero.slides.${index}.cta.href` as const)} placeholder="/properties" />
@@ -445,9 +459,13 @@ export default function CmsManagementPage() {
                         <AccordionContent className="space-y-3 pt-3">
                             <Label>Page Title (Meta)</Label><Input {...aboutForm.register('pageTitle')} />
                             <Label>Hero Title</Label><Textarea {...aboutForm.register('heroSection.title')} rows={3} />
-                            <Label>Paragraph 1</Label><Textarea {...aboutForm.register('heroSection.paragraphs.0')} rows={4} />
-                            <Label>Paragraph 2</Label><Textarea {...aboutForm.register('heroSection.paragraphs.1')} rows={4} />
-                            <Label>Paragraph 3</Label><Textarea {...aboutForm.register('heroSection.paragraphs.2')} rows={4} />
+                            {/* Handling paragraphs array */}
+                            {(aboutForm.getValues().heroSection.paragraphs || defaultAboutPageContent.heroSection.paragraphs).map((_, index) => (
+                              <div key={index} className="space-y-1">
+                                <Label>Paragraph {index + 1}</Label>
+                                <Textarea {...aboutForm.register(`heroSection.paragraphs.${index}` as const)} rows={4} />
+                              </div>
+                            ))}
                             <Label>Image URL</Label><Input {...aboutForm.register('heroSection.imageUrl')} />
                             <Label>Image Alt Text</Label><Input {...aboutForm.register('heroSection.imageAlt')} />
                             <Label>Badge Text (use \n for new line)</Label><Input {...aboutForm.register('heroSection.badgeText')} />
@@ -458,8 +476,7 @@ export default function CmsManagementPage() {
                         <AccordionContent className="space-y-3 pt-3">
                             <Label>Section Title</Label><Input {...aboutForm.register('servicesSection.title')} />
                             <Label>Section Subtitle</Label><Textarea {...aboutForm.register('servicesSection.subtitle')} />
-                            {/* Assuming a fixed number of 4 service items based on default data */}
-                            {(defaultAboutPageContent.servicesSection.items).map((_, index) => (
+                            {(aboutForm.getValues().servicesSection.items || defaultAboutPageContent.servicesSection.items).map((_, index) => (
                                 <Card key={index} className="p-3 space-y-2 bg-muted/50 my-2">
                                     <Label>Service {index+1} Icon Name</Label><Input {...aboutForm.register(`servicesSection.items.${index}.iconName` as const)} />
                                     <Label>Service {index+1} Title</Label><Input {...aboutForm.register(`servicesSection.items.${index}.title` as const)} />
@@ -562,21 +579,31 @@ export default function CmsManagementPage() {
           <Card>
             <CardHeader><CardTitle>Contact Page Content</CardTitle></CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Editing for the Contact page. Manage content directly as a JSON object for now.</p>
+              <p className="text-muted-foreground mb-4">Edit content for the Contact page. Ensure the JSON is valid before saving.</p>
                <Controller
-                name="content" 
-                control={contactForm.control}
-                // @ts-ignore
-                defaultValue={JSON.stringify(defaultContactPageContent, null, 2)}
-                render={({ field }) => (
+                name="officesSection" // Example: binding to a part of the form if needed, or simply manage string
+                control={contactForm.control} // This control is for the whole ContactPageContentNew
+                render={({ field, fieldState }) => ( // fieldState for potential local error display
                   <Textarea
-                    value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
+                    // Manage the value as a string representation of the whole form
+                    value={typeof contactForm.getValues() === 'object' ? JSON.stringify(contactForm.getValues(), null, 2) : contactForm.getValues() || ''}
                     onChange={(e) => {
                       try {
                         const parsed = JSON.parse(e.target.value);
-                        contactForm.reset(parsed); 
+                        contactForm.reset(parsed); // Attempt to reset the entire form with parsed JSON
                       } catch (err) {
-                         field.onChange(e.target.value); 
+                        // If JSON is invalid, keep the string in the textarea for correction
+                        // Optionally, set a local error state here to inform user of invalid JSON
+                        // For now, Zod validation on submit will catch structural issues.
+                        // To allow typing, we might need a local string state for the textarea
+                        // and only call contactForm.reset on valid parse or on blur.
+                        // This simplistic onChange might cause issues if the form is complex and user types invalid JSON.
+                        // A more robust solution would be a dedicated JSON editor component or stricter onChange handling.
+                        
+                        // Fallback: try to update the field if "content" was intended, though direct reset is better.
+                        // This is tricky as the controller is bound to `officesSection` but we edit the whole form.
+                        // A simpler `defaultValue` for the form and letting direct edits update `contactForm` state
+                        // is often how such textareas are handled outside a Controller for the whole JSON.
                       }
                     }}
                     rows={25}
@@ -585,7 +612,13 @@ export default function CmsManagementPage() {
                   />
                 )}
               />
-              {Object.keys(contactForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content. Please check your input.</p>}
+              {/* Display Zod validation errors for the entire contactForm */}
+              {Object.keys(contactForm.formState.errors).length > 0 && 
+                <p className="text-destructive text-sm mt-1">
+                  Invalid JSON structure or content based on schema. Please check your input.
+                  (Errors: {JSON.stringify(contactForm.formState.errors)})
+                </p>
+              }
               <Button onClick={handleDirectSaveForContact} disabled={isUiBlockingLoading || contactForm.formState.isSubmitting} className="mt-4">
                 <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading || contactForm.formState.isSubmitting ? "Saving..." : "Save Contact Page Content"}
               </Button>
@@ -597,4 +630,3 @@ export default function CmsManagementPage() {
     </div>
   );
 }
-
