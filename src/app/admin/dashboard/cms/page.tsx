@@ -173,7 +173,13 @@ export default function CmsManagementPage() {
   const { fields: findYourHomeFeaturesFields, append: appendFindYourHomeFeature, remove: removeFindYourHomeFeature } = useFieldArray({ control: homeForm.control, name: "findYourHome.features" });
 
   const aboutForm = useForm<AboutPageContent>({ resolver: zodResolver(AboutPageContentSchema), defaultValues: defaultAboutPageContent });
+  
   const servicesForm = useForm<ServicesPageContent>({ resolver: zodResolver(ServicesPageContentSchema), defaultValues: defaultServicesPageContent });
+  const { fields: mainCategoriesFields, append: appendMainCategory, remove: removeMainCategory } = useFieldArray({ control: servicesForm.control, name: "mainCategories" });
+  const { fields: propertyVerificationItemsFields, append: appendPropertyVerificationItem, remove: removePropertyVerificationItem } = useFieldArray({ control: servicesForm.control, name: "propertyVerificationSection.items" });
+  const { fields: detailedVerificationItemsFields, append: appendDetailedVerificationItem, remove: removeDetailedVerificationItem } = useFieldArray({ control: servicesForm.control, name: "detailedVerificationSection.items" });
+
+
   const contactForm = useForm<ContactPageContentNew>({ resolver: zodResolver(ContactPageContentSchema), defaultValues: defaultContactPageContent });
 
 
@@ -185,7 +191,7 @@ export default function CmsManagementPage() {
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error && error.code !== 'PGRST116') { // PGRST116: row not found, which is fine
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
 
@@ -220,16 +226,17 @@ export default function CmsManagementPage() {
 
       if (error) {
         toast({ title: `Error saving ${pageId} content`, description: error.message, variant: 'destructive' });
-        throw error;
+        throw error; // Propagate error for RHF
       } else {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Content Saved`, description: 'Your changes have been successfully saved.' });
       }
     } catch (e: any) {
         toast({ title: `Unexpected error saving ${pageId}`, description: e.message || 'An unknown error occurred.', variant: 'destructive' });
-        throw e;
+        throw e; // Propagate error for RHF
     }
   };
 
+  // Used for forms not managed by react-hook-form's handleSubmit directly (e.g., raw JSON textareas)
   const handleDirectSave = async (pageId: PageId, formInstance: any) => {
     setIsUiBlockingLoading(true);
     try {
@@ -442,36 +449,84 @@ export default function CmsManagementPage() {
         </TabsContent>
 
         <TabsContent value="services" className="mt-6">
-          <Card>
-            <CardHeader><CardTitle>Services Page Content</CardTitle></CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">Editing for the Services page is more complex. For now, manage its content directly as a JSON object.</p>
-              <Controller
-                name="content"
-                control={servicesForm.control}
-                render={({ field }) => (
-                  <Textarea
-                    value={typeof field.value === 'string' ? field.value : JSON.stringify(field.value, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        servicesForm.reset(parsed);
-                      } catch (err) {
-                        // Allow text editing, Zod validates on save
-                      }
-                    }}
-                    rows={25}
-                    placeholder="Enter JSON content for Services Page"
-                    className="font-mono text-xs"
-                  />
-                )}
-              />
-              {Object.keys(servicesForm.formState.errors).length > 0 && <p className="text-destructive text-sm mt-1">Invalid JSON structure or content.</p>}
-              <Button onClick={() => handleDirectSave('services', servicesForm)} disabled={isUiBlockingLoading} className="mt-4">
-                <Save className="mr-2 h-4 w-4" /> {isUiBlockingLoading ? "Saving..." : "Save Services Page Content"}
-              </Button>
-            </CardContent>
-          </Card>
+          <form onSubmit={servicesForm.handleSubmit(data => performSave('services', data))}>
+            <Card>
+              <CardHeader><CardTitle>Services Page Content</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <Accordion type="multiple" defaultValue={['services-header']} className="w-full">
+                  <AccordionItem value="services-header">
+                    <AccordionTrigger className="text-lg font-semibold">Header & Meta</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>Page Title (Meta)</Label><Input {...servicesForm.register('pageTitle')} placeholder="Services Page Title" />
+                      <Label>Header Title</Label><Input {...servicesForm.register('headerTitle')} placeholder="Main Title on Page" />
+                      <Label>Header Subtitle</Label><Textarea {...servicesForm.register('headerSubtitle')} placeholder="Subtitle below main title" />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="main-categories">
+                    <AccordionTrigger className="text-lg font-semibold">Main Service Categories</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-3">
+                      {mainCategoriesFields.map((categoryField, index) => (
+                        <Card key={categoryField.id} className="p-4 space-y-3 bg-muted/50">
+                          <Label>Category {index + 1} Title</Label><Input {...servicesForm.register(`mainCategories.${index}.title` as const)} placeholder="Category Title" />
+                          <Label>Description</Label><Textarea {...servicesForm.register(`mainCategories.${index}.description` as const)} placeholder="Category Description" rows={3} />
+                          <Button type="button" variant="destructive" size="sm" onClick={() => removeMainCategory(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Category</Button>
+                        </Card>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => appendMainCategory({ title: 'New Category', description: 'Description for new category.' })}><PlusCircle className="mr-2 h-4 w-4" /> Add Main Category</Button>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="property-verification">
+                    <AccordionTrigger className="text-lg font-semibold">Property Verification Section</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>Section Title</Label><Input {...servicesForm.register('propertyVerificationSection.title')} placeholder="Section Title" />
+                      <Label>Section Subtitle</Label><Textarea {...servicesForm.register('propertyVerificationSection.subtitle')} placeholder="Section Subtitle" />
+                      <h4 className="font-medium pt-2">Verification Items:</h4>
+                      {propertyVerificationItemsFields.map((itemField, index) => (
+                        <Card key={itemField.id} className="p-3 space-y-2 bg-muted/50">
+                          <Label>Icon Name (Lucide)</Label><Input {...servicesForm.register(`propertyVerificationSection.items.${index}.iconName` as const)} placeholder="FileWarning" />
+                          <Label>Item Title</Label><Input {...servicesForm.register(`propertyVerificationSection.items.${index}.title` as const)} placeholder="Item Title" />
+                          <Label>Item Description</Label><Textarea {...servicesForm.register(`propertyVerificationSection.items.${index}.description` as const)} placeholder="Item Description" />
+                          <Button type="button" variant="destructive" size="sm" onClick={() => removePropertyVerificationItem(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Item</Button>
+                        </Card>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => appendPropertyVerificationItem({ iconName: 'CheckSquare', title: 'New Verification Item', description: 'Details about this item.' })}><PlusCircle className="mr-2 h-4 w-4" /> Add Verification Item</Button>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="detailed-verification">
+                    <AccordionTrigger className="text-lg font-semibold">Detailed Verification Section</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>Section Title</Label><Input {...servicesForm.register('detailedVerificationSection.title')} placeholder="Section Title" />
+                      <Label>Section Subtitle</Label><Textarea {...servicesForm.register('detailedVerificationSection.subtitle')} placeholder="Section Subtitle" />
+                      <h4 className="font-medium pt-2">Detailed Items:</h4>
+                      {detailedVerificationItemsFields.map((itemField, index) => (
+                        <Card key={itemField.id} className="p-3 space-y-2 bg-muted/50">
+                          <Label>Icon Name (Lucide)</Label><Input {...servicesForm.register(`detailedVerificationSection.items.${index}.iconName` as const)} placeholder="ShieldCheck" />
+                          <Label>Item Title</Label><Input {...servicesForm.register(`detailedVerificationSection.items.${index}.title` as const)} placeholder="Item Title" />
+                          <Label>Item Description</Label><Textarea {...servicesForm.register(`detailedVerificationSection.items.${index}.description` as const)} placeholder="Item Description" />
+                          <Button type="button" variant="destructive" size="sm" onClick={() => removeDetailedVerificationItem(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Item</Button>
+                        </Card>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => appendDetailedVerificationItem({ iconName: 'ScanSearch', title: 'New Detailed Item', description: 'Details about this item.' })}><PlusCircle className="mr-2 h-4 w-4" /> Add Detailed Item</Button>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="services-cta">
+                    <AccordionTrigger className="text-lg font-semibold">Call to Action (CTA)</AccordionTrigger>
+                    <AccordionContent className="space-y-3 pt-3">
+                      <Label>CTA Text</Label><Input {...servicesForm.register('cta.text')} placeholder="Get Started" />
+                      <Label>CTA Link</Label><Input {...servicesForm.register('cta.href')} placeholder="/contact" />
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                <Button type="submit" disabled={servicesForm.formState.isSubmitting || isUiBlockingLoading} className="mt-6">
+                  <Save className="mr-2 h-4 w-4" /> {servicesForm.formState.isSubmitting ? "Saving..." : "Save Services Page Content"}
+                </Button>
+              </CardContent>
+            </Card>
+          </form>
         </TabsContent>
 
         <TabsContent value="contact" className="mt-6">
@@ -511,3 +566,4 @@ export default function CmsManagementPage() {
     </div>
   );
 }
+
