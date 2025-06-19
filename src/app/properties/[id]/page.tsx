@@ -43,10 +43,9 @@ export default function PropertyDetailsPage() {
     // Fetch property regardless of status first
     const { data, error } = await supabase
       .from('properties')
-      .select(\`
-        *,
-        agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)
-      \`)
+      .select(
+        '*, agent:users!properties_agent_id_fkey (id, name, email, avatar_url, role, phone, agency)'
+      )
       .eq('id', propertyId)
       .maybeSingle();
 
@@ -183,7 +182,7 @@ export default function PropertyDetailsPage() {
                     </CardTitle>
                     <CardDescription className={cn("text-sm", property.status === 'pending' && "text-yellow-600", property.status === 'rejected' && "text-destructive-foreground/80")}>
                         {property.status === 'pending' && "Review the details below before approving or rejecting."}
-                        {property.status === 'rejected' && \`Reason: \${property.rejection_reason || 'Not specified'}\`}
+                        {property.status === 'rejected' && `Reason: ${property.rejection_reason || 'Not specified'}`}
                     </CardDescription>
                 </div>
             </CardContent>
@@ -246,7 +245,7 @@ export default function PropertyDetailsPage() {
               <>
                 <Image
                   src={mainDisplayImage}
-                  alt={\`\${property.title} - Image \${currentImageIndex + 1}\`}
+                  alt={`${property.title} - Image ${currentImageIndex + 1}`}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   style={{objectFit:"cover"}}
@@ -278,9 +277,9 @@ export default function PropertyDetailsPage() {
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
                       className={cn( "block rounded-md overflow-hidden w-20 h-14 md:w-24 md:h-16 relative shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ring-offset-background", currentImageIndex === index ? "ring-2 ring-primary ring-offset-2" : "hover:opacity-75 transition-opacity" )}
-                      aria-label={\`View image \${index + 1}\`}
+                      aria-label={`View image ${index + 1}`}
                     >
-                      <Image src={img} alt={\`Thumbnail \${property.title} \${index + 1}\`} fill style={{objectFit:"cover"}} />
+                      <Image src={img} alt={`Thumbnail ${property.title} ${index + 1}`} fill style={{objectFit:"cover"}} />
                     </button>
                   ))}
                 </div>
@@ -300,7 +299,7 @@ export default function PropertyDetailsPage() {
                 <DetailItem icon={<Building2 />} label="Property Type" value={property.property_type} />
                 <DetailItem icon={<BedDouble />} label="Bedrooms" value={property.bedrooms.toString()} />
                 <DetailItem icon={<Bath />} label="Bathrooms" value={property.bathrooms.toString()} />
-                {property.area_sq_ft && <DetailItem icon={<Maximize />} label="Area" value={\`\${property.area_sq_ft} sq ft\`} />}
+                {property.area_sq_ft && <DetailItem icon={<Maximize />} label="Area" value={`${property.area_sq_ft} sq ft`} />}
                 {property.year_built && <DetailItem icon={<CalendarDays />} label="Year Built" value={property.year_built.toString()} />}
                 <DetailItem icon={<Tag />} label="Listing Type" value={property.listing_type} />
               </div>
@@ -323,13 +322,14 @@ export default function PropertyDetailsPage() {
           }
         </div>
         <div className="space-y-8">
-          <Card className="shadow-lg">
-            <CardHeader> <CardTitle className="font-headline">Marketed by</CardTitle> </CardHeader>
+           <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="font-headline">Marketed by</CardTitle>
+            </CardHeader>
             <CardContent className="flex flex-col items-center text-center space-y-3">
               <Avatar className="w-24 h-24 border-2 border-primary">
-                {/* You can replace this with a Homeland Capital logo if desired */}
-                <AvatarImage src="https://placehold.co/100x100/4DB6AC/FFFFFF.png?text=HC" alt="Homeland Capital" data-ai-hint="company logo" />
-                <AvatarFallback><Building className="h-10 w-10" /></AvatarFallback>
+                <AvatarImage src="https://placehold.co/100x100/4DB6AC/FFFFFF.png?text=HC" alt="Homeland Capital" data-ai-hint="company logo"/>
+                <AvatarFallback><Building className="h-10 w-10"/></AvatarFallback>
               </Avatar>
               <h3 className="text-xl font-semibold text-foreground">Homeland Capital</h3>
             </CardContent>
@@ -376,3 +376,4 @@ const PropertyDetailsSkeleton = () => (
     </div>
   </div>
 );
+
