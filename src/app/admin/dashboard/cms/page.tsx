@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/cms/page.tsx
 'use client';
 
@@ -23,8 +22,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, Users } from 'lucide-react';
+import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, Users, Building, HelpCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // Zod Schemas for Validation (ensure these are complete and correct)
 const CmsLinkSchema = z.object({ text: z.string().min(1), href: z.string().min(1) });
@@ -191,33 +191,59 @@ export default function CmsManagementPage() {
 
   const loadPageContent = useCallback(async (pageId: PageId) => {
     setIsUiBlockingLoading(true);
-    const { data, error } = await supabase
-      .from('page_content')
-      .select('content')
-      .eq('page_id', pageId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('page_content')
+        .select('content')
+        .eq('page_id', pageId)
+        .single();
 
-    if (error && error.code !== 'PGRST116') {
-      toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
+      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is a valid state we handle with defaults.
+        toast({
+          title: `Error loading ${pageId} content`,
+          description: error.message,
+          variant: 'destructive',
+        });
+        // Check for specific auth error to give a better message
+        if (error.message.toLowerCase().includes('jwt')) {
+            toast({
+                title: "Session Expired",
+                description: "Your session may have expired. Please refresh the page to continue.",
+                variant: 'destructive',
+                duration: 10000,
+            });
+        }
+      }
+
+      const contentToLoad = data?.content as any;
+
+      switch (pageId) {
+        case 'home':
+          homeForm.reset(contentToLoad || defaultHomePageContent);
+          break;
+        case 'about':
+          aboutForm.reset(contentToLoad || defaultAboutPageContent);
+          break;
+        case 'services':
+          servicesForm.reset(contentToLoad || defaultServicesPageContent);
+          break;
+        case 'contact':
+          contactForm.reset(contentToLoad || { ...defaultContactPageContent, officesSection: { ...defaultContactPageContent.officesSection, regionalOffice: null }});
+          break;
+      }
+    } catch (e: any) {
+        // This will catch network errors or other exceptions not handled by Supabase's `{ data, error }` pattern.
+        toast({
+            title: "An Unexpected Error Occurred",
+            description: "There was a problem loading content. Please check your connection and refresh the page.",
+            variant: "destructive",
+            duration: 10000
+        });
+        console.error("Critical error in loadPageContent:", e);
+    } finally {
+        // This block ensures the loading spinner is always turned off, preventing the UI from getting stuck.
+        setIsUiBlockingLoading(false);
     }
-
-    const contentToLoad = data?.content as any;
-
-    switch (pageId) {
-      case 'home':
-        homeForm.reset(contentToLoad || defaultHomePageContent);
-        break;
-      case 'about':
-        aboutForm.reset(contentToLoad || defaultAboutPageContent);
-        break;
-      case 'services':
-        servicesForm.reset(contentToLoad || defaultServicesPageContent);
-        break;
-      case 'contact':
-        contactForm.reset(contentToLoad || { ...defaultContactPageContent, officesSection: { ...defaultContactPageContent.officesSection, regionalOffice: null }});
-        break;
-    }
-    setIsUiBlockingLoading(false);
   }, [toast, homeForm, aboutForm, servicesForm, contactForm]);
 
   useEffect(() => {
@@ -321,7 +347,7 @@ export default function CmsManagementPage() {
                             </p>
                           )}
 
-                          <Label>Subtitle</Label><Input {...homeForm.register(`hero.slides.${index}.subtitle` as const)} placeholder="Hero Subtitle" />
+                          <Label>Subtitle</Label><Textarea {...homeForm.register(`hero.slides.${index}.subtitle`)} placeholder="Hero Subtitle" />
                           <Label>CTA Text</Label><Input {...homeForm.register(`hero.slides.${index}.cta.text` as const)} placeholder="Explore Now" />
                           <Label>CTA Link</Label><Input {...homeForm.register(`hero.slides.${index}.cta.href` as const)} placeholder="/properties" />
                           <Label>Background Image URL</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageUrl` as const)} placeholder="https://placehold.co/..." />
