@@ -1,4 +1,3 @@
-
 // src/app/community-projects/[id]/page.tsx
 'use client';
 
@@ -6,13 +5,13 @@ import React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { CommunityProject, AuthenticatedUser, NigerianStateCapital } from '@/lib/types';
+import type { CommunityProject, AuthenticatedUser, NigerianStateCapital, NigerianState } from '@/lib/types';
 import { nigerianStateCapitals } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign, FileHeart } from 'lucide-react';
+import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign, FileHeart, MailQuestion } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -258,7 +257,7 @@ export default function CommunityProjectDetailsPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-3 space-y-8"> {/* Changed from lg:col-span-2 */}
+        <div className="lg:col-span-2 space-y-8"> {/* Changed from lg:col-span-2 */}
           <Card className="shadow-lg">
             <CardHeader> <CardTitle className="font-headline">Project Details</CardTitle> </CardHeader>
             <CardContent className="space-y-4">
@@ -277,17 +276,21 @@ export default function CommunityProjectDetailsPage() {
               )}
             </CardContent>
           </Card>
-          
-          <Card className="shadow-lg">
-            <CardHeader><CardTitle className="font-headline">Express Interest</CardTitle></CardHeader>
+        </div>
+        <div className="lg:col-span-1 space-y-8">
+           <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="font-headline">Express Interest</CardTitle>
+                <CardDescription>
+                    Interested in a similar project in your area or have specific requirements? Let us know!
+                </CardDescription>
+            </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Interested in a similar project in your area or have specific requirements? Let us know!</p>
-              <Button onClick={handleOpenInterestDialog} disabled={authLoading}>
-                <MessageSquare className="mr-2 h-5 w-5"/> Express Interest
+              <Button onClick={handleOpenInterestDialog} disabled={authLoading} size="lg" className="w-full">
+                <FileHeart className="mr-2 h-5 w-5"/> Express Interest
               </Button>
             </CardContent>
           </Card>
-
         </div>
       </div>
 
@@ -432,10 +435,13 @@ const ProjectDetailsSkeleton = () => (
     <Card><CardContent className="p-6"><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><Skeleton className="h-10 w-3/4 mb-2" /><Skeleton className="h-6 w-1/2" /></div><Skeleton className="h-12 w-1/4 md:w-1/6" /></div></CardContent></Card>
     <Card><CardContent className="p-2 md:p-4"><Skeleton className="aspect-[16/10] w-full rounded-md" /><div className="mt-3 flex space-x-2 p-1">{[...Array(4)].map((_,i) => (<Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" />))}</div></CardContent></Card>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-3 space-y-8"> 
+      <div className="lg:col-span-2 space-y-8"> 
         <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /><Skeleton className="h-px w-full my-6" /><Skeleton className="h-10 w-1/3" /></CardContent></Card>
-        <Card><CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader><CardContent><Skeleton className="h-6 w-2/3 mb-3"/><Skeleton className="h-10 w-1/3"/></CardContent></Card>
+      </div>
+      <div className="lg:col-span-1 space-y-8">
+        <Card><CardHeader><Skeleton className="h-8 w-1/2 mb-2" /><Skeleton className="h-4 w-3/4"/></CardHeader><CardContent><Skeleton className="h-12 w-full"/></CardContent></Card>
       </div>
     </div>
   </div>
 );
+
