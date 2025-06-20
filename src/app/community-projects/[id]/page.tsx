@@ -2,6 +2,7 @@
 // src/app/community-projects/[id]/page.tsx
 'use client';
 
+import React from 'react'; // Added React import
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
