@@ -23,7 +23,7 @@ import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
-import { useAuth } from '@/contexts/auth-context'; 
+import { useAuth } from '@/contexts/auth-context';
 
 interface AdminPromotionTier {
   id: string;
@@ -41,8 +41,8 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
 ];
 
 interface AdminCommunityBudgetTier {
-  id: string; // internal ID for mapping, e.g., 'tier1', 'tier2'
-  name: string; // User-facing name, e.g. "Under ₦5M"
+  id: string;
+  name: string;
   description: string;
   icon: React.ReactNode;
 }
@@ -58,13 +58,13 @@ const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnable
   { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
   { key: 'machinery', label: 'Machinery Marketplace Sector', defaultEnabled: false, icon: <Package className="h-5 w-5"/> },
   { key: 'development', label: 'Development Projects Sector', defaultEnabled: false, icon: <Zap className="h-5 w-5"/> },
-  { key: 'community', label: 'Community Projects Sector', defaultEnabled: false, icon: <Users className="h-5 w-5"/> },
+  { key: 'community', label: 'Community Projects Sector', defaultEnabled: false, icon: <CommunityIcon className="h-5 w-5"/> },
 ];
 
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
-  const { refreshPlatformSettings } = useAuth(); 
+  const { refreshPlatformSettings } = useAuth();
   const [loading, setLoading] = useState(true);
 
   const [siteName, setSiteName] = useState('Homeland Capital');
@@ -82,7 +82,7 @@ export default function PlatformSettingsPage() {
 
   const [sectorVisibility, setSectorVisibility] = useState<SectorVisibility>({});
 
-  const fetchLocalPageSettings = useCallback(async () => { 
+  const fetchLocalPageSettings = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('platform_settings')
@@ -90,58 +90,60 @@ export default function PlatformSettingsPage() {
       .eq('id', 1)
       .single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error for initial setup
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults.`, variant: 'destructive' });
-      const initialVisibility: SectorVisibility = {};
-      sectorConfigurations.forEach(sector => {
-        initialVisibility[sector.key] = sector.defaultEnabled;
-      });
-      setSectorVisibility(initialVisibility);
-      // Set default community budget tiers if fetch fails
-      setAdminCommunityBudgetTiers(initialAdminCommunityBudgetTiersUI);
-    } else if (data) {
-      setSiteName(data.site_name || 'Homeland Capital');
-      setMaintenanceMode(data.maintenance_mode || false);
-      setDefaultCurrency(data.default_currency || 'NGN');
-      setNotificationEmail(data.notification_email || 'admin@homelandcapital.com');
-      setPredefinedAmenities((data.predefined_amenities as string || "Pool,Garage,Gym"));
-      setPropertyTypes((data.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
-
-      setPromotionsEnabled(data.promotions_enabled ?? true);
-      if (data.promotion_tiers) {
-        const dbTiers = data.promotion_tiers as PromotionTierConfig[];
-        const uiTiers = initialAdminPromotionTiersUI.map(uiTier => {
-          const dbMatch = dbTiers.find(dbT => dbT.id === uiTier.id);
-          return dbMatch ? {
-            ...uiTier,
-            name: dbMatch.name,
-            fee: dbMatch.fee.toString(),
-            duration: dbMatch.duration.toString(),
-            description: dbMatch.description,
-          } : uiTier;
-        });
-        setAdminPromotionTiers(uiTiers);
-      }
-
-      if (data.community_project_budget_tiers) {
-        const dbBudgetTiers = data.community_project_budget_tiers as CommunityProjectBudgetTierConfig[];
-        const uiBudgetTiers = initialAdminCommunityBudgetTiersUI.map(uiTier => {
-            const dbMatch = dbBudgetTiers.find(dbTier => dbTier.id === uiTier.id);
-            return dbMatch ? { ...uiTier, name: dbMatch.name, description: dbMatch.description } : uiTier;
-        });
-        setAdminCommunityBudgetTiers(uiBudgetTiers);
-      } else {
-        setAdminCommunityBudgetTiers(initialAdminCommunityBudgetTiersUI);
-      }
-
-
-      const dbSectorVisibility = data.sector_visibility as SectorVisibility | null;
-      const initialVisibility: SectorVisibility = {};
-      sectorConfigurations.forEach(sector => {
-        initialVisibility[sector.key] = dbSectorVisibility?.[sector.key] ?? sector.defaultEnabled;
-      });
-      setSectorVisibility(initialVisibility);
     }
+    
+    const settingsData = data || {}; // Use empty object if no data
+
+    setSiteName(settingsData.site_name || 'Homeland Capital');
+    setMaintenanceMode(settingsData.maintenance_mode || false);
+    setDefaultCurrency(settingsData.default_currency || 'NGN');
+    setNotificationEmail(settingsData.notification_email || 'admin@homelandcapital.com');
+    setPredefinedAmenities((settingsData.predefined_amenities as string || "Pool,Garage,Gym"));
+    setPropertyTypes((settingsData.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
+    setPromotionsEnabled(settingsData.promotions_enabled ?? true);
+
+    // Robustly initialize adminPromotionTiers
+    let finalUiPromotionTiers = initialAdminPromotionTiersUI.map(initialTier => ({ ...initialTier }));
+    if (settingsData.promotion_tiers) {
+        const dbPromotionTiers = settingsData.promotion_tiers as PromotionTierConfig[];
+        finalUiPromotionTiers = initialAdminPromotionTiersUI.map(uiTierTemplate => {
+            const dbMatch = dbPromotionTiers.find(dbTier => dbTier.id === uiTierTemplate.id);
+            return dbMatch ? {
+                ...uiTierTemplate,
+                name: dbMatch.name,
+                fee: dbMatch.fee.toString(),
+                duration: dbMatch.duration.toString(),
+                description: dbMatch.description,
+            } : { ...uiTierTemplate };
+        });
+    }
+    setAdminPromotionTiers(finalUiPromotionTiers);
+
+    // Robustly initialize adminCommunityBudgetTiers
+    let finalUiCommunityBudgetTiers = initialAdminCommunityBudgetTiersUI.map(initialTier => ({ ...initialTier }));
+    if (settingsData.community_project_budget_tiers) {
+        const dbBudgetTiers = settingsData.community_project_budget_tiers as CommunityProjectBudgetTierConfig[];
+        finalUiCommunityBudgetTiers = initialAdminCommunityBudgetTiersUI.map(uiTierTemplate => {
+            const dbMatch = dbBudgetTiers.find(dbTier => dbTier.id === uiTierTemplate.id);
+            return dbMatch ? {
+                ...uiTierTemplate,
+                name: dbMatch.name,
+                description: dbMatch.description,
+            } : { ...uiTierTemplate };
+        });
+    }
+    setAdminCommunityBudgetTiers(finalUiCommunityBudgetTiers);
+
+
+    const dbSectorVisibility = settingsData.sector_visibility as SectorVisibility | null;
+    const initialVisibilityState: SectorVisibility = {};
+    sectorConfigurations.forEach(sector => {
+      initialVisibilityState[sector.key] = dbSectorVisibility?.[sector.key] ?? sector.defaultEnabled;
+    });
+    setSectorVisibility(initialVisibilityState);
+
     setLoading(false);
   }, [toast]);
 
@@ -187,7 +189,7 @@ export default function PlatformSettingsPage() {
         duration: parseInt(tier.duration, 10) || 0,
         description: tier.description,
       })),
-      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({ // Corrected from adminPromotionTiers
+      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({
         id: tier.id,
         name: tier.name,
         description: tier.description,
@@ -203,8 +205,8 @@ export default function PlatformSettingsPage() {
       toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
-      await refreshPlatformSettings(); 
-      fetchLocalPageSettings(); 
+      await refreshPlatformSettings();
+      fetchLocalPageSettings();
     }
   };
 
@@ -213,7 +215,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-8">
             <Skeleton className="h-12 w-1/2 mb-2" />
             <Skeleton className="h-8 w-3/4 mb-6" />
-            {[...Array(5)].map((_, i) => ( 
+            {[...Array(5)].map((_, i) => (
                 <Card key={i} className="shadow-xl mb-6">
                     <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
                     <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
@@ -598,3 +600,4 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
+
