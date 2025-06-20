@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink } from 'lucide-react';
+import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,26 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDesc, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
 
 // Basic UUID regex for validation
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const interestFormSchema = z.object({
+  location: z.string().min(3, { message: "Please specify your desired location." }),
+  selectedBudgetTier: z.string().min(1, { message: "Please select a budget tier." }),
+  message: z.string().min(10, { message: "Message should be at least 10 characters long." }).optional(),
+});
+type InterestFormValues = z.infer<typeof interestFormSchema>;
+
 
 export default function CommunityProjectDetailsPage() {
   const params = useParams();
@@ -30,9 +47,29 @@ export default function CommunityProjectDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [isValidId, setIsValidId] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const { user: authContextUser, loading: authLoading } = useAuth();
+  const { user: authContextUser, loading: authLoading, platformSettings, isAuthenticated } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const [isInterestDialogOpen, setIsInterestDialogOpen] = useState(false);
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
+
+  const interestForm = useForm<InterestFormValues>({
+    resolver: zodResolver(interestFormSchema),
+    defaultValues: {
+      location: '',
+      selectedBudgetTier: '',
+      message: '',
+    },
+  });
+
+  useEffect(() => {
+    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    } else {
+      setAvailableBudgetTiers([]);
+    }
+  }, [platformSettings]);
+
 
   const fetchProjectDetails = useCallback(async (projectId: string) => {
     setLoading(true);
@@ -50,7 +87,7 @@ export default function CommunityProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as CommunityProject['category'],
-        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : []) : [],
+        budget_tiers: data.budget_tier ? (Array.isArray(data.budget_tier) ? data.budget_tier : []) : [],
         status: data.status as CommunityProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -76,7 +113,32 @@ export default function CommunityProjectDetailsPage() {
     }
   }, [idFromUrl, fetchProjectDetails]);
 
-  if (loading || authLoading) {
+  const handleInterestSubmit = (values: InterestFormValues) => {
+    console.log("Community Project Interest Submitted:", {
+      projectId: project?.id,
+      projectTitle: project?.title,
+      userEmail: authContextUser?.email,
+      ...values,
+    });
+    toast({
+      title: "Interest Expressed!",
+      description: "Thank you for your interest. We will review your submission. (This is a demo response)",
+    });
+    setIsInterestDialogOpen(false);
+    interestForm.reset();
+  };
+  
+  const handleOpenInterestDialog = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Login Required", description: "Please log in to express interest.", variant: "default" });
+      router.push('/agents/login');
+      return;
+    }
+    setIsInterestDialogOpen(true);
+  };
+
+
+  if (loading || authLoading || (!platformSettings && !authLoading)) {
     return <ProjectDetailsSkeleton />;
   }
 
@@ -155,26 +217,106 @@ export default function CommunityProjectDetailsPage() {
               )}
             </CardContent>
           </Card>
+          
+          <Card className="shadow-lg">
+            <CardHeader><CardTitle className="font-headline">Express Interest</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">Interested in a similar project in your area or have specific requirements? Let us know!</p>
+              <Button onClick={handleOpenInterestDialog} disabled={authLoading}>
+                <MessageSquare className="mr-2 h-5 w-5"/> Express Interest
+              </Button>
+            </CardContent>
+          </Card>
+
         </div>
-        {/* Managed By Pane Removed */}
       </div>
+
+      <Dialog open={isInterestDialogOpen} onOpenChange={setIsInterestDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">Express Interest: {project.title}</DialogTitle>
+            <DialogDesc>
+              Tell us more about your interest in a project like this.
+            </DialogDesc>
+          </DialogHeader>
+          <Form {...interestForm}>
+            <form onSubmit={interestForm.handleSubmit(handleInterestSubmit)} className="space-y-4 py-4">
+              <FormField
+                control={interestForm.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center"><LocationIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location</FormLabel>
+                    <FormControl><Input placeholder="e.g., My Community, XYZ State" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={interestForm.control}
+                name="selectedBudgetTier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1 text-muted-foreground"/>Preferred Budget Tier</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableBudgetTiers.length === 0}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a budget tier" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {availableBudgetTiers.length > 0 ? (
+                          availableBudgetTiers.map(tier => (
+                            <SelectItem key={tier} value={tier}>{tier}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>No tiers configured</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {availableBudgetTiers.length === 0 && <p className="text-xs text-muted-foreground pt-1">Budget tiers are not configured for selection.</p>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={interestForm.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center"><MessageSquare className="w-4 h-4 mr-1 text-muted-foreground"/>Additional Message (Optional)</FormLabel>
+                    <FormControl><Textarea placeholder="Any specific details or requirements..." {...field} rows={4} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <DialogClose asChild><Button variant="outline" type="button">Cancel</Button></DialogClose>
+                <Button type="submit" disabled={interestForm.formState.isSubmitting}>
+                  {interestForm.formState.isSubmitting ? "Submitting..." : "Submit Interest"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
 
-const DetailItem = ({ icon, label, value, className }: { icon: React.ReactNode, label: string, value: string | undefined | null, className?: string }) => {
-  if (value === undefined || value === null) return null;
-  return ( <div className="flex items-start"> <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span> <div> <p className="text-sm text-muted-foreground">{label}</p> <p className={cn("font-semibold", className)}>{value}</p> </div> </div> );
-};
 
 const ProjectDetailsSkeleton = () => (
   <div className="space-y-8">
     <Card><CardContent className="p-6"><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><Skeleton className="h-10 w-3/4 mb-2" /><Skeleton className="h-6 w-1/2" /></div><Skeleton className="h-12 w-1/4 md:w-1/6" /></div></CardContent></Card>
     <Card><CardContent className="p-2 md:p-4"><Skeleton className="aspect-[16/10] w-full rounded-md" /><div className="mt-3 flex space-x-2 p-1">{[...Array(4)].map((_,i) => (<Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" />))}</div></CardContent></Card>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-3 space-y-8"> <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /><Skeleton className="h-px w-full my-6" /><Skeleton className="h-10 w-1/3" /></CardContent></Card> </div>
-      {/* Managed By Pane Skeleton Removed */}
+      <div className="lg:col-span-3 space-y-8"> 
+        <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /><Skeleton className="h-px w-full my-6" /><Skeleton className="h-10 w-1/3" /></CardContent></Card>
+        <Card><CardHeader><Skeleton className="h-8 w-1/4" /></CardHeader><CardContent><Skeleton className="h-6 w-2/3 mb-3"/><Skeleton className="h-10 w-1/3"/></CardContent></Card>
+      </div>
     </div>
   </div>
 );
 
+      
