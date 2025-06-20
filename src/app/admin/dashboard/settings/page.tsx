@@ -23,7 +23,7 @@ import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
-import { useAuth } from '@/hooks/use-auth'; 
+import { useAuth } from '@/contexts/auth-context'; 
 
 interface AdminPromotionTier {
   id: string;
