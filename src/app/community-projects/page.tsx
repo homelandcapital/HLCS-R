@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { communityProjectCategories } from '@/lib/types'; 
-import { useAuth } from '@/hooks/use-auth'; // For platformSettings
+import { useAuth } from '@/contexts/auth-context'; // For platformSettings
 
 export default function CommunityProjectsPage() {
   const { platformSettings, loading: authLoading } = useAuth(); // Get platformSettings
