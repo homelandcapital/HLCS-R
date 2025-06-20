@@ -197,8 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, user]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -397,5 +396,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
