@@ -1,4 +1,3 @@
-
 // src/components/layout/admin-dashboard-layout.tsx
 "use client";
 
@@ -98,7 +97,8 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
     if (!loading && isAuthenticated && user && user.role === 'platform_admin') {
       fetchUnreadCounts();
     }
-  }, [isAuthenticated, user, loading, fetchUnreadCounts, pathname]); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user, loading, pathname]); 
 
   useEffect(() => {
     if (!loading) {

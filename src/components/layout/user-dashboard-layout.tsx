@@ -1,4 +1,3 @@
-
 // src/components/layout/user-dashboard-layout.tsx
 "use client";
 
@@ -64,7 +63,8 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
     if (!loading && isAuthenticated && user && user.role === 'user') {
       fetchUnreadCount();
     }
-  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user, loading, pathname]); 
 
 
   useEffect(() => {
