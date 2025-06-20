@@ -134,7 +134,7 @@ export type Database = {
           message: string | null
           project_id: string | null
           project_title: string | null
-          selected_budget_tier: string
+          selected_budget_tier: string | null
           state_capital: string | null
           status: string
           user_email: string | null
@@ -149,7 +149,7 @@ export type Database = {
           message?: string | null
           project_id?: string | null
           project_title?: string | null
-          selected_budget_tier: string
+          selected_budget_tier?: string | null
           state_capital?: string | null
           status?: string
           user_email?: string | null
@@ -164,7 +164,7 @@ export type Database = {
           message?: string | null
           project_id?: string | null
           project_title?: string | null
-          selected_budget_tier?: string
+          selected_budget_tier?: string | null
           state_capital?: string | null
           status?: string
           user_email?: string | null
