@@ -213,7 +213,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-8">
             <Skeleton className="h-12 w-1/2 mb-2" />
             <Skeleton className="h-8 w-3/4 mb-6" />
-            {[...Array(5)].map((_, i) => ( // Increased skeleton cards
+            {[...Array(5)].map((_, i) => ( 
                 <Card key={i} className="shadow-xl mb-6">
                     <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
                     <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
@@ -598,4 +598,3 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
-

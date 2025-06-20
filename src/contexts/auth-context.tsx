@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings } from '@/lib/types';
+import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings, CommunityProjectBudgetTierConfig } from '@/lib/types'; // Added CommunityProjectBudgetTierConfig
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname }  from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +25,7 @@ interface AuthContextType {
   sendPasswordResetEmail: (email: string) => Promise<{ error: Error | null }>;
   updateUserPassword: (newPassword: string) => Promise<{ error: Error | null }>;
   getSupabaseSession: () => Session | null;
-  refreshPlatformSettings: () => Promise<void>; // Added this
+  refreshPlatformSettings: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,18 +60,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('[AuthContext] Error fetching platform settings:', error.message);
       return null;
     }
-    return data as PlatformSettings | null;
+    // Ensure communityProjectBudgetTiers is an array, even if null/undefined from DB
+    const communityTiers = Array.isArray(data.community_project_budget_tiers) 
+        ? data.community_project_budget_tiers as CommunityProjectBudgetTierConfig[]
+        : [];
+
+    return {
+        ...data,
+        community_project_budget_tiers: communityTiers,
+    } as PlatformSettings | null;
   }, []);
 
   const refreshPlatformSettings = useCallback(async () => {
     if (!isMountedRef.current) return;
-    // console.log('[AuthContext] Refreshing platform settings...'); // Optional: for debugging
-    // setLoading(true); // You might want to show a loading state briefly
     const newSettings = await fetchPlatformSettingsInternal();
     if (isMountedRef.current) {
       setPlatformSettings(newSettings);
-      // setLoading(false);
-      // console.log('[AuthContext] Platform settings refreshed:', newSettings); // Optional
     }
   }, [fetchPlatformSettingsInternal]);
 
@@ -168,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) {
             setUser(profile);
-            await refreshPlatformSettings(); // Refresh settings on sign-in
+            await refreshPlatformSettings(); 
 
             if (profile) {
               if (profile.role === 'agent') router.push('/agents/dashboard');
@@ -181,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (event === 'USER_UPDATED' && currentSession?.user) {
           const profile = await fetchUserProfileAndRelatedData(currentSession.user);
           if (isMountedRef.current) setUser(profile);
-           await refreshPlatformSettings(); // Also refresh settings if user updates
+           await refreshPlatformSettings(); 
         } else if (event === 'TOKEN_REFRESHED') {
             if (currentSession?.user && currentSession.user.id !== user?.id) {
                 const profile = await fetchUserProfileAndRelatedData(currentSession.user);
@@ -380,7 +384,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       sendPasswordResetEmail,
       updateUserPassword,
       getSupabaseSession,
-      refreshPlatformSettings // Provide the new function
+      refreshPlatformSettings
     }}>
       {children}
     </AuthContext.Provider>

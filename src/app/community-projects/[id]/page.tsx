@@ -192,4 +192,3 @@ const ProjectDetailsSkeleton = () => (
     </div>
   </div>
 );
-

@@ -142,7 +142,7 @@ export interface CommunityProject {
   description: string; 
   brochure_link?: string | null; 
   images?: string[] | null; 
-  budget_tier?: string | null; // Stores the name of the configured tier
+  budget_tier?: string | null; // Changed from enum to string (to store tier name or ID)
   status: CommunityProjectStatus; 
   created_at: string; 
   updated_at: string; 
@@ -324,10 +324,11 @@ export const managedSectorKeys = ['realEstate', 'machinery', 'development', 'com
 export type SectorKey = typeof managedSectorKeys[number];
 export type SectorVisibility = Partial<Record<SectorKey, boolean>>;
 
+// New config type for admin-defined community project budget tiers
 export interface CommunityProjectBudgetTierConfig {
-  id: string; 
-  name: string; 
-  description: string; 
+  id: string; // e.g., 'tier_1_low', 'tier_2_medium'
+  name: string; // e.g., "Below ₦5 Million", "₦5 - ₦20 Million"
+  description: string; // e.g., "For small scale community initiatives"
 }
 
 export interface PlatformSettings {
@@ -340,8 +341,7 @@ export interface PlatformSettings {
   predefinedAmenities: string; 
   propertyTypes: string[]; 
   sector_visibility?: SectorVisibility | null; 
-  communityProjectBudgetTiers?: CommunityProjectBudgetTierConfig[] | null;
+  communityProjectBudgetTiers?: CommunityProjectBudgetTierConfig[] | null; // Added this
 }
 
 import type { Database } from './database.types';
-
