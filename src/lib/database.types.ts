@@ -191,42 +191,48 @@ export type Database = {
       development_projects: {
         Row: {
           brochure_link: string | null
-          budget_tier: string[] | null
           category: Database["public"]["Enums"]["development_project_category_enum"]
           created_at: string
           description: string
           human_readable_id: string
           id: string
           images: Json | null
+          location_area_city: string | null
           managed_by_user_id: string | null
+          price: number | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
           status: Database["public"]["Enums"]["community_project_status_enum"]
           title: string
           updated_at: string
         }
         Insert: {
           brochure_link?: string | null
-          budget_tier?: string[] | null
           category: Database["public"]["Enums"]["development_project_category_enum"]
           created_at?: string
           description: string
           human_readable_id: string
           id?: string
           images?: Json | null
+          location_area_city?: string | null
           managed_by_user_id?: string | null
+          price?: number | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["community_project_status_enum"]
           title: string
           updated_at?: string
         }
         Update: {
           brochure_link?: string | null
-          budget_tier?: string[] | null
           category?: Database["public"]["Enums"]["development_project_category_enum"]
           created_at?: string
           description?: string
           human_readable_id?: string
           id?: string
           images?: Json | null
+          location_area_city?: string | null
           managed_by_user_id?: string | null
+          price?: number | null
+          state?: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["community_project_status_enum"]
           title?: string
           updated_at?: string

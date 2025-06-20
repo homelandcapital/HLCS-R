@@ -28,11 +28,12 @@ const baseNavLinks = [
   { href: '/properties', label: 'Properties', sectorKey: 'realEstate' as SectorKey, icon: <Building className="h-5 w-5"/> },
   { href: '/services', label: 'Services', alwaysVisible: true, icon: <Briefcase className="h-5 w-5"/> }, 
   { href: '/services#machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Briefcase className="h-5 w-5"/> }, 
-  { href: '/services#development', label: 'Development', sectorKey: 'development' as SectorKey, icon: <Zap className="h-5 w-5"/> },
+  { href: '/development-projects', label: 'Development', sectorKey: 'development' as SectorKey, icon: <Zap className="h-5 w-5"/> },
   { href: '/community-projects', label: 'Community', sectorKey: 'community' as SectorKey, icon: <CommunityIcon className="h-5 w-5"/> }, // Updated link
   { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, 
   { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, 
 ];
+
 
 const Navbar = () => {
   const { isAuthenticated, user, signOut, loading: authContextLoading, platformSettings } = useAuth();
