@@ -40,6 +40,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const isMountedRef = useRef(true);
 
+  // Use a ref to hold the latest user state to avoid stale closures in the subscription
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -185,10 +191,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (isMountedRef.current) setUser(profile);
            await refreshPlatformSettings(); 
         } else if (event === 'TOKEN_REFRESHED') {
-            if (currentSession?.user && currentSession.user.id !== user?.id) {
+            if (currentSession?.user && currentSession.user.id !== userRef.current?.id) {
                 const profile = await fetchUserProfileAndRelatedData(currentSession.user);
                  if (isMountedRef.current) setUser(profile);
-            } else if (!currentSession?.user && user) {
+            } else if (!currentSession?.user && userRef.current) {
                 if (isMountedRef.current) setUser(null);
             }
         }
@@ -197,7 +203,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, user]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
