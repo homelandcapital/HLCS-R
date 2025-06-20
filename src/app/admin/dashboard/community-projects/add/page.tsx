@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect } from 'react';
-import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon } from 'lucide-react';
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X } from 'lucide-react'; // Added X here
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { CommunityProjectCategory, CommunityProjectBudgetTier, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
@@ -208,7 +208,7 @@ export default function AddCommunityProjectPage() {
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {imagePreviews.map((previewUrl, index) => (
                       <div key={index} className="relative group aspect-square">
-                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} fill objectFit="cover" className="rounded-md" />
                         <button
                           type="button"
                           className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"

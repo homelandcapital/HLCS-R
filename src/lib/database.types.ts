@@ -11,61 +11,49 @@ export type Database = {
     Tables: {
       community_projects: {
         Row: {
+          brochure_link: string | null
+          budget_tier:
+            | Database["public"]["Enums"]["community_project_budget_tier_enum"]
+            | null
           category: Database["public"]["Enums"]["community_project_category_enum"]
-          contact_email: string | null
           created_at: string
-          current_funding: number | null
           description: string
-          expected_completion_date: string | null
-          funding_goal: number | null
           human_readable_id: string
           id: string
           images: Json | null
-          location_description: string
           managed_by_user_id: string | null
-          organization_name: string | null
-          start_date: string | null
-          state: Database["public"]["Enums"]["nigerian_state_enum"]
           status: Database["public"]["Enums"]["community_project_status_enum"]
           title: string
           updated_at: string
         }
         Insert: {
+          brochure_link?: string | null
+          budget_tier?:
+            | Database["public"]["Enums"]["community_project_budget_tier_enum"]
+            | null
           category: Database["public"]["Enums"]["community_project_category_enum"]
-          contact_email?: string | null
           created_at?: string
-          current_funding?: number | null
           description: string
-          expected_completion_date?: string | null
-          funding_goal?: number | null
           human_readable_id: string
           id?: string
           images?: Json | null
-          location_description: string
           managed_by_user_id?: string | null
-          organization_name?: string | null
-          start_date?: string | null
-          state: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["community_project_status_enum"]
           title: string
           updated_at?: string
         }
         Update: {
+          brochure_link?: string | null
+          budget_tier?:
+            | Database["public"]["Enums"]["community_project_budget_tier_enum"]
+            | null
           category?: Database["public"]["Enums"]["community_project_category_enum"]
-          contact_email?: string | null
           created_at?: string
-          current_funding?: number | null
           description?: string
-          expected_completion_date?: string | null
-          funding_goal?: number | null
           human_readable_id?: string
           id?: string
           images?: Json | null
-          location_description?: string
           managed_by_user_id?: string | null
-          organization_name?: string | null
-          start_date?: string | null
-          state?: Database["public"]["Enums"]["nigerian_state_enum"]
           status?: Database["public"]["Enums"]["community_project_status_enum"]
           title?: string
           updated_at?: string
@@ -401,6 +389,9 @@ export type Database = {
       }
     }
     Enums: {
+      community_project_budget_tier_enum:
+        | "Below 5 Million NGN"
+        | "5 Million NGN and Above"
       community_project_category_enum:
         | "Water Supply"
         | "Education Support"
@@ -576,6 +567,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      community_project_budget_tier_enum: [
+        "Below 5 Million NGN",
+        "5 Million NGN and Above",
+      ],
       community_project_category_enum: [
         "Water Supply",
         "Education Support",
