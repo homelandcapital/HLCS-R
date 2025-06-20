@@ -2,7 +2,7 @@
 // src/app/community-projects/[id]/page.tsx
 'use client';
 
-import React from 'react'; // Added React import
+import React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, DollarSign, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink } from 'lucide-react';
+import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ export default function CommunityProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as CommunityProject['category'],
-        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : JSON.parse(String(data.budget_tiers))) : [],
+        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : []) : [],
         status: data.status as CommunityProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -136,28 +136,10 @@ export default function CommunityProjectDetailsPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-3 space-y-8">
           <Card className="shadow-lg">
             <CardHeader> <CardTitle className="font-headline">Project Details</CardTitle> </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-foreground">
-                <DetailItem icon={<CommunityIcon />} label="Category" value={project.category} />
-                <div>
-                  <p className="text-sm text-muted-foreground flex items-center">
-                    <DollarSign className="w-5 h-5 mr-1 text-accent shrink-0" /> Budget Tiers
-                  </p>
-                  {project.budget_tiers && project.budget_tiers.length > 0 ? (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {project.budget_tiers.map(tier => (
-                        <Badge key={tier} variant="secondary">{tier}</Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="font-semibold">Not Specified</p>
-                  )}
-                </div>
-              </div>
-              <Separator className="my-6" />
               <h3 className="text-xl font-headline mb-2">Description</h3>
               <p className="text-foreground leading-relaxed whitespace-pre-line">{project.description}</p>
               {project.brochure_link && (
@@ -174,18 +156,7 @@ export default function CommunityProjectDetailsPage() {
             </CardContent>
           </Card>
         </div>
-        <div className="space-y-8">
-           {project.manager && (
-            <Card className="shadow-lg">
-                <CardHeader><CardTitle className="font-headline">Managed By</CardTitle></CardHeader>
-                <CardContent className="flex flex-col items-center text-center space-y-3">
-                    <h3 className="text-lg font-semibold text-foreground">{project.manager.name}</h3>
-                    <p className="text-sm text-muted-foreground">{project.manager.email}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{project.manager.role.replace('_', ' ')}</p>
-                </CardContent>
-            </Card>
-           )}
-        </div>
+        {/* Managed By Pane Removed */}
       </div>
     </div>
   );
@@ -201,8 +172,8 @@ const ProjectDetailsSkeleton = () => (
     <Card><CardContent className="p-6"><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><Skeleton className="h-10 w-3/4 mb-2" /><Skeleton className="h-6 w-1/2" /></div><Skeleton className="h-12 w-1/4 md:w-1/6" /></div></CardContent></Card>
     <Card><CardContent className="p-2 md:p-4"><Skeleton className="aspect-[16/10] w-full rounded-md" /><div className="mt-3 flex space-x-2 p-1">{[...Array(4)].map((_,i) => (<Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" />))}</div></CardContent></Card>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-8"> <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{[...Array(2)].map((_,i) => <Skeleton key={i} className="h-12 w-full" />)}</div><Skeleton className="h-px w-full my-6" /><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /><Skeleton className="h-px w-full my-6" /><Skeleton className="h-10 w-1/3" /></CardContent></Card> </div>
-      <div className="space-y-8"><Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent className="flex flex-col items-center space-y-3"><Skeleton className="w-20 h-20 rounded-full" /><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardContent></Card></div>
+      <div className="lg:col-span-3 space-y-8"> <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /><Skeleton className="h-px w-full my-6" /><Skeleton className="h-10 w-1/3" /></CardContent></Card> </div>
+      {/* Managed By Pane Skeleton Removed */}
     </div>
   </div>
 );
