@@ -204,3 +204,4 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
+

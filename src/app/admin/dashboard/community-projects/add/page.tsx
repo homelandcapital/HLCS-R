@@ -225,7 +225,7 @@ export default function AddCommunityProjectPage() {
                   <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {imagePreviews.map((previewUrl, index) => (
                       <div key={index} className="relative group aspect-square">
-                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} fill objectFit="cover" className="rounded-md" />
+                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} fill style={{objectFit:"cover"}} className="rounded-md" />
                         <button
                           type="button"
                           className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -250,3 +250,4 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
+

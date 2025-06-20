@@ -133,8 +133,6 @@ export const communityProjectCategories: CommunityProjectCategory[] = ["Water Su
 export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
 export const communityProjectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
 
-// Removed: CommunityProjectBudgetTier enum and communityProjectBudgetTiers array
-// This will now be configured in Platform Settings
 
 export interface CommunityProject {
   id: string; 
@@ -144,7 +142,7 @@ export interface CommunityProject {
   description: string; 
   brochure_link?: string | null; 
   images?: string[] | null; 
-  budget_tier?: string | null; // Changed from enum to string to store the name of the configured tier
+  budget_tier?: string | null; // Stores the name of the configured tier
   status: CommunityProjectStatus; 
   created_at: string; 
   updated_at: string; 
@@ -327,9 +325,9 @@ export type SectorKey = typeof managedSectorKeys[number];
 export type SectorVisibility = Partial<Record<SectorKey, boolean>>;
 
 export interface CommunityProjectBudgetTierConfig {
-  id: string; // e.g. 'tier_1_low', 'tier_2_medium'
-  name: string; // e.g. "Below ₦5 Million"
-  description: string; // e.g. "For smaller community initiatives"
+  id: string; 
+  name: string; 
+  description: string; 
 }
 
 export interface PlatformSettings {
@@ -342,7 +340,8 @@ export interface PlatformSettings {
   predefinedAmenities: string; 
   propertyTypes: string[]; 
   sector_visibility?: SectorVisibility | null; 
-  communityProjectBudgetTiers?: CommunityProjectBudgetTierConfig[] | null; // New
+  communityProjectBudgetTiers?: CommunityProjectBudgetTierConfig[] | null;
 }
 
 import type { Database } from './database.types';
+
