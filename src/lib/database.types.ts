@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -118,6 +119,122 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "community_projects_managed_by_user_id_fkey"
+            columns: ["managed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      development_project_interests: {
+        Row: {
+          created_at: string
+          id: string
+          lga_name: string | null
+          location_type: string | null
+          message: string | null
+          project_id: string | null
+          project_title: string | null
+          selected_budget_tier: string
+          state_capital: string | null
+          status: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lga_name?: string | null
+          location_type?: string | null
+          message?: string | null
+          project_id?: string | null
+          project_title?: string | null
+          selected_budget_tier: string
+          state_capital?: string | null
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lga_name?: string | null
+          location_type?: string | null
+          message?: string | null
+          project_id?: string | null
+          project_title?: string | null
+          selected_budget_tier?: string
+          state_capital?: string | null
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_project_interests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "development_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_project_interests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      development_projects: {
+        Row: {
+          brochure_link: string | null
+          budget_tier: string[] | null
+          category: Database["public"]["Enums"]["development_project_category_enum"]
+          created_at: string
+          description: string
+          human_readable_id: string
+          id: string
+          images: Json | null
+          managed_by_user_id: string | null
+          status: Database["public"]["Enums"]["community_project_status_enum"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          brochure_link?: string | null
+          budget_tier?: string[] | null
+          category: Database["public"]["Enums"]["development_project_category_enum"]
+          created_at?: string
+          description: string
+          human_readable_id: string
+          id?: string
+          images?: Json | null
+          managed_by_user_id?: string | null
+          status?: Database["public"]["Enums"]["community_project_status_enum"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          brochure_link?: string | null
+          budget_tier?: string[] | null
+          category?: Database["public"]["Enums"]["development_project_category_enum"]
+          created_at?: string
+          description?: string
+          human_readable_id?: string
+          id?: string
+          images?: Json | null
+          managed_by_user_id?: string | null
+          status?: Database["public"]["Enums"]["community_project_status_enum"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_projects_managed_by_user_id_fkey"
             columns: ["managed_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -464,6 +581,11 @@ export type Database = {
         | "Canceled"
         | "Pending Approval"
         | "Rejected"
+      development_project_category_enum:
+        | "Manufacturing"
+        | "Energy"
+        | "Agriculture"
+        | "Real Estate"
       inquiry_status: "new" | "contacted" | "resolved" | "archived"
       inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
@@ -640,6 +762,12 @@ export const Constants = {
         "Canceled",
         "Pending Approval",
         "Rejected",
+      ],
+      development_project_category_enum: [
+        "Manufacturing",
+        "Energy",
+        "Agriculture",
+        "Real Estate",
       ],
       inquiry_status: ["new", "contacted", "resolved", "archived"],
       inquiry_status_enum: ["new", "contacted", "resolved", "archived"],

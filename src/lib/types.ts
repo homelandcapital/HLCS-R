@@ -181,6 +181,47 @@ export interface CommunityProjectInterest {
 }
 
 
+// Development Project Types
+export type DevelopmentProjectCategory = "Manufacturing" | "Energy" | "Agriculture" | "Real Estate";
+export const developmentProjectCategories: DevelopmentProjectCategory[] = ["Manufacturing", "Energy", "Agriculture", "Real Estate"];
+
+export interface DevelopmentProject {
+  id: string; 
+  human_readable_id: string; 
+  title: string; 
+  category: DevelopmentProjectCategory; 
+  description: string; 
+  brochure_link?: string | null; 
+  images?: string[] | null; 
+  budget_tiers: string[] | null;
+  status: CommunityProjectStatus; // Reusing status from community projects
+  created_at: string; 
+  updated_at: string; 
+  managed_by_user_id: string | null; 
+  manager?: AuthenticatedUser | null; 
+}
+
+// Development Project Interest Types
+export type DevelopmentProjectInterestStatus = 'new' | 'contacted' | 'resolved';
+export const developmentProjectInterestStatuses: DevelopmentProjectInterestStatus[] = ['new', 'contacted', 'resolved'];
+
+export interface DevelopmentProjectInterest {
+  id: string;
+  project_id: string | null; 
+  project_title: string | null; 
+  user_id: string | null; 
+  user_name: string | null;
+  user_email: string | null;
+  location_type: 'stateCapital' | 'lga';
+  state_capital?: string | null;
+  lga_name?: string | null;
+  selected_budget_tier: string;
+  message?: string | null;
+  created_at: string;
+  status: DevelopmentProjectInterestStatus;
+}
+
+
 // CMS Content Types
 export interface CmsLink {
   text: string;
