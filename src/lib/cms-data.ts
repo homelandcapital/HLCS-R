@@ -241,12 +241,6 @@ export let contactPageContentData: ContactPageContentNew = {
       { day: "Sunday", time: "Closed" }
     ]
   },
-  investorRelationsSection: {
-    title: "Investor Relations",
-    description: "For investor-specific inquiries, please contact our Investor Relations department directly:",
-    email: "investors@homelandcapitalsolution.com",
-    phone: "+1 (212) 555-8901"
-  }
 };
 
 

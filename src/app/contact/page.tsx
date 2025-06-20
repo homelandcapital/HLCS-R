@@ -163,41 +163,6 @@ export default function ContactPageRedesigned() {
               </form>
             </CardContent>
           </Card>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center text-foreground">
-                  <Clock className="w-5 h-5 mr-2 text-primary" /> {content.businessHoursSection.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm">
-                {content.businessHoursSection.hours.map((item, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span className="text-muted-foreground">{item.day}:</span>
-                    <span className="text-foreground font-medium">{item.time}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-xl font-headline flex items-center text-foreground">
-                  <Users className="w-5 h-5 mr-2 text-primary" /> {content.investorRelationsSection.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="text-muted-foreground">{content.investorRelationsSection.description}</p>
-                <a href={`mailto:${content.investorRelationsSection.email}`} className="flex items-center text-primary hover:underline">
-                  <Mail className="w-4 h-4 mr-2" /> {content.investorRelationsSection.email}
-                </a>
-                <a href={`tel:${content.investorRelationsSection.phone.replace(/\s+/g, '')}`} className="flex items-center text-primary hover:underline">
-                  <Phone className="w-4 h-4 mr-2" /> {content.investorRelationsSection.phone}
-                </a>
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
         {/* Right Column */}
@@ -229,6 +194,22 @@ export default function ContactPageRedesigned() {
                   </TabsContent>
                 )}
               </Tabs>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center text-foreground">
+                <Clock className="w-5 h-5 mr-2 text-primary" /> {content.businessHoursSection.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 text-sm">
+              {content.businessHoursSection.hours.map((item, index) => (
+                <div key={index} className="flex justify-between">
+                  <span className="text-muted-foreground">{item.day}:</span>
+                  <span className="text-foreground font-medium">{item.time}</span>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </div>

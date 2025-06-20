@@ -374,12 +374,6 @@ export interface ContactPageContentNew {
     title: string;
     hours: Array<{ day: string; time: string }>;
   };
-  investorRelationsSection: {
-    title: string;
-    description: string;
-    email: string;
-    phone: string;
-  };
 }
 
 

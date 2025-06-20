@@ -154,12 +154,6 @@ const ContactPageContentSchema = z.object({
             time: z.string().min(1, "Time is required")
         })).min(1, "At least one business hour entry is required"),
     }),
-    investorRelationsSection: z.object({
-        title: z.string().min(1, "Investor relations title is required"),
-        description: z.string().min(1, "Description is required"),
-        email: z.string().email("Invalid email for investor relations"),
-        phone: z.string().min(1, "Phone number for investor relations is required"),
-    }),
 });
 
 
@@ -654,16 +648,6 @@ export default function CmsManagementPage() {
                             </Card>
                         ))}
                         <Button type="button" variant="outline" onClick={() => appendBusinessHour({ day: "New Day", time: "Time Range" })}><PlusCircle className="mr-2 h-4 w-4" /> Add Hour Entry</Button>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="contact-investor-relations">
-                    <AccordionTrigger className="text-lg font-semibold">Investor Relations Section</AccordionTrigger>
-                    <AccordionContent className="space-y-3 pt-3">
-                        <Label>Section Title</Label><Input {...contactForm.register('investorRelationsSection.title')} />
-                        <Label>Description</Label><Textarea {...contactForm.register('investorRelationsSection.description')} rows={2} />
-                        <Label>Email</Label><Input type="email" {...contactForm.register('investorRelationsSection.email')} />
-                        <Label>Phone</Label><Input {...contactForm.register('investorRelationsSection.phone')} />
                     </AccordionContent>
                   </AccordionItem>
 
