@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Users, Building, Mail } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Users, Building, Mail, Users2 as CommunityIcon } from "lucide-react"; // Added CommunityIcon
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 import type { SectorKey } from '@/lib/types';
@@ -30,25 +30,22 @@ const Navbar = () => {
   const baseNavLinks = [
     { href: '/', label: 'Home', alwaysVisible: true, icon: <Home className="h-5 w-5"/> },
     { href: '/properties', label: 'Properties', sectorKey: 'realEstate' as SectorKey, icon: <Building className="h-5 w-5"/> },
-    { href: '/services', label: 'Services', alwaysVisible: true, icon: <Briefcase className="h-5 w-5"/> }, // Main Services page
-    { href: '/services#machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Briefcase className="h-5 w-5"/> }, // Using Briefcase as placeholder
+    { href: '/services', label: 'Services', alwaysVisible: true, icon: <Briefcase className="h-5 w-5"/> }, 
+    { href: '/services#machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Briefcase className="h-5 w-5"/> }, 
     { href: '/services#development', label: 'Development', sectorKey: 'development' as SectorKey, icon: <Zap className="h-5 w-5"/> },
-    { href: '/services#community', label: 'Community', sectorKey: 'community' as SectorKey, icon: <Users className="h-5 w-5"/> },
-    { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, // UserCircle as placeholder
-    { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, // Mail as placeholder
+    { href: '/community-projects', label: 'Community', sectorKey: 'community' as SectorKey, icon: <CommunityIcon className="h-5 w-5"/> }, // Updated link
+    { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, 
+    { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, 
   ];
 
   const visibleNavLinks = React.useMemo(() => {
     return baseNavLinks.filter(link => {
       if (link.alwaysVisible) return true;
       if (link.sectorKey) {
-        // Default to true if sector_visibility is null/undefined OR if the specific key is undefined (meaning show by default)
-        // Or default to false if you want sectors hidden by default unless explicitly enabled.
-        // For "Properties" (realEstate), let's default to true. For new sectors, default to false.
-        const defaultVisibility = link.sectorKey === 'realEstate' ? true : false;
+        const defaultVisibility = link.sectorKey === 'realEstate' ? true : (link.sectorKey === 'community' ? true : false); // Community visible by default
         return platformSettings?.sector_visibility?.[link.sectorKey] ?? defaultVisibility;
       }
-      return false;
+      return false; // Should not happen if logic is correct
     });
   }, [platformSettings, baseNavLinks]);
 

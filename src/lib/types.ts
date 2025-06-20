@@ -5,7 +5,7 @@ export interface BaseUser {
   id: string;
   name: string;
   email: string;
-  avatar_url?: string | null; // Changed from avatarUrl to match DB
+  avatar_url?: string | null;
   role: UserRole;
 }
 
@@ -42,8 +42,6 @@ export const nigerianStates = [
 export type ListingType = Database['public']['Enums']['listing_type_enum'];
 export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
-// This 'propertyTypes' const is used as a fallback if platform settings fail to load.
-// And also by PropertySearchFilter. The canonical list is now in platform_settings.
 export const propertyTypes: string[] = ['House', 'Apartment', 'Condo', 'Townhouse', 'Land', 'Shortlet', 'Office Space', 'Warehouse'];
 
 
@@ -61,41 +59,40 @@ export interface PromotionDetails {
   promoted_at: string;
 }
 
-// Interface for Property aligning with Supabase 'properties' table
 export interface Property {
-  id: string; // UUID
-  human_readable_id?: string | null; // New user-friendly ID
+  id: string; 
+  human_readable_id?: string | null; 
   title: string;
   description: string;
-  price: number; // NUMERIC
+  price: number; 
   listing_type: ListingType;
   location_area_city: string;
   state: NigerianState;
   address: string;
-  property_type: string; // Changed from PropertyTypeEnum to string
-  bedrooms: number; // INT
-  bathrooms: number; // INT
-  area_sq_ft?: number | null; // NUMERIC
-  images?: string[] | null; // JSONB (array of URLs)
-  amenities?: string[] | null; // JSONB (array of strings)
-  year_built?: number | null; // INT
-  coordinates_lat?: number | null; // DOUBLE PRECISION
-  coordinates_lng?: number | null; // DOUBLE PRECISION
+  property_type: string; 
+  bedrooms: number; 
+  bathrooms: number; 
+  area_sq_ft?: number | null; 
+  images?: string[] | null; 
+  amenities?: string[] | null; 
+  year_built?: number | null; 
+  coordinates_lat?: number | null; 
+  coordinates_lng?: number | null; 
 
-  agent_id: string | null; // UUID, FK to users.id
-  agent?: Agent | null; // For populated agent data
+  agent_id: string | null; 
+  agent?: Agent | null; 
 
   status: PropertyStatus;
-  rejection_reason?: string | null; // TEXT
+  rejection_reason?: string | null; 
 
-  is_promoted?: boolean | null; // BOOLEAN
-  promotion_tier_id?: string | null; // TEXT
-  promotion_tier_name?: string | null; // TEXT
-  promoted_at?: string | null; // TIMESTAMPTZ (ISO string)
-  promotion_expires_at?: string | null; // TIMESTAMPTZ (ISO string)
+  is_promoted?: boolean | null; 
+  promotion_tier_id?: string | null; 
+  promotion_tier_name?: string | null; 
+  promoted_at?: string | null; 
+  promotion_expires_at?: string | null; 
 
-  created_at: string; // TIMESTAMPTZ (ISO string)
-  updated_at: string; // TIMESTAMPTZ (ISO string)
+  created_at: string; 
+  updated_at: string; 
 
   promotionDetails?: PromotionDetails | null;
 }
@@ -129,6 +126,36 @@ export interface Inquiry {
   conversation?: InquiryMessage[];
 }
 
+// Community Project Types
+export type CommunityProjectCategory = "Water Supply" | "Education Support" | "Health Program" | "Nutrition Support" | "Other";
+export const communityProjectCategories: CommunityProjectCategory[] = ["Water Supply", "Education Support", "Health Program", "Nutrition Support", "Other"];
+
+export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
+export const communityProjectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
+
+
+export interface CommunityProject {
+  id: string; // UUID
+  human_readable_id: string; // TEXT, unique
+  title: string; // TEXT
+  category: CommunityProjectCategory; // Relies on DB enum
+  description: string; // TEXT
+  location_description: string; // TEXT
+  state: NigerianState; // Relies on DB enum
+  images?: string[] | null; // JSONB array of URLs
+  status: CommunityProjectStatus; // Relies on DB enum
+  funding_goal?: number | null; // NUMERIC
+  current_funding?: number | null; // NUMERIC, default 0
+  start_date?: string | null; // DATE (ISO string)
+  expected_completion_date?: string | null; // DATE (ISO string)
+  contact_email?: string | null; // TEXT
+  organization_name?: string | null; // TEXT
+  created_at: string; // TIMESTAMPTZ (ISO string)
+  updated_at: string; // TIMESTAMPTZ (ISO string)
+  managed_by_user_id: string | null; // UUID, FK to users table
+  manager?: AuthenticatedUser | null; // For populated manager data (admin/agent)
+}
+
 
 // CMS Content Types
 export interface CmsLink {
@@ -136,15 +163,6 @@ export interface CmsLink {
   href: string;
 }
 
-export interface CmsFeatureItem { // Kept for AboutPage backwards compatibility for now
-  iconName?: string;
-  title: string;
-  description: string;
-  link?: string;
-  ctaText?: string;
-}
-
-// New specific types for HomePage
 interface HeroSlide {
   titleLines: string[];
   subtitle?: string;
@@ -260,26 +278,6 @@ export interface AboutPageContent {
 }
 
 
-// Old ContactPageContent, to be replaced or merged
-export interface ContactInfo {
-  email: string;
-  phone: string;
-  address: string;
-  officeHours: {
-    weekdays: string;
-    saturday: string;
-    sunday: string;
-  };
-}
-export interface ContactPageContent {
-  pageTitle: string;
-  headerTitle: string;
-  headerDescription: string;
-  contactInfo: ContactInfo;
-}
-
-
-// New structure for Contact Page
 export interface OfficeDetails {
   tabName: string;
   name: string;
@@ -301,7 +299,7 @@ export interface ContactPageContentNew {
   officesSection: {
     title: string;
     headquarters: OfficeDetails;
-    regionalOffice?: OfficeDetails;
+    regionalOffice?: OfficeDetails | null; // Allow null if optional
   };
   businessHoursSection: {
     title: string;
@@ -322,14 +320,12 @@ export interface FooterLinkColumn {
 }
 
 export interface FooterContent {
-  logoText?: string;
   tagline: string;
   columns: FooterLinkColumn[];
   copyrightText: string;
   builtWithText: string;
 }
 
-// Sector Management Types
 export const managedSectorKeys = ['realEstate', 'machinery', 'development', 'community'] as const;
 export type SectorKey = typeof managedSectorKeys[number];
 export type SectorVisibility = Partial<Record<SectorKey, boolean>>;
@@ -341,10 +337,9 @@ export interface PlatformSettings {
   defaultCurrency: string;
   maintenanceMode: boolean;
   notificationEmail: string;
-  predefinedAmenities: string; // Stored as comma-separated string
-  propertyTypes: string[]; // Stored as TEXT[] in DB
-  sector_visibility?: SectorVisibility | null; // Added for sector toggles
+  predefinedAmenities: string; 
+  propertyTypes: string[]; 
+  sector_visibility?: SectorVisibility | null; 
 }
 
-// Import Database type from supabase
 import type { Database } from './database.types';
