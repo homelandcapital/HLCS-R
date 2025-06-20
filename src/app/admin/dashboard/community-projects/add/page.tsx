@@ -39,7 +39,7 @@ const projectFormSchema = z.object({
   category: z.enum(communityProjectCategories as [CommunityProjectCategory, ...CommunityProjectCategory[]], { required_error: "Project category is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
-  budget_tier: z.string({ required_error: "Budget tier is required."}).min(1, "Budget tier is required."), // Now a string
+  budget_tier: z.string({ required_error: "Budget tier is required."}).min(1, "Budget tier is required."),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -48,14 +48,16 @@ export default function AddCommunityProjectPage() {
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
   const router = useRouter();
-  const { user, loading: authLoading, platformSettings } = useAuth(); // Get platformSettings from context
+  const { user, loading: authLoading, platformSettings } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
 
   useEffect(() => {
-    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
+    if (platformSettings && platformSettings.communityProjectBudgetTiers && Array.isArray(platformSettings.communityProjectBudgetTiers)) {
       setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    } else {
+      setAvailableBudgetTiers([]); // Ensure it's an empty array if not available or not an array
     }
   }, [platformSettings]);
 
@@ -66,7 +68,7 @@ export default function AddCommunityProjectPage() {
       category: undefined,
       description: '',
       brochure_link: '',
-      budget_tier: undefined, // Will be selected from dynamic list
+      budget_tier: undefined,
     },
   });
   
@@ -133,7 +135,7 @@ export default function AddCommunityProjectPage() {
         category: values.category,
         description: values.description,
         brochure_link: values.brochure_link || null,
-        budget_tier: values.budget_tier, // budget_tier is now string (tier name)
+        budget_tier: values.budget_tier,
         images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
         status: 'Pending Approval' as CommunityProjectStatus, 
         managed_by_user_id: currentAdmin.id,
@@ -159,7 +161,8 @@ export default function AddCommunityProjectPage() {
     });
   }
 
-  if (authLoading || (platformSettings === null && !authLoading) ) { // Show skeleton if auth or settings are loading
+  // Show skeleton if auth context is loading OR if platformSettings is null (still loading from context) AND auth isn't loading anymore
+  if (authLoading || (platformSettings === null && !authLoading) ) {
     return <Skeleton className="h-[500px] w-full" />;
   }
    if (user?.role !== 'platform_admin') {
@@ -250,3 +253,5 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
+
+    

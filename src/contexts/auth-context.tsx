@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings, CommunityProjectBudgetTierConfig } from '@/lib/types'; // Added CommunityProjectBudgetTierConfig
+import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings, CommunityProjectBudgetTierConfig } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname }  from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -60,15 +60,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('[AuthContext] Error fetching platform settings:', error.message);
       return null;
     }
-    // Ensure communityProjectBudgetTiers is an array, even if null/undefined from DB
-    const communityTiers = Array.isArray(data.community_project_budget_tiers) 
-        ? data.community_project_budget_tiers as CommunityProjectBudgetTierConfig[]
-        : [];
+    
+    let parsedCommunityTiers: CommunityProjectBudgetTierConfig[] = [];
+    const dbTiers = data.community_project_budget_tiers;
+
+    if (dbTiers) {
+        if (typeof dbTiers === 'string') {
+            try {
+                const parsed = JSON.parse(dbTiers);
+                if (Array.isArray(parsed)) {
+                    parsedCommunityTiers = parsed as CommunityProjectBudgetTierConfig[];
+                } else {
+                    console.warn('[AuthContext] community_project_budget_tiers from DB (string) was not a valid JSON array. Defaulting to empty.');
+                }
+            } catch (e) {
+                console.error('[AuthContext] Error parsing community_project_budget_tiers from DB string:', e);
+            }
+        } else if (Array.isArray(dbTiers)) {
+            parsedCommunityTiers = dbTiers as CommunityProjectBudgetTierConfig[];
+        } else {
+            console.warn('[AuthContext] community_project_budget_tiers from DB is not a string or array. Type:', typeof dbTiers, 'Value:', dbTiers, '. Defaulting to empty.');
+        }
+    }
+
 
     return {
         ...data,
-        community_project_budget_tiers: communityTiers,
-    } as PlatformSettings | null;
+        community_project_budget_tiers: parsedCommunityTiers,
+    } as PlatformSettings; // Ensure it returns PlatformSettings, not null if data exists
   }, []);
 
   const refreshPlatformSettings = useCallback(async () => {
@@ -199,7 +218,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, user?.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]); // Removed user?.id from deps
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -398,3 +418,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
