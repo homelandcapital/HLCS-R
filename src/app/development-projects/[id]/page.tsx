@@ -36,28 +36,7 @@ import type { TablesInsert } from '@/lib/database.types';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const interestFormSchema = z.object({
-  locationType: z.enum(['stateCapital', 'lga'], {
-    required_error: "Please select a location type (State Capital or LGA).",
-  }),
-  stateCapital: z.string().optional(),
-  lgaName: z.string().optional(),
-  preferredBudget: z.coerce.number().positive({ message: "Please enter a valid budget." }),
-  message: z.string().min(10, { message: "Message should be at least 10 characters long." }).optional(),
-}).superRefine((data, ctx) => {
-  if (data.locationType === 'stateCapital' && !data.stateCapital) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Please select a state capital.",
-      path: ['stateCapital'],
-    });
-  }
-  if (data.locationType === 'lga' && (!data.lgaName || data.lgaName.trim().length < 3)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "LGA name must be at least 3 characters.",
-      path: ['lgaName'],
-    });
-  }
+  message: z.string().min(10, { message: "Message should be at least 10 characters long." }).optional().or(z.literal('')),
 });
 
 type InterestFormValues = z.infer<typeof interestFormSchema>;
@@ -78,15 +57,9 @@ export default function DevelopmentProjectDetailsPage() {
   const interestForm = useForm<InterestFormValues>({
     resolver: zodResolver(interestFormSchema),
     defaultValues: {
-      locationType: undefined,
-      stateCapital: '',
-      lgaName: '',
-      preferredBudget: '' as any,
       message: '',
     },
   });
-
-  const watchedLocationType = interestForm.watch('locationType');
 
   const fetchProjectDetails = useCallback(async (projectId: string) => {
     setLoading(true);
@@ -143,10 +116,10 @@ export default function DevelopmentProjectDetailsPage() {
       user_id: authContextUser.id,
       user_name: authContextUser.name,
       user_email: authContextUser.email,
-      location_type: values.locationType,
-      state_capital: values.locationType === 'stateCapital' ? values.stateCapital : null,
-      lga_name: values.locationType === 'lga' ? values.lgaName : null,
-      selected_budget_tier: String(values.preferredBudget),
+      location_type: null,
+      state_capital: null,
+      lga_name: null,
+      selected_budget_tier: null,
       message: values.message || null,
       status: 'new', 
     };
@@ -178,11 +151,7 @@ export default function DevelopmentProjectDetailsPage() {
       router.push('/agents/login');
       return;
     }
-    interestForm.reset({ 
-      locationType: undefined,
-      stateCapital: '',
-      lgaName: '',
-      preferredBudget: '' as any,
+    interestForm.reset({
       message: '',
     });
     setIsInterestDialogOpen(true);
@@ -319,91 +288,6 @@ export default function DevelopmentProjectDetailsPage() {
           </DialogHeader>
           <Form {...interestForm}>
             <form onSubmit={interestForm.handleSubmit(handleInterestSubmit)} className="space-y-4 py-4">
-              <FormField
-                control={interestForm.control}
-                name="locationType"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location Type</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          if (value === 'stateCapital') interestForm.setValue('lgaName', '');
-                          if (value === 'lga') interestForm.setValue('stateCapital', '');
-                        }}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl><RadioGroupItem value="stateCapital" /></FormControl>
-                          <FormLabel className="font-normal">State Capital</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl><RadioGroupItem value="lga" /></FormControl>
-                          <FormLabel className="font-normal">Local Government Area (LGA)</FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {watchedLocationType === 'stateCapital' && (
-                <FormField
-                  control={interestForm.control}
-                  name="stateCapital"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State Capital</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a state capital" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {nigerianStateCapitals.map(capital => (
-                            <SelectItem key={capital} value={capital}>{capital}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {watchedLocationType === 'lga' && (
-                <FormField
-                  control={interestForm.control}
-                  name="lgaName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Local Government Area Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter LGA name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <FormField
-                control={interestForm.control}
-                name="preferredBudget"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1 text-muted-foreground"/>Your Preferred Budget (NGN)</FormLabel>
-                     <FormControl>
-                        <Input type="number" placeholder="e.g., 50000000" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={interestForm.control}
                 name="message"

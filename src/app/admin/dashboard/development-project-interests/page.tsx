@@ -206,10 +206,10 @@ export default function DevProjectInterestsManagementPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{interest.location_type === 'stateCapital' ? interest.state_capital : interest.lga_name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{interest.location_type === 'stateCapital' ? 'State Capital' : 'LGA'}</div>
+                      <div className="text-sm">{interest.location_type === 'stateCapital' ? interest.state_capital : interest.lga_name || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{interest.location_type === 'stateCapital' ? 'State Capital' : (interest.location_type ? 'LGA' : 'N/A')}</div>
                     </TableCell>
-                    <TableCell><Badge variant="outline">{interest.selected_budget_tier}</Badge></TableCell>
+                    <TableCell><Badge variant="outline">{interest.selected_budget_tier || 'N/A'}</Badge></TableCell>
                     <TableCell>
                         <div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(interest.created_at), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(interest.created_at), "p")}</div></div></div>
                     </TableCell>
@@ -245,12 +245,12 @@ export default function DevProjectInterestsManagementPage() {
                 
                 <Separator />
                 <h4 className="font-medium text-muted-foreground">Desired Location</h4>
-                <InfoRow icon={<MapPin />} label="Location Type" value={selectedInterest.location_type === 'stateCapital' ? 'State Capital' : 'LGA'} />
+                <InfoRow icon={<MapPin />} label="Location Type" value={selectedInterest.location_type === 'stateCapital' ? 'State Capital' : (selectedInterest.location_type ? 'LGA' : 'N/A')} />
                 {selectedInterest.location_type === 'stateCapital' && <InfoRow icon={<MapPin />} label="State Capital" value={selectedInterest.state_capital} />}
                 {selectedInterest.location_type === 'lga' && <InfoRow icon={<MapPin />} label="LGA Name" value={selectedInterest.lga_name} />}
                 
                 <Separator />
-                <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier} />
+                <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier || 'N/A'} />
                 
                 {selectedInterest.message && (
                     <>

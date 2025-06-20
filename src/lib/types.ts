@@ -216,10 +216,10 @@ export interface DevelopmentProjectInterest {
   user_id: string | null; 
   user_name: string | null;
   user_email: string | null;
-  location_type: 'stateCapital' | 'lga';
+  location_type: 'stateCapital' | 'lga' | null;
   state_capital?: string | null;
   lga_name?: string | null;
-  selected_budget_tier: string;
+  selected_budget_tier: string | null;
   message?: string | null;
   created_at: string;
   status: DevelopmentProjectInterestStatus;
