@@ -1,4 +1,3 @@
-
 'use client'; // Keep as client component due to form interactions
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Phone, MapPin, Send, Building, Briefcase, Clock, Users, ChevronRight } from 'lucide-react';
 import { contactPageContentData as defaultContent } from '@/lib/cms-data';
 import type { OfficeDetails, ContactPageContentNew } from '@/lib/types';
-import PropertyMap from '@/components/property/property-map';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -231,15 +229,6 @@ export default function ContactPageRedesigned() {
                   </TabsContent>
                 )}
               </Tabs>
-              
-              {activeOffice && activeOffice.mapCoordinates && (
-                <div className="mt-6 h-72 w-full rounded-md overflow-hidden border">
-                  <PropertyMap 
-                    coordinates={activeOffice.mapCoordinates} 
-                    title={activeOffice.mapTitle} 
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
@@ -247,5 +236,4 @@ export default function ContactPageRedesigned() {
     </div>
   );
 }
-
     
