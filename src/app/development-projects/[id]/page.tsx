@@ -1,4 +1,3 @@
-
 // src/app/development-projects/[id]/page.tsx
 'use client';
 
@@ -41,7 +40,7 @@ const interestFormSchema = z.object({
   }),
   stateCapital: z.string().optional(),
   lgaName: z.string().optional(),
-  selectedBudgetTier: z.string().min(1, { message: "Please select a budget tier." }),
+  preferredBudget: z.coerce.number().positive({ message: "Please enter a valid budget." }),
   message: z.string().min(10, { message: "Message should be at least 10 characters long." }).optional(),
 }).superRefine((data, ctx) => {
   if (data.locationType === 'stateCapital' && !data.stateCapital) {
@@ -74,29 +73,19 @@ export default function DevelopmentProjectDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isInterestDialogOpen, setIsInterestDialogOpen] = useState(false);
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
-
+  
   const interestForm = useForm<InterestFormValues>({
     resolver: zodResolver(interestFormSchema),
     defaultValues: {
       locationType: undefined,
       stateCapital: '',
       lgaName: '',
-      selectedBudgetTier: '',
+      preferredBudget: '' as any,
       message: '',
     },
   });
 
   const watchedLocationType = interestForm.watch('locationType');
-
-  useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
-    } else {
-      setAvailableBudgetTiers([]);
-    }
-  }, [platformSettings]);
-
 
   const fetchProjectDetails = useCallback(async (projectId: string) => {
     setLoading(true);
@@ -114,7 +103,7 @@ export default function DevelopmentProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as DevelopmentProject['category'],
-        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : []) : [],
+        budget_tier: data.budget_tier ? (Array.isArray(data.budget_tier) ? data.budget_tier : []) : [],
         status: data.status as DevelopmentProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -156,7 +145,7 @@ export default function DevelopmentProjectDetailsPage() {
       location_type: values.locationType,
       state_capital: values.locationType === 'stateCapital' ? values.stateCapital : null,
       lga_name: values.locationType === 'lga' ? values.lgaName : null,
-      selected_budget_tier: values.selectedBudgetTier,
+      selected_budget_tier: String(values.preferredBudget),
       message: values.message || null,
       status: 'new', 
     };
@@ -192,14 +181,14 @@ export default function DevelopmentProjectDetailsPage() {
       locationType: undefined,
       stateCapital: '',
       lgaName: '',
-      selectedBudgetTier: '',
+      preferredBudget: '' as any,
       message: '',
     });
     setIsInterestDialogOpen(true);
   };
 
 
-  if (loading || authLoading || (!platformSettings && !authLoading)) {
+  if (loading || authLoading) {
     return <ProjectDetailsSkeleton />;
   }
 
@@ -225,6 +214,7 @@ export default function DevelopmentProjectDetailsPage() {
   const defaultImage = 'https://placehold.co/1200x800.png?text=Project+Image';
   const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
   const displayStatus = project.status === 'Ongoing' ? 'Active' : project.status;
+  const displayPrice = project.budget_tier?.[0] ? parseInt(project.budget_tier[0], 10) : null;
 
   return (
     <div className="space-y-8">
@@ -242,9 +232,15 @@ export default function DevelopmentProjectDetailsPage() {
               <div className="text-sm text-muted-foreground mb-1 flex items-center"> <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id} </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
-              <div className="text-2xl font-bold text-foreground whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right capitalize">
-                {displayStatus}
-              </div>
+               {displayPrice ? (
+                 <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right">
+                    ₦{displayPrice.toLocaleString()}
+                 </div>
+               ) : (
+                 <div className="text-2xl font-bold text-foreground whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right capitalize">
+                    {displayStatus}
+                 </div>
+               )}
               <Button
                 onClick={handleOpenInterestDialog}
                 disabled={authLoading}
@@ -391,27 +387,13 @@ export default function DevelopmentProjectDetailsPage() {
 
               <FormField
                 control={interestForm.control}
-                name="selectedBudgetTier"
+                name="preferredBudget"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1 text-muted-foreground"/>Preferred Budget Tier</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableBudgetTiers.length === 0}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a budget tier" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableBudgetTiers.length > 0 ? (
-                          availableBudgetTiers.map(tier => (
-                            <SelectItem key={tier} value={tier}>{tier}</SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="" disabled>No tiers configured</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {availableBudgetTiers.length === 0 && <p className="text-xs text-muted-foreground pt-1">Budget tiers are not configured for selection.</p>}
+                    <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1 text-muted-foreground"/>Your Preferred Budget (NGN)</FormLabel>
+                     <FormControl>
+                        <Input type="number" placeholder="e.g., 50000000" {...field} value={field.value || ''} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

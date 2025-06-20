@@ -1,4 +1,3 @@
-
 // src/app/development-projects/page.tsx
 'use client';
 
@@ -27,19 +26,8 @@ export default function DevelopmentProjectsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<DevelopmentProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
   
   const publicDisplayStatuses: DevProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
-
-  useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
-    } else {
-      setAvailableBudgetTiers([]);
-    }
-  }, [platformSettings]);
-
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -60,7 +48,7 @@ export default function DevelopmentProjectsPage() {
         ...p,
         category: p.category as DevelopmentProjectCategory,
         status: p.status as DevProjectStatus,
-        budget_tiers: p.budget_tiers ? (Array.isArray(p.budget_tiers) ? p.budget_tiers : JSON.parse(String(p.budget_tiers))) : [],
+        budget_tier: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as DevelopmentProject[];
@@ -79,9 +67,6 @@ export default function DevelopmentProjectsPage() {
     if (categoryFilter !== 'all') {
       tempProjects = tempProjects.filter(p => p.category === categoryFilter);
     }
-    if (budgetTierFilter !== 'all') {
-      tempProjects = tempProjects.filter(p => p.budget_tiers?.includes(budgetTierFilter));
-    }
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       tempProjects = tempProjects.filter(p => 
@@ -90,7 +75,7 @@ export default function DevelopmentProjectsPage() {
       );
     }
     setFilteredProjects(tempProjects);
-  }, [searchTerm, categoryFilter, budgetTierFilter, projects]);
+  }, [searchTerm, categoryFilter, projects]);
 
 
   return (
@@ -108,7 +93,7 @@ export default function DevelopmentProjectsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center"><Filter className="w-5 h-5 mr-2"/>Filter Projects</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
@@ -116,13 +101,6 @@ export default function DevelopmentProjectsPage() {
           <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
             <SelectContent><SelectItem value="all">All Categories</SelectItem>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
-          </Select>
-          <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={authLoading || availableBudgetTiers.length === 0}>
-            <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">All Budget Tiers</SelectItem>
-                {availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))}
-            </SelectContent>
           </Select>
         </CardContent>
       </Card>
@@ -185,12 +163,10 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         <Link href={`/development-projects/${project.id}`}>
           <CardTitle className="text-xl font-headline mb-2 hover:text-primary transition-colors line-clamp-2">{project.title}</CardTitle>
         </Link>
-        {project.budget_tiers && project.budget_tiers.length > 0 && (
-            <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-1 gap-1">
-                 <DollarSign className="w-4 h-4 shrink-0 text-accent" /> 
-                 {project.budget_tiers.map((tier, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">{tier}</Badge>
-                 ))}
+        {project.budget_tier && project.budget_tier[0] && (
+            <div className="flex flex-wrap items-center text-sm font-semibold text-accent mb-2 gap-1">
+                <DollarSign className="w-4 h-4 shrink-0" />
+                <span>Budget: ₦{parseInt(project.budget_tier[0], 10).toLocaleString()}</span>
             </div>
         )}
         <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>

@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/development-projects/page.tsx
 'use client';
 
@@ -19,25 +18,15 @@ import { useAuth } from '@/contexts/auth-context';
 import { developmentProjectCategories, communityProjectStatuses } from '@/lib/types';
 
 export default function DevelopmentProjectsManagementPage() {
-  const { user: adminUser, loading: authLoading, platformSettings } = useAuth();
+  const { user: adminUser, loading: authLoading } = useAuth();
   const [allProjects, setAllProjects] = useState<DevelopmentProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<DevelopmentProject[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DevProjectStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<DevelopmentProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
   const { toast } = useToast();
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
-    } else {
-      setAvailableBudgetTiers([]);
-    }
-  }, [platformSettings]);
-
+  
   const fetchProjects = useCallback(async () => {
     setPageLoading(true);
     const { data, error } = await supabase
@@ -53,7 +42,7 @@ export default function DevelopmentProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as DevelopmentProjectCategory,
-        budget_tiers: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
+        budget_tier: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
         status: p.status as DevProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -79,9 +68,6 @@ export default function DevelopmentProjectsManagementPage() {
     if (categoryFilter !== 'all') {
       projects = projects.filter(project => project.category === categoryFilter);
     }
-    if (budgetTierFilter !== 'all') {
-      projects = projects.filter(project => project.budget_tiers?.includes(budgetTierFilter));
-    }
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       projects = projects.filter(project =>
@@ -91,7 +77,7 @@ export default function DevelopmentProjectsManagementPage() {
       );
     }
     setFilteredProjects(projects);
-  }, [searchTerm, statusFilter, categoryFilter, budgetTierFilter, allProjects]);
+  }, [searchTerm, statusFilter, categoryFilter, allProjects]);
 
   const getStatusBadgeVariant = (status: DevProjectStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
@@ -120,7 +106,7 @@ export default function DevelopmentProjectsManagementPage() {
   };
 
 
-  if (authLoading || pageLoading || (platformSettings === null && !authLoading)) {
+  if (authLoading || pageLoading) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-12 w-1/2" /> <Skeleton className="h-8 w-3/4" />
@@ -157,21 +143,14 @@ export default function DevelopmentProjectsManagementPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">All Projects</CardTitle>
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative lg:col-span-2">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="relative lg:col-span-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search by ID, title, description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
               <SelectContent><SelectItem value="all">All Categories</SelectItem>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
-            </Select>
-            <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={availableBudgetTiers.length === 0}>
-              <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Budget Tiers</SelectItem>
-                {availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))}
-              </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DevProjectStatus | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
@@ -180,7 +159,7 @@ export default function DevelopmentProjectsManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredProjects.length === 0 && (searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || budgetTierFilter !== 'all') ? (
+          {filteredProjects.length === 0 && (searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') ? (
             <div className="text-center py-10"><p className="text-lg font-medium">No projects match your filters.</p><p className="text-muted-foreground">Try adjusting your search or filters.</p></div>
           ) : allProjects.length === 0 ? (
             <div className="text-center py-10"><p className="text-lg font-medium">No projects found.</p><p className="text-muted-foreground">There are currently no development projects listed.</p></div>
@@ -189,7 +168,7 @@ export default function DevelopmentProjectsManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Budget Tiers</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Price / Budget</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -201,17 +180,11 @@ export default function DevelopmentProjectsManagementPage() {
                       </TableCell>
                       <TableCell><Badge variant="outline">{project.category}</Badge></TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {project.budget_tiers && project.budget_tiers.length > 0 ? (
-                            project.budget_tiers.map(tier => (
-                              <Badge key={tier} variant="secondary" className="flex items-center w-fit text-xs">
-                                <DollarSign className="h-3 w-3 mr-1"/>{tier}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">N/A</span>
-                          )}
-                        </div>
+                        {project.budget_tier && project.budget_tier[0] ? (
+                            <Badge variant="secondary">₦{parseInt(project.budget_tier[0], 10).toLocaleString()}</Badge>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">Not specified</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {project.brochure_link ? (

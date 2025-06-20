@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/development-projects/add/page.tsx
 'use client';
 
@@ -40,7 +39,10 @@ const projectFormSchema = z.object({
   category: z.enum(developmentProjectCategories as [DevelopmentProjectCategory, ...DevelopmentProjectCategory[]], { required_error: "Project category is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
-  budget_tiers: z.array(z.string()).min(1, { message: "At least one budget tier must be selected." }),
+  price: z.preprocess(
+    val => (val === "" || val === undefined ? undefined : String(val).trim() === "" ? undefined : val),
+    z.coerce.number().positive({ message: 'Price must be a positive number if provided.' }).optional()
+  ),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -49,19 +51,9 @@ export default function AddDevelopmentProjectPage() {
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
   const router = useRouter();
-  const { user, loading: authLoading, platformSettings } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (platformSettings && platformSettings.configuredCommunityBudgetTiers) {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
-    } else {
-      setAvailableBudgetTiers([]);
-    }
-  }, [platformSettings]);
-
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -70,7 +62,7 @@ export default function AddDevelopmentProjectPage() {
       category: undefined,
       description: '',
       brochure_link: '',
-      budget_tiers: [],
+      price: '' as any,
     },
   });
   
@@ -141,7 +133,7 @@ export default function AddDevelopmentProjectPage() {
           category: values.category,
           description: values.description,
           brochure_link: values.brochure_link || null,
-          budget_tier: values.budget_tiers,
+          budget_tier: values.price ? [String(values.price)] : null,
           images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
           status: 'Ongoing' as CommunityProjectStatus, // Changed from 'Pending Approval'
           managed_by_user_id: currentAdmin.id,
@@ -178,7 +170,7 @@ export default function AddDevelopmentProjectPage() {
     });
   }
  
-  if (authLoading || (platformSettings === null && !authLoading) ) {
+  if (authLoading) {
     return <Skeleton className="h-[500px] w-full" />;
   }
    if (user?.role !== 'platform_admin') {
@@ -209,67 +201,7 @@ export default function AddDevelopmentProjectPage() {
               
               <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
                  
-                <FormField
-                  control={form.control}
-                  name="budget_tiers"
-                  render={() => (
-                    <FormItem>
-                      <div className="mb-2">
-                        <FormLabel className="text-base flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tiers</FormLabel>
-                        <FormDescription>
-                          Select one or more applicable budget tiers for this project.
-                        </FormDescription>
-                      </div>
-                      {availableBudgetTiers.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                          {availableBudgetTiers.map((tierName) => (
-                            <FormField
-                              key={tierName}
-                              control={form.control}
-                              name="budget_tiers"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={tierName}
-                                    className="flex flex-row items-center space-x-2 space-y-0 p-3 border rounded-md hover:bg-muted/50 transition-colors"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(tierName)}
-                                        onCheckedChange={(checked) => {
-                                          const currentTiers = field.value || [];
-                                          return checked
-                                            ? field.onChange([...currentTiers, tierName])
-                                            : field.onChange(
-                                                currentTiers.filter(
-                                                  (value) => value !== tierName
-                                                )
-                                              )
-                                        }}
-                                        id={`tier-${tierName.replace(/\s+/g, '-')}`}
-                                      />
-                                    </FormControl>
-                                    <FormLabel htmlFor={`tier-${tierName.replace(/\s+/g, '-')}`} className="font-normal text-sm cursor-pointer flex-grow">
-                                      {tierName}
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No budget tiers configured yet by admin.</p>
-                      )}
-                      {availableBudgetTiers.length === 0 && platformSettings && !platformSettings.configuredCommunityBudgetTiers?.trim() && (
-                        <FormDescription className="text-xs text-destructive">
-                          Budget tiers not configured by admin. Please set them in Platform Settings.
-                        </FormDescription>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Project Budget / Price (Optional)</FormLabel> <FormControl><Input type="number" placeholder="e.g., 50000000" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
 
               <FormItem>
                 <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Project Images (Max 10)</FormLabel>
