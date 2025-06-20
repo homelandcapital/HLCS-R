@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -49,7 +49,7 @@ export default function CommunityProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as CommunityProject['category'],
-        budget_tier: data.budget_tier as CommunityProject['budget_tier'] | null,
+        budget_tier: data.budget_tier as string | null, // budget_tier is now string
         status: data.status as CommunityProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -192,5 +192,3 @@ const ProjectDetailsSkeleton = () => (
     </div>
   </div>
 );
-
-    

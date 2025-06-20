@@ -12,17 +12,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useTransition, useEffect } from 'react';
-import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X } from 'lucide-react'; // Added X here
+import { useState, useTransition, useEffect, useCallback } from 'react';
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { CommunityProjectCategory, CommunityProjectBudgetTier, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
-import { communityProjectCategories, communityProjectBudgetTiers } from '@/lib/types';
+import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus, CommunityProjectBudgetTierConfig, PlatformSettings } from '@/lib/types';
+import { communityProjectCategories } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
 import NextImage from 'next/image';
-import { uploadPropertyImages } from '@/actions/upload-images'; // Re-use for project images
+import { uploadPropertyImages } from '@/actions/upload-images';
 
 function generateCommunityProjectId(): string {
   const yearDigits = new Date().getFullYear().toString().slice(-2);
@@ -39,8 +39,7 @@ const projectFormSchema = z.object({
   category: z.enum(communityProjectCategories as [CommunityProjectCategory, ...CommunityProjectCategory[]], { required_error: "Project category is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
-  budget_tier: z.enum(communityProjectBudgetTiers as [CommunityProjectBudgetTier, ...CommunityProjectBudgetTier[]], { required_error: "Budget tier is required."}),
-  // Images field will be handled separately via selectedFiles state
+  budget_tier: z.string({ required_error: "Budget tier is required."}).min(1, "Budget tier is required."), // Now a string
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -49,9 +48,16 @@ export default function AddCommunityProjectPage() {
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, platformSettings } = useAuth(); // Get platformSettings from context
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
+      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    }
+  }, [platformSettings]);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -60,16 +66,14 @@ export default function AddCommunityProjectPage() {
       category: undefined,
       description: '',
       brochure_link: '',
-      budget_tier: undefined,
+      budget_tier: undefined, // Will be selected from dynamic list
     },
   });
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       const filesArray = Array.from(event.target.files);
-      // Limit to, say, 10 images
       setSelectedFiles(prevFiles => [...prevFiles, ...filesArray].slice(0, 10)); 
-
       const newPreviews = filesArray.map(file => URL.createObjectURL(file));
       setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews].slice(0, 10));
     }
@@ -79,7 +83,6 @@ export default function AddCommunityProjectPage() {
     setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
     setImagePreviews(prevPreviews => {
       const newPreviews = prevPreviews.filter((_, index) => index !== indexToRemove);
-      // Revoke object URL to free up memory
       if (prevPreviews[indexToRemove]) {
         URL.revokeObjectURL(prevPreviews[indexToRemove]);
       }
@@ -88,7 +91,6 @@ export default function AddCommunityProjectPage() {
   };
   
   useEffect(() => {
-    // Cleanup object URLs when component unmounts or previews change
     return () => {
       imagePreviews.forEach(previewUrl => URL.revokeObjectURL(previewUrl));
     };
@@ -110,7 +112,6 @@ export default function AddCommunityProjectPage() {
         });
 
         try {
-          // Using the same upload action as properties for now, folder can be adjusted in action if needed
           const result = await uploadPropertyImages(formData); 
           if (result.error) {
             toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
@@ -132,9 +133,9 @@ export default function AddCommunityProjectPage() {
         category: values.category,
         description: values.description,
         brochure_link: values.brochure_link || null,
-        budget_tier: values.budget_tier,
+        budget_tier: values.budget_tier, // budget_tier is now string (tier name)
         images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-        status: 'Pending Approval' as CommunityProjectStatus, // Default status
+        status: 'Pending Approval' as CommunityProjectStatus, 
         managed_by_user_id: currentAdmin.id,
       };
 
@@ -158,7 +159,7 @@ export default function AddCommunityProjectPage() {
     });
   }
 
-  if (authLoading) {
+  if (authLoading || (platformSettings === null && !authLoading) ) { // Show skeleton if auth or settings are loading
     return <Skeleton className="h-[500px] w-full" />;
   }
    if (user?.role !== 'platform_admin') {
@@ -189,7 +190,23 @@ export default function AddCommunityProjectPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                 <FormField control={form.control} name="budget_tier" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select budget tier" /></SelectTrigger></FormControl> <SelectContent>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+                 <FormField control={form.control} name="budget_tier" render={({ field }) => ( 
+                    <FormItem> 
+                        <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel> 
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableBudgetTiers.length === 0}> 
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select budget tier" /></SelectTrigger></FormControl> 
+                            <SelectContent>
+                                {availableBudgetTiers.length > 0 ? (
+                                    availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name} - {tier.description}</SelectItem>))
+                                ) : (
+                                    <SelectItem value="-" disabled>No budget tiers configured</SelectItem>
+                                )}
+                            </SelectContent> 
+                        </Select>
+                        {availableBudgetTiers.length === 0 && <FormDescription className="text-xs text-destructive">Budget tiers not configured by admin. Please set them in Platform Settings.</FormDescription>}
+                        <FormMessage /> 
+                    </FormItem> 
+                )} />
               </div>
 
               <FormItem>
@@ -233,5 +250,3 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
-
-    

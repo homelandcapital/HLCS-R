@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus, CommunityProjectBudgetTier } from '@/lib/types';
+import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus, CommunityProjectBudgetTierConfig } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -15,9 +15,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { communityProjectCategories, communityProjectBudgetTiers } from '@/lib/types'; // Only public filterable enums
+import { communityProjectCategories } from '@/lib/types'; 
+import { useAuth } from '@/hooks/use-auth'; // For platformSettings
 
 export default function CommunityProjectsPage() {
+  const { platformSettings, loading: authLoading } = useAuth(); // Get platformSettings
   const [projects, setProjects] = useState<CommunityProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<CommunityProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,16 @@ export default function CommunityProjectsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<CommunityProjectBudgetTier | 'all'>('all');
+  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all'); // Changed to string for tier name
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
   
-  // Publicly viewable statuses
   const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
+      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    }
+  }, [platformSettings]);
 
 
   const fetchProjects = useCallback(async () => {
@@ -50,7 +58,7 @@ export default function CommunityProjectsPage() {
         ...p,
         category: p.category as CommunityProjectCategory,
         status: p.status as CommunityProjectStatus,
-        budget_tier: p.budget_tier as CommunityProjectBudgetTier | null,
+        budget_tier: p.budget_tier as string | null, // budget_tier is now string
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as CommunityProject[];
@@ -107,15 +115,18 @@ export default function CommunityProjectsPage() {
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
             <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
           </Select>
-          <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as CommunityProjectBudgetTier | 'all')}>
+          <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={authLoading || availableBudgetTiers.length === 0}>
             <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Budget Tiers</SelectItem>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent>
+            <SelectContent>
+                <SelectItem value="all">All Budget Tiers</SelectItem>
+                {availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name}</SelectItem>))}
+            </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
 
-      {loading ? (
+      {loading || authLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => <ProjectCardSkeleton key={i} />)}
         </div>
@@ -173,7 +184,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         </Link>
         {project.budget_tier && (
             <div className="flex items-center text-sm text-muted-foreground mb-1">
-                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier}
+                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier} {/* Display string name */}
             </div>
         )}
         <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>
@@ -193,5 +204,3 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
-
-    

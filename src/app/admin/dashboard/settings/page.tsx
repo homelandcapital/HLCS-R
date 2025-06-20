@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users, Users2 as CommunityIcon, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -18,12 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
-import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, SectorKey, SectorVisibility } from '@/lib/types';
+import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, SectorKey, SectorVisibility, CommunityProjectBudgetTierConfig } from '@/lib/types';
 import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import React from 'react';
-import { useAuth } from '@/contexts/auth-context'; // Import useAuth
+import { useAuth } from '@/hooks/use-auth'; 
 
 interface AdminPromotionTier {
   id: string;
@@ -40,6 +40,20 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
 ];
 
+interface AdminCommunityBudgetTier {
+  id: string; // internal ID for mapping, e.g., 'tier1', 'tier2'
+  name: string; // User-facing name, e.g. "Under ₦5M"
+  description: string;
+  icon: React.ReactNode;
+}
+
+const initialAdminCommunityBudgetTiersUI: AdminCommunityBudgetTier[] = [
+  { id: 'tier_1_low', name: 'Low Budget', icon: <DollarSign className="h-5 w-5 text-green-500" />, description: 'For projects typically under ₦5 Million.' },
+  { id: 'tier_2_medium', name: 'Medium Budget', icon: <DollarSign className="h-5 w-5 text-blue-500" />, description: 'For projects typically between ₦5 Million and ₦20 Million.' },
+  { id: 'tier_3_high', name: 'High Budget', icon: <DollarSign className="h-5 w-5 text-red-500" />, description: 'For projects typically above ₦20 Million.' },
+];
+
+
 const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnabled: boolean, icon: React.ReactNode }> = [
   { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
   { key: 'machinery', label: 'Machinery Marketplace Sector', defaultEnabled: false, icon: <Package className="h-5 w-5"/> },
@@ -50,7 +64,7 @@ const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnable
 
 export default function PlatformSettingsPage() {
   const { toast } = useToast();
-  const { refreshPlatformSettings } = useAuth(); // Get the refresh function
+  const { refreshPlatformSettings } = useAuth(); 
   const [loading, setLoading] = useState(true);
 
   const [siteName, setSiteName] = useState('Homeland Capital');
@@ -64,9 +78,11 @@ export default function PlatformSettingsPage() {
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
 
+  const [adminCommunityBudgetTiers, setAdminCommunityBudgetTiers] = useState<AdminCommunityBudgetTier[]>(initialAdminCommunityBudgetTiersUI);
+
   const [sectorVisibility, setSectorVisibility] = useState<SectorVisibility>({});
 
-  const fetchLocalPageSettings = useCallback(async () => { // Renamed to avoid confusion with context's fetch
+  const fetchLocalPageSettings = useCallback(async () => { 
     setLoading(true);
     const { data, error } = await supabase
       .from('platform_settings')
@@ -81,6 +97,8 @@ export default function PlatformSettingsPage() {
         initialVisibility[sector.key] = sector.defaultEnabled;
       });
       setSectorVisibility(initialVisibility);
+      // Set default community budget tiers if fetch fails
+      setAdminCommunityBudgetTiers(initialAdminCommunityBudgetTiersUI);
     } else if (data) {
       setSiteName(data.site_name || 'Homeland Capital');
       setMaintenanceMode(data.maintenance_mode || false);
@@ -105,6 +123,18 @@ export default function PlatformSettingsPage() {
         setAdminPromotionTiers(uiTiers);
       }
 
+      if (data.community_project_budget_tiers) {
+        const dbBudgetTiers = data.community_project_budget_tiers as CommunityProjectBudgetTierConfig[];
+        const uiBudgetTiers = initialAdminCommunityBudgetTiersUI.map(uiTier => {
+            const dbMatch = dbBudgetTiers.find(dbTier => dbTier.id === uiTier.id);
+            return dbMatch ? { ...uiTier, name: dbMatch.name, description: dbMatch.description } : uiTier;
+        });
+        setAdminCommunityBudgetTiers(uiBudgetTiers);
+      } else {
+        setAdminCommunityBudgetTiers(initialAdminCommunityBudgetTiersUI);
+      }
+
+
       const dbSectorVisibility = data.sector_visibility as SectorVisibility | null;
       const initialVisibility: SectorVisibility = {};
       sectorConfigurations.forEach(sector => {
@@ -120,8 +150,16 @@ export default function PlatformSettingsPage() {
   }, [fetchLocalPageSettings]);
 
 
-  const handleTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'icon'>, value: string) => {
+  const handlePromotionTierChange = (tierId: string, field: keyof Omit<AdminPromotionTier, 'id' | 'icon'>, value: string) => {
     setAdminPromotionTiers(currentTiers =>
+      currentTiers.map(tier =>
+        tier.id === tierId ? { ...tier, [field]: value } : tier
+      )
+    );
+  };
+
+  const handleCommunityBudgetTierChange = (tierId: string, field: 'name' | 'description', value: string) => {
+    setAdminCommunityBudgetTiers(currentTiers =>
       currentTiers.map(tier =>
         tier.id === tierId ? { ...tier, [field]: value } : tier
       )
@@ -133,7 +171,7 @@ export default function PlatformSettingsPage() {
   };
 
   const handleSaveChanges = async () => {
-    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility'> & { promotion_tiers: PromotionTierConfig[], property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'communityProjectBudgetTiers'> & { promotion_tiers: PromotionTierConfig[], community_project_budget_tiers: CommunityProjectBudgetTierConfig[], property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
       id: 1,
       site_name: siteName,
       maintenance_mode: maintenanceMode,
@@ -149,6 +187,11 @@ export default function PlatformSettingsPage() {
         duration: parseInt(tier.duration, 10) || 0,
         description: tier.description,
       })),
+      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({
+        id: tier.id,
+        name: tier.name,
+        description: tier.description,
+      })),
       sector_visibility: sectorVisibility,
     };
 
@@ -160,8 +203,8 @@ export default function PlatformSettingsPage() {
       toast({ title: 'Error Saving Settings', description: `Could not save settings: ${error.message}`, variant: 'destructive' });
     } else {
       toast({ title: 'Settings Saved', description: 'Platform settings have been successfully updated.' });
-      await refreshPlatformSettings(); // Refresh context settings
-      fetchLocalPageSettings(); // Refresh local page settings (optional, but good for consistency if there are derived states)
+      await refreshPlatformSettings(); 
+      fetchLocalPageSettings(); 
     }
   };
 
@@ -170,7 +213,7 @@ export default function PlatformSettingsPage() {
         <div className="space-y-8">
             <Skeleton className="h-12 w-1/2 mb-2" />
             <Skeleton className="h-8 w-3/4 mb-6" />
-            {[...Array(4)].map((_, i) => (
+            {[...Array(5)].map((_, i) => ( // Increased skeleton cards
                 <Card key={i} className="shadow-xl mb-6">
                     <CardHeader> <Skeleton className="h-8 w-1/3 mb-2" /> <Skeleton className="h-4 w-2/3" /> </CardHeader>
                     <CardContent className="space-y-6"> <Skeleton className="h-10 w-full" /> <Skeleton className="h-10 w-full" /> </CardContent>
@@ -343,7 +386,7 @@ export default function PlatformSettingsPage() {
                       <Input
                         id={`${tier.id}-name`}
                         value={tier.name}
-                        onChange={(e) => handleTierChange(tier.id, 'name', e.target.value)}
+                        onChange={(e) => handlePromotionTierChange(tier.id, 'name', e.target.value)}
                         placeholder="e.g., Basic Boost"
                         className="text-lg font-headline mt-0.5"
                         disabled={!promotionsEnabled}
@@ -359,7 +402,7 @@ export default function PlatformSettingsPage() {
                         id={`${tier.id}-fee`}
                         type="number"
                         value={tier.fee}
-                        onChange={(e) => handleTierChange(tier.id, 'fee', e.target.value)}
+                        onChange={(e) => handlePromotionTierChange(tier.id, 'fee', e.target.value)}
                         placeholder="e.g., 5000"
                         min="0"
                         disabled={!promotionsEnabled}
@@ -371,7 +414,7 @@ export default function PlatformSettingsPage() {
                         id={`${tier.id}-duration`}
                         type="number"
                         value={tier.duration}
-                        onChange={(e) => handleTierChange(tier.id, 'duration', e.target.value)}
+                        onChange={(e) => handlePromotionTierChange(tier.id, 'duration', e.target.value)}
                         placeholder="e.g., 7"
                         min="1"
                         disabled={!promotionsEnabled}
@@ -383,7 +426,7 @@ export default function PlatformSettingsPage() {
                     <Textarea
                       id={`${tier.id}-description`}
                       value={tier.description}
-                      onChange={(e) => handleTierChange(tier.id, 'description', e.target.value)}
+                      onChange={(e) => handlePromotionTierChange(tier.id, 'description', e.target.value)}
                       placeholder="Briefly describe this promotion tier..."
                       rows={2}
                       disabled={!promotionsEnabled}
@@ -396,6 +439,54 @@ export default function PlatformSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <CommunityIcon className="mr-2 h-5 w-5 text-muted-foreground" /> Community Project Budget Tier Settings
+          </CardTitle>
+          <CardDescription>Define budget tiers for community projects.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-8">
+            {adminCommunityBudgetTiers.map((tier) => (
+              <Card key={tier.id}>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0">{tier.icon}</span>
+                    <div className="flex-grow">
+                      <Label htmlFor={`${tier.id}-comm-budget-name`} className="text-xs font-medium text-muted-foreground">Tier Name</Label>
+                      <Input
+                        id={`${tier.id}-comm-budget-name`}
+                        value={tier.name}
+                        onChange={(e) => handleCommunityBudgetTierChange(tier.id, 'name', e.target.value)}
+                        placeholder="e.g., Small Scale Projects"
+                        className="text-lg font-headline mt-0.5"
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor={`${tier.id}-comm-budget-description`}>Description</Label>
+                    <Textarea
+                      id={`${tier.id}-comm-budget-description`}
+                      value={tier.description}
+                      onChange={(e) => handleCommunityBudgetTierChange(tier.id, 'description', e.target.value)}
+                      placeholder="Briefly describe this budget tier..."
+                      rows={2}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+           <p className="text-xs text-muted-foreground mt-4">
+              These tiers help categorize community projects by their estimated budget. The names and descriptions will be shown when adding a new community project.
+            </p>
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-xl">
         <CardHeader>

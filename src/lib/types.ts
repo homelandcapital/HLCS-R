@@ -133,34 +133,23 @@ export const communityProjectCategories: CommunityProjectCategory[] = ["Water Su
 export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
 export const communityProjectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
 
-export type CommunityProjectBudgetTier = "Below 5 Million NGN" | "5 Million NGN and Above";
-export const communityProjectBudgetTiers: CommunityProjectBudgetTier[] = ["Below 5 Million NGN", "5 Million NGN and Above"];
-
+// Removed: CommunityProjectBudgetTier enum and communityProjectBudgetTiers array
+// This will now be configured in Platform Settings
 
 export interface CommunityProject {
-  id: string; // UUID
-  human_readable_id: string; // TEXT, unique
-  title: string; // TEXT
-  category: CommunityProjectCategory; // Relies on DB enum
-  description: string; // TEXT
-  brochure_link?: string | null; // TEXT, new
-  images?: string[] | null; // JSONB array of URLs
-  budget_tier?: CommunityProjectBudgetTier | null; // Relies on DB enum, new
-  status: CommunityProjectStatus; // Relies on DB enum (kept for admin management, default on add)
-  created_at: string; // TIMESTAMPTZ (ISO string)
-  updated_at: string; // TIMESTAMPTZ (ISO string)
-  managed_by_user_id: string | null; // UUID, FK to users table
-  manager?: AuthenticatedUser | null; // For populated manager data (admin/agent)
-
-  // Removed fields:
-  // location_description: string;
-  // state: NigerianState;
-  // funding_goal?: number | null;
-  // current_funding?: number | null;
-  // start_date?: string | null;
-  // expected_completion_date?: string | null;
-  // contact_email?: string | null;
-  // organization_name?: string | null;
+  id: string; 
+  human_readable_id: string; 
+  title: string; 
+  category: CommunityProjectCategory; 
+  description: string; 
+  brochure_link?: string | null; 
+  images?: string[] | null; 
+  budget_tier?: string | null; // Changed from enum to string to store the name of the configured tier
+  status: CommunityProjectStatus; 
+  created_at: string; 
+  updated_at: string; 
+  managed_by_user_id: string | null; 
+  manager?: AuthenticatedUser | null; 
 }
 
 
@@ -306,7 +295,7 @@ export interface ContactPageContentNew {
   officesSection: {
     title: string;
     headquarters: OfficeDetails;
-    regionalOffice?: OfficeDetails | null; // Allow null if optional
+    regionalOffice?: OfficeDetails | null; 
   };
   businessHoursSection: {
     title: string;
@@ -337,6 +326,12 @@ export const managedSectorKeys = ['realEstate', 'machinery', 'development', 'com
 export type SectorKey = typeof managedSectorKeys[number];
 export type SectorVisibility = Partial<Record<SectorKey, boolean>>;
 
+export interface CommunityProjectBudgetTierConfig {
+  id: string; // e.g. 'tier_1_low', 'tier_2_medium'
+  name: string; // e.g. "Below ₦5 Million"
+  description: string; // e.g. "For smaller community initiatives"
+}
+
 export interface PlatformSettings {
   promotionsEnabled: boolean;
   promotionTiers: PromotionTierConfig[];
@@ -347,8 +342,7 @@ export interface PlatformSettings {
   predefinedAmenities: string; 
   propertyTypes: string[]; 
   sector_visibility?: SectorVisibility | null; 
+  communityProjectBudgetTiers?: CommunityProjectBudgetTierConfig[] | null; // New
 }
 
 import type { Database } from './database.types';
-
-    

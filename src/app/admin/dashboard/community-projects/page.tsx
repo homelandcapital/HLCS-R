@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory, CommunityProjectBudgetTier } from '@/lib/types';
+import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory, CommunityProjectBudgetTierConfig } from '@/lib/types'; // Updated budget tier type
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,18 +16,25 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
-import { communityProjectCategories, communityProjectBudgetTiers, communityProjectStatuses } from '@/lib/types'; // Import enums
+import { communityProjectCategories, communityProjectStatuses } from '@/lib/types';
 
 export default function CommunityProjectsManagementPage() {
-  const { user: adminUser, loading: authLoading } = useAuth();
+  const { user: adminUser, loading: authLoading, platformSettings } = useAuth();
   const [allProjects, setAllProjects] = useState<CommunityProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<CommunityProject[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CommunityProjectStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<CommunityProjectBudgetTier | 'all'>('all');
+  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all'); // Now string for tier name
   const { toast } = useToast();
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
+      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    }
+  }, [platformSettings]);
 
   const fetchProjects = useCallback(async () => {
     setPageLoading(true);
@@ -44,7 +51,7 @@ export default function CommunityProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as CommunityProjectCategory,
-        budget_tier: p.budget_tier as CommunityProjectBudgetTier | null,
+        budget_tier: p.budget_tier as string | null, // budget_tier is now string
         status: p.status as CommunityProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -111,7 +118,7 @@ export default function CommunityProjectsManagementPage() {
   };
 
 
-  if (authLoading || pageLoading) {
+  if (authLoading || pageLoading || (platformSettings === null && !authLoading)) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-12 w-1/2" /> <Skeleton className="h-8 w-3/4" />
@@ -157,9 +164,12 @@ export default function CommunityProjectsManagementPage() {
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
               <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
             </Select>
-            <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as CommunityProjectBudgetTier | 'all')}>
+            <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={availableBudgetTiers.length === 0}>
               <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Budget Tiers</SelectItem>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent>
+              <SelectContent>
+                <SelectItem value="all">All Budget Tiers</SelectItem>
+                {availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name}</SelectItem>))}
+              </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CommunityProjectStatus | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
@@ -224,5 +234,3 @@ export default function CommunityProjectsManagementPage() {
     </div>
   );
 }
-
-    
