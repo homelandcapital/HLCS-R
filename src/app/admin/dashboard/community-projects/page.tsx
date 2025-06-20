@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { communityProjectCategories, communityProjectStatuses } from '@/lib/types';
 
 export default function CommunityProjectsManagementPage() {
@@ -234,3 +234,4 @@ export default function CommunityProjectsManagementPage() {
     </div>
   );
 }
+
