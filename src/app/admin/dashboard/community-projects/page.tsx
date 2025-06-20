@@ -53,7 +53,7 @@ export default function CommunityProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as CommunityProjectCategory,
-        budget_tier: p.budget_tier as string | null,
+        budget_tiers: p.budget_tiers ? (Array.isArray(p.budget_tiers) ? p.budget_tiers : JSON.parse(String(p.budget_tiers))) : [], // Ensure budget_tiers is array
         status: p.status as CommunityProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -80,7 +80,8 @@ export default function CommunityProjectsManagementPage() {
       projects = projects.filter(project => project.category === categoryFilter);
     }
     if (budgetTierFilter !== 'all') {
-      projects = projects.filter(project => project.budget_tier === budgetTierFilter);
+      // Filter projects that include the selected budget tier in their budget_tiers array
+      projects = projects.filter(project => project.budget_tiers?.includes(budgetTierFilter));
     }
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
@@ -189,7 +190,7 @@ export default function CommunityProjectsManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Budget Tier</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Budget Tiers</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,7 +201,19 @@ export default function CommunityProjectsManagementPage() {
                         <div className="text-xs text-muted-foreground">{project.human_readable_id}</div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{project.category}</Badge></TableCell>
-                      <TableCell><Badge variant="secondary" className="flex items-center w-fit"><DollarSign className="h-3 w-3 mr-1"/>{project.budget_tier || 'N/A'}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {project.budget_tiers && project.budget_tiers.length > 0 ? (
+                            project.budget_tiers.map(tier => (
+                              <Badge key={tier} variant="secondary" className="flex items-center w-fit text-xs">
+                                <DollarSign className="h-3 w-3 mr-1"/>{tier}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {project.brochure_link ? (
                           <Button variant="link" size="sm" asChild className="p-0 h-auto">

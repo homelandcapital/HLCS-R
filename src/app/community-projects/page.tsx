@@ -60,7 +60,7 @@ export default function CommunityProjectsPage() {
         ...p,
         category: p.category as CommunityProjectCategory,
         status: p.status as CommunityProjectStatus,
-        budget_tier: p.budget_tier as string | null,
+        budget_tiers: p.budget_tiers ? (Array.isArray(p.budget_tiers) ? p.budget_tiers : JSON.parse(String(p.budget_tiers))) : [],
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as CommunityProject[];
@@ -68,7 +68,7 @@ export default function CommunityProjectsPage() {
       setFilteredProjects(formattedProjects); 
     }
     setLoading(false);
-  }, [toast, publicDisplayStatuses]);
+  }, [toast]); // Removed publicDisplayStatuses from deps as it's constant
 
   useEffect(() => {
     fetchProjects();
@@ -80,7 +80,7 @@ export default function CommunityProjectsPage() {
       tempProjects = tempProjects.filter(p => p.category === categoryFilter);
     }
     if (budgetTierFilter !== 'all') {
-      tempProjects = tempProjects.filter(p => p.budget_tier === budgetTierFilter);
+      tempProjects = tempProjects.filter(p => p.budget_tiers?.includes(budgetTierFilter));
     }
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
@@ -184,9 +184,12 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         <Link href={`/community-projects/${project.id}`}>
           <CardTitle className="text-xl font-headline mb-2 hover:text-primary transition-colors line-clamp-2">{project.title}</CardTitle>
         </Link>
-        {project.budget_tier && (
-            <div className="flex items-center text-sm text-muted-foreground mb-1">
-                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier}
+        {project.budget_tiers && project.budget_tiers.length > 0 && (
+            <div className="flex flex-wrap items-center text-sm text-muted-foreground mb-1 gap-1">
+                 <DollarSign className="w-4 h-4 shrink-0 text-accent" /> 
+                 {project.budget_tiers.map((tier, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">{tier}</Badge>
+                 ))}
             </div>
         )}
         <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>

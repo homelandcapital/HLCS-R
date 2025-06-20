@@ -3,14 +3,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
@@ -40,7 +40,7 @@ const projectFormSchema = z.object({
   category: z.enum(communityProjectCategories as [CommunityProjectCategory, ...CommunityProjectCategory[]], { required_error: "Project category is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
-  budget_tier: z.string({ required_error: "Budget tier is required."}).min(1, "Budget tier is required."),
+  budget_tiers: z.array(z.string()).min(1, { message: "At least one budget tier must be selected." }),
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -69,7 +69,7 @@ export default function AddCommunityProjectPage() {
       category: undefined,
       description: '',
       brochure_link: '',
-      budget_tier: undefined,
+      budget_tiers: [],
     },
   });
   
@@ -136,7 +136,7 @@ export default function AddCommunityProjectPage() {
         category: values.category,
         description: values.description,
         brochure_link: values.brochure_link || null,
-        budget_tier: values.budget_tier,
+        budget_tiers: values.budget_tiers, // Save array of selected tier names
         images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
         status: 'Pending Approval' as CommunityProjectStatus, 
         managed_by_user_id: currentAdmin.id,
@@ -194,35 +194,54 @@ export default function AddCommunityProjectPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                  
-                 <FormField
+                <FormField
                   control={form.control}
-                  name="budget_tier"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                          disabled={availableBudgetTiers.length === 0}
-                        >
-                          {availableBudgetTiers.length > 0 ? (
-                            availableBudgetTiers.map((tierName) => (
-                              <FormItem key={tierName} className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value={tierName} />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {tierName}
-                                </FormLabel>
-                              </FormItem>
-                            ))
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No budget tiers configured yet.</p>
-                          )}
-                        </RadioGroup>
-                      </FormControl>
+                  name="budget_tiers"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        <FormLabel className="text-base flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tiers</FormLabel>
+                        <FormDescription>
+                          Select one or more applicable budget tiers for this project.
+                        </FormDescription>
+                      </div>
+                      {availableBudgetTiers.length > 0 ? (
+                        availableBudgetTiers.map((tierName) => (
+                          <FormField
+                            key={tierName}
+                            control={form.control}
+                            name="budget_tiers"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={tierName}
+                                  className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(tierName)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), tierName])
+                                          : field.onChange(
+                                              (field.value || []).filter(
+                                                (value) => value !== tierName
+                                              )
+                                            )
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">
+                                    {tierName}
+                                  </FormLabel>
+                                </FormItem>
+                              )
+                            }}
+                          />
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No budget tiers configured yet by admin.</p>
+                      )}
                       {availableBudgetTiers.length === 0 && <FormDescription className="text-xs text-destructive">Budget tiers not configured by admin. Please set them in Platform Settings.</FormDescription>}
                       <FormMessage />
                     </FormItem>

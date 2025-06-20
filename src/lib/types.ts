@@ -142,7 +142,7 @@ export interface CommunityProject {
   description: string; 
   brochure_link?: string | null; 
   images?: string[] | null; 
-  budget_tier?: string | null;
+  budget_tiers?: string[] | null; // Changed from budget_tier: string | null
   status: CommunityProjectStatus; 
   created_at: string; 
   updated_at: string; 

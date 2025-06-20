@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -49,7 +49,7 @@ export default function CommunityProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as CommunityProject['category'],
-        budget_tier: data.budget_tier as string | null, // budget_tier is now string
+        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : JSON.parse(String(data.budget_tiers))) : [],
         status: data.status as CommunityProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -141,7 +141,20 @@ export default function CommunityProjectDetailsPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-foreground">
                 <DetailItem icon={<CommunityIcon />} label="Category" value={project.category} />
-                <DetailItem icon={<DollarSign />} label="Budget Tier" value={project.budget_tier || "Not Specified"} />
+                <div>
+                  <p className="text-sm text-muted-foreground flex items-center">
+                    <DollarSign className="w-5 h-5 mr-1 text-accent shrink-0" /> Budget Tiers
+                  </p>
+                  {project.budget_tiers && project.budget_tiers.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {project.budget_tiers.map(tier => (
+                        <Badge key={tier} variant="secondary">{tier}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="font-semibold">Not Specified</p>
+                  )}
+                </div>
               </div>
               <Separator className="my-6" />
               <h3 className="text-xl font-headline mb-2">Description</h3>
@@ -192,3 +205,4 @@ const ProjectDetailsSkeleton = () => (
     </div>
   </div>
 );
+
