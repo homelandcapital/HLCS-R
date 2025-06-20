@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
@@ -135,7 +136,7 @@ export default function AddCommunityProjectPage() {
         category: values.category,
         description: values.description,
         brochure_link: values.brochure_link || null,
-        budget_tier: values.budget_tier, // This is now a string (tier name)
+        budget_tier: values.budget_tier,
         images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
         status: 'Pending Approval' as CommunityProjectStatus, 
         managed_by_user_id: currentAdmin.id,
@@ -192,23 +193,41 @@ export default function AddCommunityProjectPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                 <FormField control={form.control} name="budget_tier" render={({ field }) => ( 
-                    <FormItem> 
-                        <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel> 
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={availableBudgetTiers.length === 0}> 
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select budget tier" /></SelectTrigger></FormControl> 
-                            <SelectContent>
-                                {availableBudgetTiers.length > 0 ? (
-                                    availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))
-                                ) : (
-                                    <SelectItem value="-" disabled>No budget tiers configured</SelectItem>
-                                )}
-                            </SelectContent> 
-                        </Select>
-                        {availableBudgetTiers.length === 0 && <FormDescription className="text-xs text-destructive">Budget tiers not configured by admin. Please set them in Platform Settings.</FormDescription>}
-                        <FormMessage /> 
-                    </FormItem> 
-                )} />
+                 
+                 <FormField
+                  control={form.control}
+                  name="budget_tier"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                          disabled={availableBudgetTiers.length === 0}
+                        >
+                          {availableBudgetTiers.length > 0 ? (
+                            availableBudgetTiers.map((tierName) => (
+                              <FormItem key={tierName} className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value={tierName} />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {tierName}
+                                </FormLabel>
+                              </FormItem>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">No budget tiers configured yet.</p>
+                          )}
+                        </RadioGroup>
+                      </FormControl>
+                      {availableBudgetTiers.length === 0 && <FormDescription className="text-xs text-destructive">Budget tiers not configured by admin. Please set them in Platform Settings.</FormDescription>}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <FormItem>
@@ -252,5 +271,4 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
-
     
