@@ -12,7 +12,7 @@ export type Database = {
       community_projects: {
         Row: {
           brochure_link: string | null
-          budget_tier: string | null
+          budget_tier: string[] | null
           category: Database["public"]["Enums"]["community_project_category_enum"]
           created_at: string
           description: string
@@ -26,7 +26,7 @@ export type Database = {
         }
         Insert: {
           brochure_link?: string | null
-          budget_tier?: string | null
+          budget_tier?: string[] | null
           category: Database["public"]["Enums"]["community_project_category_enum"]
           created_at?: string
           description: string
@@ -40,7 +40,7 @@ export type Database = {
         }
         Update: {
           brochure_link?: string | null
-          budget_tier?: string | null
+          budget_tier?: string[] | null
           category?: Database["public"]["Enums"]["community_project_category_enum"]
           created_at?: string
           description?: string
@@ -162,7 +162,7 @@ export type Database = {
       }
       platform_settings: {
         Row: {
-          community_project_budget_tiers: Json | null
+          configured_community_budget_tiers: string | null
           default_currency: string | null
           id: number
           maintenance_mode: boolean | null
@@ -176,7 +176,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          community_project_budget_tiers?: Json | null
+          configured_community_budget_tiers?: string | null
           default_currency?: string | null
           id?: number
           maintenance_mode?: boolean | null
@@ -190,7 +190,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          community_project_budget_tiers?: Json | null
+          configured_community_budget_tiers?: string | null
           default_currency?: string | null
           id?: number
           maintenance_mode?: boolean | null

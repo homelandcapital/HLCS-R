@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
-import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X } from 'lucide-react';
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X, Package } from 'lucide-react'; // Added Package, X
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
@@ -55,7 +55,7 @@ export default function AddCommunityProjectPage() {
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+    if (platformSettings && platformSettings.configuredCommunityBudgetTiers) {
       setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
     } else {
       setAvailableBudgetTiers([]);
@@ -102,63 +102,73 @@ export default function AddCommunityProjectPage() {
 
   async function onSubmit(values: ProjectFormValues) {
     startTransition(async () => {
-      if (authLoading || !user || user.role !== 'platform_admin') {
-        toast({ title: 'Authentication Error', description: 'You must be logged in as an admin.', variant: 'destructive' });
-        return;
-      }
-
-      let imageUrls: string[] = [];
-      if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        selectedFiles.forEach(file => {
-          formData.append('files', file);
-        });
-
-        try {
-          const result = await uploadPropertyImages(formData); 
-          if (result.error) {
-            toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
-            return;
-          }
-          imageUrls = result.urls || [];
-        } catch (e: any) {
-          toast({ title: 'Image Upload Error', description: `An unexpected error occurred: ${e.message}`, variant: 'destructive' });
+      try {
+        if (authLoading || !user || user.role !== 'platform_admin') {
+          toast({ title: 'Authentication Error', description: 'You must be logged in as an admin.', variant: 'destructive' });
           return;
         }
+
+        let imageUrls: string[] = [];
+        if (selectedFiles.length > 0) {
+          const formData = new FormData();
+          selectedFiles.forEach(file => {
+            formData.append('files', file);
+          });
+
+          try {
+            const result = await uploadPropertyImages(formData); 
+            if (result.error) {
+              toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
+              return; // Exit if image upload fails
+            }
+            imageUrls = result.urls || [];
+          } catch (e: any) {
+            console.error("Image upload process error:", e);
+            toast({ title: 'Image Upload Error', description: `An unexpected error occurred during image upload: ${e.message}`, variant: 'destructive' });
+            return; // Exit if image upload has an exception
+          }
+        }
+        
+        const currentAdmin = user as PlatformAdmin;
+        const generatedHumanReadableId = generateCommunityProjectId();
+
+        const projectDataToInsert: TablesInsert<'community_projects'> = {
+          human_readable_id: generatedHumanReadableId,
+          title: values.title,
+          category: values.category,
+          description: values.description,
+          brochure_link: values.brochure_link || null,
+          budget_tier: values.budget_tiers,
+          images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
+          status: 'Pending Approval' as CommunityProjectStatus, 
+          managed_by_user_id: currentAdmin.id,
+        };
+
+        const { data: newProject, error: dbError } = await supabase
+          .from('community_projects')
+          .insert(projectDataToInsert)
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error("Error saving project to DB:", dbError);
+          toast({ title: 'Error Adding Project', description: `Could not save project: ${dbError.message}`, variant: 'destructive' });
+          return; // Exit if DB insert fails
+        }
+
+        toast({ title: 'Community Project Added!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is pending approval.` });
+        form.reset();
+        setSelectedFiles([]);
+        setImagePreviews([]); // Clear previews
+        router.push('/admin/dashboard/community-projects');
+
+      } catch (finalError: any) {
+        // This catch is for any unexpected errors not caught by inner try-catches or if checks
+        console.error("Critical error during project submission process:", finalError);
+        toast({ title: 'Critical Submission Error', description: `An critical error occurred: ${finalError.message || 'Unknown error. Check console.'}`, variant: 'destructive' });
+        // The promise from startTransition will reject here due to the error, 
+        // and useTransition should set isPending (isSubmitting) to false.
       }
-      
-      const currentAdmin = user as PlatformAdmin;
-      const generatedHumanReadableId = generateCommunityProjectId();
-
-      const projectDataToInsert: TablesInsert<'community_projects'> = {
-        human_readable_id: generatedHumanReadableId,
-        title: values.title,
-        category: values.category,
-        description: values.description,
-        brochure_link: values.brochure_link || null,
-        budget_tiers: values.budget_tiers, // Save array of selected tier names
-        images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-        status: 'Pending Approval' as CommunityProjectStatus, 
-        managed_by_user_id: currentAdmin.id,
-      };
-
-      const { data: newProject, error } = await supabase
-        .from('community_projects')
-        .insert(projectDataToInsert)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error saving project to DB:", error);
-        toast({ title: 'Error Adding Project', description: `Could not save project: ${error.message}`, variant: 'destructive' });
-        return;
-      }
-
-      toast({ title: 'Community Project Added!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is pending approval.` });
-      form.reset();
-      setSelectedFiles([]);
-      setImagePreviews([]);
-      router.push('/admin/dashboard/community-projects');
     });
   }
  
@@ -187,67 +197,73 @@ export default function AddCommunityProjectPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Users2 className="w-4 h-4 mr-1"/>Project Title</FormLabel> <FormControl><Input placeholder="e.g., Clean Water Initiative for XYZ Village" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description</FormLabel> <FormControl><Textarea placeholder="Detailed description of the project, its goals, and impact..." {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )} />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+              <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
                  
                 <FormField
                   control={form.control}
                   name="budget_tiers"
                   render={() => (
                     <FormItem>
-                      <div className="mb-4">
+                      <div className="mb-2">
                         <FormLabel className="text-base flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tiers</FormLabel>
                         <FormDescription>
                           Select one or more applicable budget tiers for this project.
                         </FormDescription>
                       </div>
                       {availableBudgetTiers.length > 0 ? (
-                        availableBudgetTiers.map((tierName) => (
-                          <FormField
-                            key={tierName}
-                            control={form.control}
-                            name="budget_tiers"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={tierName}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(tierName)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...(field.value || []), tierName])
-                                          : field.onChange(
-                                              (field.value || []).filter(
-                                                (value) => value !== tierName
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          {availableBudgetTiers.map((tierName) => (
+                            <FormField
+                              key={tierName}
+                              control={form.control}
+                              name="budget_tiers"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem
+                                    key={tierName}
+                                    className="flex flex-row items-center space-x-2 space-y-0 p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                                  >
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(tierName)}
+                                        onCheckedChange={(checked) => {
+                                          const currentTiers = field.value || [];
+                                          return checked
+                                            ? field.onChange([...currentTiers, tierName])
+                                            : field.onChange(
+                                                currentTiers.filter(
+                                                  (value) => value !== tierName
+                                                )
                                               )
-                                            )
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal">
-                                    {tierName}
-                                  </FormLabel>
-                                </FormItem>
-                              )
-                            }}
-                          />
-                        ))
+                                        }}
+                                        id={`tier-${tierName.replace(/\s+/g, '-')}`}
+                                      />
+                                    </FormControl>
+                                    <FormLabel htmlFor={`tier-${tierName.replace(/\s+/g, '-')}`} className="font-normal text-sm cursor-pointer flex-grow">
+                                      {tierName}
+                                    </FormLabel>
+                                  </FormItem>
+                                )
+                              }}
+                            />
+                          ))}
+                        </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">No budget tiers configured yet by admin.</p>
                       )}
-                      {availableBudgetTiers.length === 0 && <FormDescription className="text-xs text-destructive">Budget tiers not configured by admin. Please set them in Platform Settings.</FormDescription>}
+                      {availableBudgetTiers.length === 0 && platformSettings && !platformSettings.configuredCommunityBudgetTiers?.trim() && (
+                        <FormDescription className="text-xs text-destructive">
+                          Budget tiers not configured by admin. Please set them in Platform Settings.
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
 
               <FormItem>
                 <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Project Images (Max 10)</FormLabel>
