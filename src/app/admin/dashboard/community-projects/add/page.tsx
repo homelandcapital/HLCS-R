@@ -55,10 +55,10 @@ export default function AddCommunityProjectPage() {
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-        setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    if (platformSettings && platformSettings.configuredCommunityBudgetTiers) {
+      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
     } else {
-        setAvailableBudgetTiers([]);
+      setAvailableBudgetTiers([]);
     }
   }, [platformSettings]);
 
@@ -103,9 +103,11 @@ export default function AddCommunityProjectPage() {
 
   async function onSubmit(values: ProjectFormValues) {
     startTransition(async () => {
+      console.log('[onSubmit] Transition started');
       try {
         if (authLoading || !user || user.role !== 'platform_admin') {
           toast({ title: 'Authentication Error', description: 'You must be logged in as an admin.', variant: 'destructive' });
+          console.log('[onSubmit] Auth check failed, returning.');
           return;
         }
 
@@ -115,19 +117,19 @@ export default function AddCommunityProjectPage() {
           selectedFiles.forEach(file => {
             formData.append('files', file);
           });
+          
+          console.log('[onSubmit] Starting image upload...');
+          const uploadResult = await uploadPropertyImages(formData);
+          console.log('[onSubmit] Image upload finished. Result:', uploadResult);
 
-          try {
-            const result = await uploadPropertyImages(formData); 
-            if (result.error) {
-              toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
-              return; 
-            }
-            imageUrls = result.urls || [];
-          } catch (e: any) {
-            console.error("Image upload process error:", e);
-            toast({ title: 'Image Upload Error', description: `An unexpected error occurred during image upload: ${e.message}`, variant: 'destructive' });
-            return;
+          if (uploadResult.error) {
+            toast({ title: 'Image Upload Failed', description: uploadResult.error, variant: 'destructive' });
+            console.log('[onSubmit] Image upload error, returning.');
+            return; 
           }
+          imageUrls = uploadResult.urls || [];
+        } else {
+          console.log('[onSubmit] No files to upload.');
         }
         
         const currentAdmin = user as PlatformAdmin;
@@ -141,19 +143,22 @@ export default function AddCommunityProjectPage() {
           brochure_link: values.brochure_link || null,
           budget_tier: values.budget_tiers,
           images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-          status: 'Ongoing' as CommunityProjectStatus, // Changed from 'Pending Approval'
+          status: 'Ongoing' as CommunityProjectStatus,
           managed_by_user_id: currentAdmin.id,
         };
-
+        
+        console.log('[onSubmit] Starting database insert...', projectDataToInsert);
         const { data: newProject, error: dbError } = await supabase
           .from('community_projects')
           .insert(projectDataToInsert)
           .select()
           .single();
+        console.log('[onSubmit] Database insert finished. Error:', dbError, 'Data:', newProject);
 
         if (dbError) {
           console.error("Error saving project to DB:", dbError);
           toast({ title: 'Error Adding Project', description: `Could not save project: ${dbError.message}`, variant: 'destructive' });
+          console.log('[onSubmit] DB insert error, returning.');
           return;
         }
 
@@ -162,10 +167,13 @@ export default function AddCommunityProjectPage() {
         setSelectedFiles([]);
         setImagePreviews([]); 
         router.push('/admin/dashboard/community-projects');
+        console.log('[onSubmit] Submission successful.');
 
-      } catch (finalError: any) {
-        console.error("Critical error during project submission process:", finalError);
-        toast({ title: 'Critical Submission Error', description: `An critical error occurred: ${finalError.message || 'Unknown error. Check console.'}`, variant: 'destructive' });
+      } catch (error: any) {
+        console.error("[onSubmit] Critical error during project submission process:", error);
+        toast({ title: 'Critical Submission Error', description: `An critical error occurred: ${error.message || 'Unknown error. Check console.'}`, variant: 'destructive' });
+      } finally {
+        console.log('[onSubmit] Transition block finished.');
       }
     });
   }
@@ -183,7 +191,7 @@ export default function AddCommunityProjectPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Community Project
         </h1>
-        <p className="text-muted-foreground">Fill in the details for the new community project. A unique ID will be generated and it will be published immediately.</p>
+        <p className="text-muted-foreground">Fill in the details for the new community project. It will be published immediately with an "Ongoing" status.</p>
       </div>
 
       <Card className="shadow-xl">
