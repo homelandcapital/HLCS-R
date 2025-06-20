@@ -13,15 +13,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect } from 'react';
-import { PlusCircle, UploadCloud, Users2, MapPin, DollarSign, CalendarDays, Briefcase, Hash } from 'lucide-react';
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { NigerianState, CommunityProjectCategory, CommunityProjectStatus, PlatformAdmin } from '@/lib/types';
-import { nigerianStates, communityProjectCategories, communityProjectStatuses } from '@/lib/types';
+import type { CommunityProjectCategory, CommunityProjectBudgetTier, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
+import { communityProjectCategories, communityProjectBudgetTiers } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
-// import { uploadPropertyImages } from '@/actions/upload-images'; // TODO: Adapt for community project images if needed
+import NextImage from 'next/image';
+import { uploadPropertyImages } from '@/actions/upload-images'; // Re-use for project images
 
 function generateCommunityProjectId(): string {
   const yearDigits = new Date().getFullYear().toString().slice(-2);
@@ -37,16 +38,9 @@ const projectFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   category: z.enum(communityProjectCategories as [CommunityProjectCategory, ...CommunityProjectCategory[]], { required_error: "Project category is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
-  location_description: z.string().min(5, { message: 'Location description is required.' }),
-  state: z.enum(nigerianStates, { required_error: "State is required."}),
-  status: z.enum(communityProjectStatuses as [CommunityProjectStatus, ...CommunityProjectStatus[]], { required_error: "Project status is required."}),
-  organization_name: z.string().optional(),
-  contact_email: z.string().email({ message: "Invalid email format."}).optional().or(z.literal('')),
-  funding_goal: z.preprocess(val => (val === "" || val === undefined ? undefined : Number(val)), z.number().positive({ message: 'Funding goal must be positive if provided.' }).optional()),
-  current_funding: z.preprocess(val => (val === "" || val === undefined ? 0 : Number(val)), z.number().min(0, { message: 'Current funding cannot be negative.' }).optional().default(0)),
-  start_date: z.preprocess(val => (val ? new Date(val as string).toISOString().split('T')[0] : undefined), z.string().optional()),
-  expected_completion_date: z.preprocess(val => (val ? new Date(val as string).toISOString().split('T')[0] : undefined), z.string().optional()),
-  // images field will be handled separately
+  brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
+  budget_tier: z.enum(communityProjectBudgetTiers as [CommunityProjectBudgetTier, ...CommunityProjectBudgetTier[]], { required_error: "Budget tier is required."}),
+  // Images field will be handled separately via selectedFiles state
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -57,7 +51,7 @@ export default function AddCommunityProjectPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  // const [imagePreviews, setImagePreviews] = useState<string[]>([]); // For image previews if implemented
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -65,24 +59,41 @@ export default function AddCommunityProjectPage() {
       title: '',
       category: undefined,
       description: '',
-      location_description: '',
-      state: undefined,
-      status: 'Planning',
-      organization_name: '',
-      contact_email: '',
-      funding_goal: undefined,
-      current_funding: 0,
-      start_date: undefined,
-      expected_completion_date: undefined,
+      brochure_link: '',
+      budget_tier: undefined,
     },
   });
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const filesArray = Array.from(event.target.files);
+      // Limit to, say, 10 images
+      setSelectedFiles(prevFiles => [...prevFiles, ...filesArray].slice(0, 10)); 
 
-  // File handling (simplified for now, assumes URL input or separate upload mechanism)
-  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   if (event.target.files) {
-  //     // Placeholder for actual file handling and preview logic
-  //   }
-  // };
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setImagePreviews(prevPreviews => [...prevPreviews, ...newPreviews].slice(0, 10));
+    }
+  };
+
+  const removeImage = (indexToRemove: number) => {
+    setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
+    setImagePreviews(prevPreviews => {
+      const newPreviews = prevPreviews.filter((_, index) => index !== indexToRemove);
+      // Revoke object URL to free up memory
+      if (prevPreviews[indexToRemove]) {
+        URL.revokeObjectURL(prevPreviews[indexToRemove]);
+      }
+      return newPreviews;
+    });
+  };
+  
+  useEffect(() => {
+    // Cleanup object URLs when component unmounts or previews change
+    return () => {
+      imagePreviews.forEach(previewUrl => URL.revokeObjectURL(previewUrl));
+    };
+  }, [imagePreviews]);
+
 
   async function onSubmit(values: ProjectFormValues) {
     startTransition(async () => {
@@ -91,9 +102,26 @@ export default function AddCommunityProjectPage() {
         return;
       }
 
-      // Image upload logic would go here if using a direct uploader.
-      // For now, we'll assume images are URLs added manually or later.
-      const imageUrls: string[] = ['https://placehold.co/600x400.png?text=Project+Image']; 
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+
+        try {
+          // Using the same upload action as properties for now, folder can be adjusted in action if needed
+          const result = await uploadPropertyImages(formData); 
+          if (result.error) {
+            toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
+            return;
+          }
+          imageUrls = result.urls || [];
+        } catch (e: any) {
+          toast({ title: 'Image Upload Error', description: `An unexpected error occurred: ${e.message}`, variant: 'destructive' });
+          return;
+        }
+      }
       
       const currentAdmin = user as PlatformAdmin;
       const generatedHumanReadableId = generateCommunityProjectId();
@@ -103,16 +131,10 @@ export default function AddCommunityProjectPage() {
         title: values.title,
         category: values.category,
         description: values.description,
-        location_description: values.location_description,
-        state: values.state,
-        status: values.status,
-        organization_name: values.organization_name || null,
-        contact_email: values.contact_email || null,
-        funding_goal: values.funding_goal ? Number(values.funding_goal) : null,
-        current_funding: values.current_funding ? Number(values.current_funding) : 0,
-        start_date: values.start_date || null,
-        expected_completion_date: values.expected_completion_date || null,
-        images: imageUrls, 
+        brochure_link: values.brochure_link || null,
+        budget_tier: values.budget_tier,
+        images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
+        status: 'Pending Approval' as CommunityProjectStatus, // Default status
         managed_by_user_id: currentAdmin.id,
       };
 
@@ -128,16 +150,16 @@ export default function AddCommunityProjectPage() {
         return;
       }
 
-      toast({ title: 'Community Project Added!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added.` });
+      toast({ title: 'Community Project Added!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is pending approval.` });
       form.reset();
-      // setSelectedFiles([]);
-      // setImagePreviews([]);
+      setSelectedFiles([]);
+      setImagePreviews([]);
       router.push('/admin/dashboard/community-projects');
     });
   }
 
   if (authLoading) {
-    return <Skeleton className="h-[500px] w-full" />; // Basic loading state
+    return <Skeleton className="h-[500px] w-full" />;
   }
    if (user?.role !== 'platform_admin') {
      return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for platform administrators only.</p> </div> );
@@ -164,21 +186,43 @@ export default function AddCommunityProjectPage() {
                 <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description</FormLabel> <FormControl><Textarea placeholder="Detailed description of the project, its goals, and impact..." {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )} />
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="location_description" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1"/>Location Description</FormLabel> <FormControl><Input placeholder="e.g., Villages in Ogbomosho South LGA" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="state" render={({ field }) => ( <FormItem> <FormLabel>State</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl> <SelectContent>{nigerianStates.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="status" render={({ field }) => ( <FormItem> <FormLabel>Status</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project status" /></SelectTrigger></FormControl> <SelectContent>{communityProjectStatuses.map(s => (<SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="organization_name" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Briefcase className="w-4 h-4 mr-1"/>Organization (Optional)</FormLabel> <FormControl><Input placeholder="e.g., XYZ Foundation" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="contact_email" render={({ field }) => ( <FormItem> <FormLabel>Contact Email (Optional)</FormLabel> <FormControl><Input type="email" placeholder="contact@organization.org" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                 <FormField control={form.control} name="brochure_link" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><LinkIcon className="w-4 h-4 mr-1"/>Brochure Link (Optional)</FormLabel> <FormControl><Input type="url" placeholder="https://example.com/brochure.pdf" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                 <FormField control={form.control} name="budget_tier" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Budget Tier</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select budget tier" /></SelectTrigger></FormControl> <SelectContent>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="funding_goal" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Funding Goal (NGN, Optional)</FormLabel> <FormControl><Input type="number" placeholder="e.g., 5000000" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="current_funding" render={({ field }) => ( <FormItem> <FormLabel>Current Funding (NGN, Optional)</FormLabel> <FormControl><Input type="number" placeholder="e.g., 1500000" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="start_date" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><CalendarDays className="w-4 h-4 mr-1"/>Start Date (Optional)</FormLabel> <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="expected_completion_date" render={({ field }) => ( <FormItem> <FormLabel>Expected Completion (Optional)</FormLabel> <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
-              </div>
-              {/* Placeholder for Image Upload - To be implemented more fully later */}
-              <FormItem> <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1"/>Project Images (URLs for now)</FormLabel> <FormControl><Input placeholder="Enter comma-separated image URLs" /></FormControl> <FormDescription>For now, please provide URLs. Direct upload coming soon.</FormDescription> </FormItem>
+
+              <FormItem>
+                <FormLabel className="flex items-center"><ImageIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Project Images (Max 10)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="file" 
+                    multiple 
+                    onChange={handleFileChange} 
+                    accept="image/*" 
+                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  />
+                </FormControl>
+                <FormDescription>Select one or more images for the project.</FormDescription>
+                {imagePreviews.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {imagePreviews.map((previewUrl, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <NextImage src={previewUrl} alt={`Preview ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={() => removeImage(index)}
+                          aria-label={`Remove image ${index + 1}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </FormItem>
+              
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || authLoading}>
                 {isSubmitting ? 'Adding Project...' : 'Add Community Project'}
               </Button>
@@ -189,3 +233,5 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
+
+    

@@ -133,6 +133,9 @@ export const communityProjectCategories: CommunityProjectCategory[] = ["Water Su
 export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
 export const communityProjectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
 
+export type CommunityProjectBudgetTier = "Below 5 Million NGN" | "5 Million NGN and Above";
+export const communityProjectBudgetTiers: CommunityProjectBudgetTier[] = ["Below 5 Million NGN", "5 Million NGN and Above"];
+
 
 export interface CommunityProject {
   id: string; // UUID
@@ -140,20 +143,24 @@ export interface CommunityProject {
   title: string; // TEXT
   category: CommunityProjectCategory; // Relies on DB enum
   description: string; // TEXT
-  location_description: string; // TEXT
-  state: NigerianState; // Relies on DB enum
+  brochure_link?: string | null; // TEXT, new
   images?: string[] | null; // JSONB array of URLs
-  status: CommunityProjectStatus; // Relies on DB enum
-  funding_goal?: number | null; // NUMERIC
-  current_funding?: number | null; // NUMERIC, default 0
-  start_date?: string | null; // DATE (ISO string)
-  expected_completion_date?: string | null; // DATE (ISO string)
-  contact_email?: string | null; // TEXT
-  organization_name?: string | null; // TEXT
+  budget_tier?: CommunityProjectBudgetTier | null; // Relies on DB enum, new
+  status: CommunityProjectStatus; // Relies on DB enum (kept for admin management, default on add)
   created_at: string; // TIMESTAMPTZ (ISO string)
   updated_at: string; // TIMESTAMPTZ (ISO string)
   managed_by_user_id: string | null; // UUID, FK to users table
   manager?: AuthenticatedUser | null; // For populated manager data (admin/agent)
+
+  // Removed fields:
+  // location_description: string;
+  // state: NigerianState;
+  // funding_goal?: number | null;
+  // current_funding?: number | null;
+  // start_date?: string | null;
+  // expected_completion_date?: string | null;
+  // contact_email?: string | null;
+  // organization_name?: string | null;
 }
 
 
@@ -343,3 +350,5 @@ export interface PlatformSettings {
 }
 
 import type { Database } from './database.types';
+
+    

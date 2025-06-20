@@ -3,20 +3,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus, NigerianState } from '@/lib/types';
+import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus, CommunityProjectBudgetTier } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Users2, MapPin, CalendarDays, Target, Filter, Search, ArrowRight } from 'lucide-react';
+import { Users2, Filter, Search, ArrowRight, DollarSign, Link as LinkIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { nigerianStates, communityProjectCategories, communityProjectStatuses } from '@/lib/types';
-import { format } from 'date-fns';
+import { communityProjectCategories, communityProjectBudgetTiers } from '@/lib/types'; // Only public filterable enums
 
 export default function CommunityProjectsPage() {
   const [projects, setProjects] = useState<CommunityProject[]>([]);
@@ -26,8 +25,10 @@ export default function CommunityProjectsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<CommunityProjectStatus | 'all'>('all');
-  const [stateFilter, setStateFilter] = useState<NigerianState | 'all'>('all');
+  const [budgetTierFilter, setBudgetTierFilter] = useState<CommunityProjectBudgetTier | 'all'>('all');
+  
+  // Publicly viewable statuses
+  const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
 
 
   const fetchProjects = useCallback(async () => {
@@ -35,7 +36,7 @@ export default function CommunityProjectsPage() {
     let query = supabase
       .from('community_projects')
       .select('*, manager:users!community_projects_managed_by_user_id_fkey(id, name, email, role)')
-      .in('status', ['Ongoing', 'Funding', 'Planning', 'Completed']) // Only show these statuses publicly
+      .in('status', publicDisplayStatuses) 
       .order('created_at', { ascending: false });
     
     const { data, error } = await query;
@@ -49,15 +50,15 @@ export default function CommunityProjectsPage() {
         ...p,
         category: p.category as CommunityProjectCategory,
         status: p.status as CommunityProjectStatus,
-        state: p.state as NigerianState,
+        budget_tier: p.budget_tier as CommunityProjectBudgetTier | null,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as CommunityProject[];
       setProjects(formattedProjects);
-      setFilteredProjects(formattedProjects); // Initialize filtered list
+      setFilteredProjects(formattedProjects); 
     }
     setLoading(false);
-  }, [toast]);
+  }, [toast, publicDisplayStatuses]);
 
   useEffect(() => {
     fetchProjects();
@@ -68,25 +69,19 @@ export default function CommunityProjectsPage() {
     if (categoryFilter !== 'all') {
       tempProjects = tempProjects.filter(p => p.category === categoryFilter);
     }
-    if (statusFilter !== 'all') {
-      tempProjects = tempProjects.filter(p => p.status === statusFilter);
-    }
-    if (stateFilter !== 'all') {
-      tempProjects = tempProjects.filter(p => p.state === stateFilter);
+    if (budgetTierFilter !== 'all') {
+      tempProjects = tempProjects.filter(p => p.budget_tier === budgetTierFilter);
     }
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       tempProjects = tempProjects.filter(p => 
         p.title.toLowerCase().includes(lowerSearch) ||
-        p.description.toLowerCase().includes(lowerSearch) ||
-        p.location_description.toLowerCase().includes(lowerSearch) ||
-        (p.organization_name && p.organization_name.toLowerCase().includes(lowerSearch))
+        p.description.toLowerCase().includes(lowerSearch)
       );
     }
     setFilteredProjects(tempProjects);
-  }, [searchTerm, categoryFilter, statusFilter, stateFilter, projects]);
+  }, [searchTerm, categoryFilter, budgetTierFilter, projects]);
 
-  const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
 
   return (
     <div className="space-y-8">
@@ -104,21 +99,17 @@ export default function CommunityProjectsPage() {
           <CardTitle className="font-headline text-xl flex items-center"><Filter className="w-5 h-5 mr-2"/>Filter Projects</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-           <div className="relative sm:col-span-2 lg:col-span-1">
+           <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search projects..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              <Input placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
           <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CommunityProjectCategory | 'all')}>
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
             <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CommunityProjectStatus | 'all')}>
-            <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Statuses</SelectItem>{publicDisplayStatuses.map(stat => (<SelectItem key={stat} value={stat} className="capitalize">{stat}</SelectItem>))}</SelectContent>
-          </Select>
-          <Select value={stateFilter} onValueChange={(value) => setStateFilter(value as NigerianState | 'all')}>
-            <SelectTrigger><SelectValue placeholder="Filter by State" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All States</SelectItem>{nigerianStates.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent>
+          <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as CommunityProjectBudgetTier | 'all')}>
+            <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
+            <SelectContent><SelectItem value="all">All Budget Tiers</SelectItem>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent>
           </Select>
         </CardContent>
       </Card>
@@ -180,26 +171,18 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         <Link href={`/community-projects/${project.id}`}>
           <CardTitle className="text-xl font-headline mb-2 hover:text-primary transition-colors line-clamp-2">{project.title}</CardTitle>
         </Link>
-        <div className="flex items-center text-sm text-muted-foreground mb-1">
-          <MapPin className="w-4 h-4 mr-1 shrink-0" /> {project.location_description}, {project.state}
-        </div>
-        {project.organization_name && <p className="text-xs text-muted-foreground mb-2">By: {project.organization_name}</p>}
-        <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>
-        {project.start_date && (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <CalendarDays className="w-3 h-3 mr-1 shrink-0" />
-            Start: {format(new Date(project.start_date), "MMM yyyy")}
-            {project.expected_completion_date && ` - Expected End: ${format(new Date(project.expected_completion_date), "MMM yyyy")}`}
-          </div>
-        )}
-        {(project.funding_goal && project.funding_goal > 0) && (
-           <div className="mt-2">
-             <p className="text-xs text-muted-foreground">Funding: ₦{project.current_funding?.toLocaleString() || 0} / ₦{project.funding_goal.toLocaleString()}</p>
-            {/* Basic progress bar - can be enhanced */}
-            <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-              <div className="bg-primary h-1.5 rounded-full" style={{ width: `${Math.min(100, ((project.current_funding || 0) / project.funding_goal) * 100)}%` }}></div>
+        {project.budget_tier && (
+            <div className="flex items-center text-sm text-muted-foreground mb-1">
+                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier}
             </div>
-           </div>
+        )}
+        <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>
+         {project.brochure_link && (
+            <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs mb-2">
+                <a href={project.brochure_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center">
+                    <LinkIcon className="w-3 h-3 mr-1"/> View Brochure <ExternalLink className="w-3 h-3 ml-0.5"/>
+                </a>
+            </Button>
         )}
       </CardContent>
       <CardFooter className="p-4 border-t mt-auto">
@@ -210,3 +193,5 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
+
+    

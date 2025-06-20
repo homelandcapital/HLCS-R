@@ -9,6 +9,77 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      community_projects: {
+        Row: {
+          category: Database["public"]["Enums"]["community_project_category_enum"]
+          contact_email: string | null
+          created_at: string
+          current_funding: number | null
+          description: string
+          expected_completion_date: string | null
+          funding_goal: number | null
+          human_readable_id: string
+          id: string
+          images: Json | null
+          location_description: string
+          managed_by_user_id: string | null
+          organization_name: string | null
+          start_date: string | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
+          status: Database["public"]["Enums"]["community_project_status_enum"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["community_project_category_enum"]
+          contact_email?: string | null
+          created_at?: string
+          current_funding?: number | null
+          description: string
+          expected_completion_date?: string | null
+          funding_goal?: number | null
+          human_readable_id: string
+          id?: string
+          images?: Json | null
+          location_description: string
+          managed_by_user_id?: string | null
+          organization_name?: string | null
+          start_date?: string | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
+          status?: Database["public"]["Enums"]["community_project_status_enum"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["community_project_category_enum"]
+          contact_email?: string | null
+          created_at?: string
+          current_funding?: number | null
+          description?: string
+          expected_completion_date?: string | null
+          funding_goal?: number | null
+          human_readable_id?: string
+          id?: string
+          images?: Json | null
+          location_description?: string
+          managed_by_user_id?: string | null
+          organization_name?: string | null
+          start_date?: string | null
+          state?: Database["public"]["Enums"]["nigerian_state_enum"]
+          status?: Database["public"]["Enums"]["community_project_status_enum"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_projects_managed_by_user_id_fkey"
+            columns: ["managed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inquiries: {
         Row: {
           created_at: string
@@ -330,6 +401,21 @@ export type Database = {
       }
     }
     Enums: {
+      community_project_category_enum:
+        | "Water Supply"
+        | "Education Support"
+        | "Health Program"
+        | "Nutrition Support"
+        | "Other"
+      community_project_status_enum:
+        | "Planning"
+        | "Funding"
+        | "Ongoing"
+        | "Completed"
+        | "On Hold"
+        | "Canceled"
+        | "Pending Approval"
+        | "Rejected"
       inquiry_status: "new" | "contacted" | "resolved" | "archived"
       inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
@@ -490,6 +576,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      community_project_category_enum: [
+        "Water Supply",
+        "Education Support",
+        "Health Program",
+        "Nutrition Support",
+        "Other",
+      ],
+      community_project_status_enum: [
+        "Planning",
+        "Funding",
+        "Ongoing",
+        "Completed",
+        "On Hold",
+        "Canceled",
+        "Pending Approval",
+        "Rejected",
+      ],
       inquiry_status: ["new", "contacted", "resolved", "archived"],
       inquiry_status_enum: ["new", "contacted", "resolved", "archived"],
       listing_type_enum: ["For Sale", "For Rent", "For Lease"],

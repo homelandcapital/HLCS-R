@@ -3,11 +3,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory } from '@/lib/types';
+import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory, CommunityProjectBudgetTier } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users2, Search, PlusCircle, Eye, Edit2, CheckCircle, XCircle, Filter } from 'lucide-react';
+import { Users2, Search, PlusCircle, Eye, Edit2, CheckCircle, XCircle, Filter, Link as LinkIcon, DollarSign, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
-import { format } from 'date-fns';
+import { communityProjectCategories, communityProjectBudgetTiers, communityProjectStatuses } from '@/lib/types'; // Import enums
 
 export default function CommunityProjectsManagementPage() {
   const { user: adminUser, loading: authLoading } = useAuth();
@@ -26,12 +26,8 @@ export default function CommunityProjectsManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CommunityProjectStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
+  const [budgetTierFilter, setBudgetTierFilter] = useState<CommunityProjectBudgetTier | 'all'>('all');
   const { toast } = useToast();
-
-  // Use actual enum arrays from types.ts
-  const projectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
-  const projectCategories: CommunityProjectCategory[] = ["Water Supply", "Education Support", "Health Program", "Nutrition Support", "Other"];
-
 
   const fetchProjects = useCallback(async () => {
     setPageLoading(true);
@@ -48,8 +44,8 @@ export default function CommunityProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as CommunityProjectCategory,
+        budget_tier: p.budget_tier as CommunityProjectBudgetTier | null,
         status: p.status as CommunityProjectStatus,
-        state: p.state as any, // Assuming NigerianState is correctly typed
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as CommunityProject[];
@@ -74,25 +70,27 @@ export default function CommunityProjectsManagementPage() {
     if (categoryFilter !== 'all') {
       projects = projects.filter(project => project.category === categoryFilter);
     }
+    if (budgetTierFilter !== 'all') {
+      projects = projects.filter(project => project.budget_tier === budgetTierFilter);
+    }
     if (searchTerm) {
       const lowerSearchTerm = searchTerm.toLowerCase();
       projects = projects.filter(project =>
         project.title.toLowerCase().includes(lowerSearchTerm) ||
         project.human_readable_id.toLowerCase().includes(lowerSearchTerm) ||
-        project.location_description.toLowerCase().includes(lowerSearchTerm) ||
-        (project.organization_name && project.organization_name.toLowerCase().includes(lowerSearchTerm))
+        project.description.toLowerCase().includes(lowerSearchTerm)
       );
     }
     setFilteredProjects(projects);
-  }, [searchTerm, statusFilter, categoryFilter, allProjects]);
+  }, [searchTerm, statusFilter, categoryFilter, budgetTierFilter, allProjects]);
 
   const getStatusBadgeVariant = (status: CommunityProjectStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'Pending Approval': return 'default';
       case 'Ongoing': case 'Funding': return 'secondary';
-      case 'Completed': return 'outline'; // Success like variant (e.g., green if customized)
+      case 'Completed': return 'outline'; 
       case 'Rejected': case 'Canceled': return 'destructive';
-      case 'Planning': case 'On Hold': return 'secondary'; // Neutral or informative
+      case 'Planning': case 'On Hold': return 'secondary'; 
       default: return 'outline';
     }
   };
@@ -108,7 +106,7 @@ export default function CommunityProjectsManagementPage() {
       return false;
     }
     toast({ title: `Project ${newStatus}`, description: `The project status has been updated.` });
-    fetchProjects(); // Refresh the list
+    fetchProjects(); 
     return true;
   };
 
@@ -151,22 +149,26 @@ export default function CommunityProjectsManagementPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">All Projects</CardTitle>
           <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="relative sm:col-span-2 lg:col-span-1">
+            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search by ID, title, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              <Input placeholder="Search by ID, title, description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CommunityProjectCategory | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Categories</SelectItem>{projectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            </Select>
+            <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as CommunityProjectBudgetTier | 'all')}>
+              <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Budget Tiers</SelectItem>{communityProjectBudgetTiers.map(tier => (<SelectItem key={tier} value={tier}>{tier}</SelectItem>))}</SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CommunityProjectStatus | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Statuses</SelectItem>{projectStatuses.map(stat => (<SelectItem key={stat} value={stat} className="capitalize">{stat}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Statuses</SelectItem>{communityProjectStatuses.map(stat => (<SelectItem key={stat} value={stat} className="capitalize">{stat}</SelectItem>))}</SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
-          {filteredProjects.length === 0 && (searchTerm || statusFilter !== 'all' || categoryFilter !== 'all') ? (
+          {filteredProjects.length === 0 && (searchTerm || statusFilter !== 'all' || categoryFilter !== 'all' || budgetTierFilter !== 'all') ? (
             <div className="text-center py-10"><p className="text-lg font-medium">No projects match your filters.</p><p className="text-muted-foreground">Try adjusting your search or filters.</p></div>
           ) : allProjects.length === 0 ? (
             <div className="text-center py-10"><p className="text-lg font-medium">No projects found.</p><p className="text-muted-foreground">There are currently no community projects listed.</p></div>
@@ -175,7 +177,7 @@ export default function CommunityProjectsManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Location</TableHead><TableHead>Status</TableHead><TableHead>Managed By</TableHead><TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Budget Tier</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -186,19 +188,26 @@ export default function CommunityProjectsManagementPage() {
                         <div className="text-xs text-muted-foreground">{project.human_readable_id}</div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{project.category}</Badge></TableCell>
+                      <TableCell><Badge variant="secondary" className="flex items-center w-fit"><DollarSign className="h-3 w-3 mr-1"/>{project.budget_tier || 'N/A'}</Badge></TableCell>
                       <TableCell>
-                        <div className="text-sm">{project.location_description}</div>
-                        <div className="text-xs text-muted-foreground">{project.state}</div>
+                        {project.brochure_link ? (
+                          <Button variant="link" size="sm" asChild className="p-0 h-auto">
+                            <a href={project.brochure_link} target="_blank" rel="noopener noreferrer" className="flex items-center">
+                              View Link <ExternalLink className="h-3 w-3 ml-1"/>
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
                       </TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(project.status)} className="capitalize text-sm px-3 py-1">{project.status}</Badge></TableCell>
-                      <TableCell>{project.manager?.name || 'N/A'}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="icon" asChild title="View Project Details">
                            <Link href={`/community-projects/${project.id}`} target="_blank" rel="noopener noreferrer"><span><Eye className="h-4 w-4" /></span></Link>
                         </Button>
                         {project.status === 'Pending Approval' && (
                           <>
-                            <Button variant="default" size="icon" onClick={() => handleUpdateStatus(project.id, 'Ongoing')} title="Approve Project" className="bg-green-500 hover:bg-green-600"><CheckCircle className="h-4 w-4" /></Button>
+                            <Button variant="default" size="icon" onClick={() => handleUpdateStatus(project.id, 'Ongoing')} title="Approve Project (Mark as Ongoing)" className="bg-green-500 hover:bg-green-600"><CheckCircle className="h-4 w-4" /></Button>
                             <Button variant="destructive" size="icon" onClick={() => handleUpdateStatus(project.id, 'Rejected')} title="Reject Project"><XCircle className="h-4 w-4" /></Button>
                           </>
                         )}
@@ -215,3 +224,5 @@ export default function CommunityProjectsManagementPage() {
     </div>
   );
 }
+
+    
