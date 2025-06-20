@@ -6,7 +6,8 @@ import React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { CommunityProject, AuthenticatedUser } from '@/lib/types';
+import type { CommunityProject, AuthenticatedUser, NigerianStateCapital } from '@/lib/types';
+import { nigerianStateCapitals } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -19,11 +20,12 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDesc, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDesc, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,10 +35,30 @@ import { z } from 'zod';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const interestFormSchema = z.object({
-  location: z.string().min(3, { message: "Please specify your desired location." }),
+  locationType: z.enum(['stateCapital', 'lga'], {
+    required_error: "Please select a location type (State Capital or LGA).",
+  }),
+  stateCapital: z.string().optional(),
+  lgaName: z.string().optional(),
   selectedBudgetTier: z.string().min(1, { message: "Please select a budget tier." }),
   message: z.string().min(10, { message: "Message should be at least 10 characters long." }).optional(),
+}).superRefine((data, ctx) => {
+  if (data.locationType === 'stateCapital' && !data.stateCapital) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Please select a state capital.",
+      path: ['stateCapital'],
+    });
+  }
+  if (data.locationType === 'lga' && (!data.lgaName || data.lgaName.trim().length < 3)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "LGA name must be at least 3 characters.",
+      path: ['lgaName'],
+    });
+  }
 });
+
 type InterestFormValues = z.infer<typeof interestFormSchema>;
 
 
@@ -56,11 +78,15 @@ export default function CommunityProjectDetailsPage() {
   const interestForm = useForm<InterestFormValues>({
     resolver: zodResolver(interestFormSchema),
     defaultValues: {
-      location: '',
+      locationType: undefined,
+      stateCapital: '',
+      lgaName: '',
       selectedBudgetTier: '',
       message: '',
     },
   });
+
+  const watchedLocationType = interestForm.watch('locationType');
 
   useEffect(() => {
     if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
@@ -87,7 +113,7 @@ export default function CommunityProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as CommunityProject['category'],
-        budget_tiers: data.budget_tier ? (Array.isArray(data.budget_tier) ? data.budget_tier : []) : [],
+        budget_tiers: data.budget_tiers ? (Array.isArray(data.budget_tiers) ? data.budget_tiers : []) : [],
         status: data.status as CommunityProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -134,6 +160,13 @@ export default function CommunityProjectDetailsPage() {
       router.push('/agents/login');
       return;
     }
+    interestForm.reset({ // Reset form with potentially new defaults if project/auth changes
+      locationType: undefined,
+      stateCapital: '',
+      lgaName: '',
+      selectedBudgetTier: '',
+      message: '',
+    });
     setIsInterestDialogOpen(true);
   };
 
@@ -178,7 +211,6 @@ export default function CommunityProjectDetailsPage() {
             <div>
               <h1 className="text-3xl md:text-4xl font-headline text-primary mb-1">{project.title}</h1>
               <div className="text-sm text-muted-foreground mb-1 flex items-center"> <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id} </div>
-              <div className="flex items-center text-muted-foreground text-sm mb-2"> <Badge variant="outline" className="mr-2 capitalize">{project.category}</Badge> </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
               <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="text-lg px-4 py-2 capitalize">{project.status}</Badge>
@@ -243,15 +275,76 @@ export default function CommunityProjectDetailsPage() {
             <form onSubmit={interestForm.handleSubmit(handleInterestSubmit)} className="space-y-4 py-4">
               <FormField
                 control={interestForm.control}
-                name="location"
+                name="locationType"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><LocationIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location</FormLabel>
-                    <FormControl><Input placeholder="e.g., My Community, XYZ State" {...field} /></FormControl>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="flex items-center"><LocationIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location Type</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value === 'stateCapital') interestForm.setValue('lgaName', '');
+                          if (value === 'lga') interestForm.setValue('stateCapital', '');
+                        }}
+                        defaultValue={field.value}
+                        className="flex flex-col space-y-1"
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl><RadioGroupItem value="stateCapital" /></FormControl>
+                          <FormLabel className="font-normal">State Capital</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl><RadioGroupItem value="lga" /></FormControl>
+                          <FormLabel className="font-normal">Local Government Area (LGA)</FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {watchedLocationType === 'stateCapital' && (
+                <FormField
+                  control={interestForm.control}
+                  name="stateCapital"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State Capital</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a state capital" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {nigerianStateCapitals.map(capital => (
+                            <SelectItem key={capital} value={capital}>{capital}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {watchedLocationType === 'lga' && (
+                <FormField
+                  control={interestForm.control}
+                  name="lgaName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local Government Area Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter LGA name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <FormField
                 control={interestForm.control}
                 name="selectedBudgetTier"
@@ -306,6 +399,11 @@ export default function CommunityProjectDetailsPage() {
 }
 
 
+const DetailItem = ({ icon, label, value, className }: { icon: React.ReactNode, label: string, value: string | undefined | null, className?: string }) => {
+  if (value === undefined || value === null) return null;
+  return ( <div className="flex items-start"> <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span> <div> <p className="text-sm text-muted-foreground">{label}</p> <p className={cn("font-semibold", className)}>{value}</p> </div> </div> );
+};
+
 const ProjectDetailsSkeleton = () => (
   <div className="space-y-8">
     <Card><CardContent className="p-6"><div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"><div><Skeleton className="h-10 w-3/4 mb-2" /><Skeleton className="h-6 w-1/2" /></div><Skeleton className="h-12 w-1/4 md:w-1/6" /></div></CardContent></Card>
@@ -318,5 +416,3 @@ const ProjectDetailsSkeleton = () => (
     </div>
   </div>
 );
-
-      

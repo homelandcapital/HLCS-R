@@ -39,6 +39,16 @@ export const nigerianStates = [
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ] as const;
 
+export const nigerianStateCapitals = [
+  "Umuahia", "Yola", "Uyo", "Awka", "Bauchi", "Yenagoa", "Makurdi", "Maiduguri",
+  "Calabar", "Asaba", "Abakaliki", "Benin City", "Ado-Ekiti", "Enugu", "Gombe",
+  "Owerri", "Dutse", "Kaduna", "Kano", "Katsina", "Birnin Kebbi", "Lokoja",
+  "Ilorin", "Ikeja", "Lafia", "Minna", "Abeokuta", "Akure", "Oshogbo", "Ibadan",
+  "Jos", "Port Harcourt", "Sokoto", "Jalingo", "Damaturu", "Gusau", "Abuja"
+] as const;
+export type NigerianStateCapital = typeof nigerianStateCapitals[number];
+
+
 export type ListingType = Database['public']['Enums']['listing_type_enum'];
 export const listingTypes: ListingType[] = ['For Sale', 'For Rent', 'For Lease'];
 
@@ -142,7 +152,7 @@ export interface CommunityProject {
   description: string; 
   brochure_link?: string | null; 
   images?: string[] | null; 
-  budget_tiers?: string[] | null; // Changed from budget_tier: string | null
+  budget_tiers: string[] | null;
   status: CommunityProjectStatus; 
   created_at: string; 
   updated_at: string; 
