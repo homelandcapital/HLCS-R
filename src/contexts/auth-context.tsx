@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings, CommunityProjectBudgetTierConfig } from '@/lib/types';
+import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, PlatformSettings as PlatformSettingsType } from '@/lib/types';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname }  from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthenticatedUser | null;
-  platformSettings: PlatformSettings | null;
+  platformSettings: PlatformSettingsType | null;
   loading: boolean;
   isPropertySaved: (propertyId: string) => boolean;
   toggleSaveProperty: (propertyId: string) => void;
@@ -33,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettingsType | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const fetchPlatformSettingsInternal = useCallback(async (): Promise<PlatformSettings | null> => {
+  const fetchPlatformSettingsInternal = useCallback(async (): Promise<PlatformSettingsType | null> => {
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
@@ -61,33 +61,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
     
-    let parsedCommunityTiers: CommunityProjectBudgetTierConfig[] = [];
-    const dbTiers = data.community_project_budget_tiers;
-
-    if (dbTiers) {
-        if (typeof dbTiers === 'string') {
-            try {
-                const parsed = JSON.parse(dbTiers);
-                if (Array.isArray(parsed)) {
-                    parsedCommunityTiers = parsed as CommunityProjectBudgetTierConfig[];
-                } else {
-                    console.warn('[AuthContext] community_project_budget_tiers from DB (string) was not a valid JSON array. Defaulting to empty.');
-                }
-            } catch (e) {
-                console.error('[AuthContext] Error parsing community_project_budget_tiers from DB string:', e);
-            }
-        } else if (Array.isArray(dbTiers)) {
-            parsedCommunityTiers = dbTiers as CommunityProjectBudgetTierConfig[];
-        } else {
-            console.warn('[AuthContext] community_project_budget_tiers from DB is not a string or array. Type:', typeof dbTiers, 'Value:', dbTiers, '. Defaulting to empty.');
-        }
-    }
-
-
     return {
         ...data,
-        community_project_budget_tiers: parsedCommunityTiers,
-    } as PlatformSettings; // Ensure it returns PlatformSettings, not null if data exists
+        predefinedAmenities: data.predefined_amenities || "",
+        propertyTypes: data.property_types || [],
+        configuredCommunityBudgetTiers: data.configured_community_budget_tiers || "",
+    } as PlatformSettingsType;
   }, []);
 
   const refreshPlatformSettings = useCallback(async () => {
@@ -219,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       authListener?.subscription.unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]); // Removed user?.id from deps
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {

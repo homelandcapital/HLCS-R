@@ -16,7 +16,7 @@ import { useState, useTransition, useEffect, useCallback } from 'react';
 import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus, CommunityProjectBudgetTierConfig, PlatformSettings } from '@/lib/types';
+import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
 import { communityProjectCategories } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
@@ -51,13 +51,13 @@ export default function AddCommunityProjectPage() {
   const { user, loading: authLoading, platformSettings } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && platformSettings.communityProjectBudgetTiers && Array.isArray(platformSettings.communityProjectBudgetTiers)) {
-      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
     } else {
-      setAvailableBudgetTiers([]); // Ensure it's an empty array if not available or not an array
+      setAvailableBudgetTiers([]);
     }
   }, [platformSettings]);
 
@@ -135,7 +135,7 @@ export default function AddCommunityProjectPage() {
         category: values.category,
         description: values.description,
         brochure_link: values.brochure_link || null,
-        budget_tier: values.budget_tier,
+        budget_tier: values.budget_tier, // This is now a string (tier name)
         images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
         status: 'Pending Approval' as CommunityProjectStatus, 
         managed_by_user_id: currentAdmin.id,
@@ -160,8 +160,7 @@ export default function AddCommunityProjectPage() {
       router.push('/admin/dashboard/community-projects');
     });
   }
-
-  // Show skeleton if auth context is loading OR if platformSettings is null (still loading from context) AND auth isn't loading anymore
+ 
   if (authLoading || (platformSettings === null && !authLoading) ) {
     return <Skeleton className="h-[500px] w-full" />;
   }
@@ -200,7 +199,7 @@ export default function AddCommunityProjectPage() {
                             <FormControl><SelectTrigger><SelectValue placeholder="Select budget tier" /></SelectTrigger></FormControl> 
                             <SelectContent>
                                 {availableBudgetTiers.length > 0 ? (
-                                    availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name} - {tier.description}</SelectItem>))
+                                    availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))
                                 ) : (
                                     <SelectItem value="-" disabled>No budget tiers configured</SelectItem>
                                 )}

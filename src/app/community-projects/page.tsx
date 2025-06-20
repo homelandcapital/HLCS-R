@@ -3,23 +3,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus, CommunityProjectBudgetTierConfig } from '@/lib/types';
+import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Users2, Filter, Search, ArrowRight, DollarSign, Link as LinkIcon } from 'lucide-react';
+import { Users2, Filter, Search, ArrowRight, DollarSign, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { communityProjectCategories } from '@/lib/types'; 
-import { useAuth } from '@/contexts/auth-context'; // For platformSettings
+import { useAuth } from '@/contexts/auth-context'; 
 
 export default function CommunityProjectsPage() {
-  const { platformSettings, loading: authLoading } = useAuth(); // Get platformSettings
+  const { platformSettings, loading: authLoading } = useAuth(); 
   const [projects, setProjects] = useState<CommunityProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<CommunityProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,14 +27,16 @@ export default function CommunityProjectsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all'); // Changed to string for tier name
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
+  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
   
   const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
 
   useEffect(() => {
-    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
-      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    } else {
+      setAvailableBudgetTiers([]);
     }
   }, [platformSettings]);
 
@@ -58,7 +60,7 @@ export default function CommunityProjectsPage() {
         ...p,
         category: p.category as CommunityProjectCategory,
         status: p.status as CommunityProjectStatus,
-        budget_tier: p.budget_tier as string | null, // budget_tier is now string
+        budget_tier: p.budget_tier as string | null,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as CommunityProject[];
@@ -84,7 +86,7 @@ export default function CommunityProjectsPage() {
       const lowerSearch = searchTerm.toLowerCase();
       tempProjects = tempProjects.filter(p => 
         p.title.toLowerCase().includes(lowerSearch) ||
-        p.description.toLowerCase().includes(lowerSearch)
+        (p.description && p.description.toLowerCase().includes(lowerSearch))
       );
     }
     setFilteredProjects(tempProjects);
@@ -119,7 +121,7 @@ export default function CommunityProjectsPage() {
             <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
             <SelectContent>
                 <SelectItem value="all">All Budget Tiers</SelectItem>
-                {availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name}</SelectItem>))}
+                {availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))}
             </SelectContent>
           </Select>
         </CardContent>
@@ -184,7 +186,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         </Link>
         {project.budget_tier && (
             <div className="flex items-center text-sm text-muted-foreground mb-1">
-                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier} {/* Display string name */}
+                 <DollarSign className="w-4 h-4 mr-1 shrink-0 text-accent" /> {project.budget_tier}
             </div>
         )}
         <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>
@@ -204,3 +206,4 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
+

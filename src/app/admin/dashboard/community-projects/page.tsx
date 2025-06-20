@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory, CommunityProjectBudgetTierConfig } from '@/lib/types'; // Updated budget tier type
+import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,13 +26,15 @@ export default function CommunityProjectsManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CommunityProjectStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all'); // Now string for tier name
+  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
   const { toast } = useToast();
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<CommunityProjectBudgetTierConfig[]>([]);
+  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && platformSettings.communityProjectBudgetTiers) {
-      setAvailableBudgetTiers(platformSettings.communityProjectBudgetTiers);
+    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    } else {
+      setAvailableBudgetTiers([]);
     }
   }, [platformSettings]);
 
@@ -51,7 +53,7 @@ export default function CommunityProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as CommunityProjectCategory,
-        budget_tier: p.budget_tier as string | null, // budget_tier is now string
+        budget_tier: p.budget_tier as string | null,
         status: p.status as CommunityProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -85,7 +87,7 @@ export default function CommunityProjectsManagementPage() {
       projects = projects.filter(project =>
         project.title.toLowerCase().includes(lowerSearchTerm) ||
         project.human_readable_id.toLowerCase().includes(lowerSearchTerm) ||
-        project.description.toLowerCase().includes(lowerSearchTerm)
+        (project.description && project.description.toLowerCase().includes(lowerSearchTerm))
       );
     }
     setFilteredProjects(projects);
@@ -168,7 +170,7 @@ export default function CommunityProjectsManagementPage() {
               <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Budget Tiers</SelectItem>
-                {availableBudgetTiers.map(tier => (<SelectItem key={tier.id} value={tier.name}>{tier.name}</SelectItem>))}
+                {availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CommunityProjectStatus | 'all')}>

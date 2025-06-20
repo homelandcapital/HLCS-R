@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users, Users2 as CommunityIcon, DollarSign } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users, Users2 as CommunityIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
-import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, SectorKey, SectorVisibility, CommunityProjectBudgetTierConfig } from '@/lib/types';
+import type { PromotionTierConfig, PlatformSettings as PlatformSettingsType, SectorKey, SectorVisibility } from '@/lib/types';
 import { managedSectorKeys } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,20 +39,6 @@ const initialAdminPromotionTiersUI: AdminPromotionTier[] = [
   { id: 'premium', name: 'Premium Spotlight', icon: <TrendingUp className="h-5 w-5 text-orange-500" />, fee: '12000', duration: '14', description: 'Enhanced visibility and higher placement for 14 days.' },
   { id: 'ultimate', name: 'Ultimate Feature', icon: <Gem className="h-5 w-5 text-purple-500" />, fee: '25000', duration: '30', description: 'Maximum visibility, top of search, and prominent highlighting for 30 days.' },
 ];
-
-interface AdminCommunityBudgetTier {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-}
-
-const initialAdminCommunityBudgetTiersUI: AdminCommunityBudgetTier[] = [
-  { id: 'tier_1_low', name: 'Low Budget', icon: <DollarSign className="h-5 w-5 text-green-500" />, description: 'For projects typically under ₦5 Million.' },
-  { id: 'tier_2_medium', name: 'Medium Budget', icon: <DollarSign className="h-5 w-5 text-blue-500" />, description: 'For projects typically between ₦5 Million and ₦20 Million.' },
-  { id: 'tier_3_high', name: 'High Budget', icon: <DollarSign className="h-5 w-5 text-red-500" />, description: 'For projects typically above ₦20 Million.' },
-];
-
 
 const sectorConfigurations: Array<{ key: SectorKey, label: string, defaultEnabled: boolean, icon: React.ReactNode }> = [
   { key: 'realEstate', label: 'Real Estate Sector (Properties Link)', defaultEnabled: true, icon: <Home className="h-5 w-5"/> },
@@ -78,7 +64,7 @@ export default function PlatformSettingsPage() {
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
 
-  const [adminCommunityBudgetTiers, setAdminCommunityBudgetTiers] = useState<AdminCommunityBudgetTier[]>(initialAdminCommunityBudgetTiersUI);
+  const [configuredCommunityTiersString, setConfiguredCommunityTiersString] = useState('Small Scale Projects,Mid-Range Initiatives,Large Impact Efforts');
 
   const [sectorVisibility, setSectorVisibility] = useState<SectorVisibility>({});
 
@@ -90,11 +76,11 @@ export default function PlatformSettingsPage() {
       .eq('id', 1)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is not an error for initial setup
+    if (error && error.code !== 'PGRST116') { 
       toast({ title: 'Error Fetching Settings', description: `Could not load platform settings: ${error.message}. Using defaults.`, variant: 'destructive' });
     }
     
-    const settingsData = data || {}; // Use empty object if no data
+    const settingsData = data || {};
 
     setSiteName(settingsData.site_name || 'Homeland Capital');
     setMaintenanceMode(settingsData.maintenance_mode || false);
@@ -104,7 +90,6 @@ export default function PlatformSettingsPage() {
     setPropertyTypes((settingsData.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
     setPromotionsEnabled(settingsData.promotions_enabled ?? true);
 
-    // Robustly initialize adminPromotionTiers
     let finalUiPromotionTiers = initialAdminPromotionTiersUI.map(initialTier => ({ ...initialTier }));
     if (settingsData.promotion_tiers) {
         const dbPromotionTiers = settingsData.promotion_tiers as PromotionTierConfig[];
@@ -121,21 +106,7 @@ export default function PlatformSettingsPage() {
     }
     setAdminPromotionTiers(finalUiPromotionTiers);
 
-    // Robustly initialize adminCommunityBudgetTiers
-    let finalUiCommunityBudgetTiers = initialAdminCommunityBudgetTiersUI.map(initialTier => ({ ...initialTier }));
-    if (settingsData.community_project_budget_tiers) {
-        const dbBudgetTiers = settingsData.community_project_budget_tiers as CommunityProjectBudgetTierConfig[];
-        finalUiCommunityBudgetTiers = initialAdminCommunityBudgetTiersUI.map(uiTierTemplate => {
-            const dbMatch = dbBudgetTiers.find(dbTier => dbTier.id === uiTierTemplate.id);
-            return dbMatch ? {
-                ...uiTierTemplate,
-                name: dbMatch.name,
-                description: dbMatch.description,
-            } : { ...uiTierTemplate };
-        });
-    }
-    setAdminCommunityBudgetTiers(finalUiCommunityBudgetTiers);
-
+    setConfiguredCommunityTiersString(settingsData.configured_community_budget_tiers || 'Small Scale Projects,Mid-Range Initiatives,Large Impact Efforts');
 
     const dbSectorVisibility = settingsData.sector_visibility as SectorVisibility | null;
     const initialVisibilityState: SectorVisibility = {};
@@ -160,20 +131,12 @@ export default function PlatformSettingsPage() {
     );
   };
 
-  const handleCommunityBudgetTierChange = (tierId: string, field: 'name' | 'description', value: string) => {
-    setAdminCommunityBudgetTiers(currentTiers =>
-      currentTiers.map(tier =>
-        tier.id === tierId ? { ...tier, [field]: value } : tier
-      )
-    );
-  };
-
   const handleSectorVisibilityChange = (sectorKey: SectorKey, checked: boolean) => {
     setSectorVisibility(prev => ({ ...prev, [sectorKey]: checked }));
   };
 
   const handleSaveChanges = async () => {
-    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'communityProjectBudgetTiers'> & { promotion_tiers: PromotionTierConfig[], community_project_budget_tiers: CommunityProjectBudgetTierConfig[], property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'configuredCommunityBudgetTiers'> & { promotion_tiers: PromotionTierConfig[], configured_community_budget_tiers: string | null, property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
       id: 1,
       site_name: siteName,
       maintenance_mode: maintenanceMode,
@@ -189,11 +152,7 @@ export default function PlatformSettingsPage() {
         duration: parseInt(tier.duration, 10) || 0,
         description: tier.description,
       })),
-      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({
-        id: tier.id,
-        name: tier.name,
-        description: tier.description,
-      })),
+      configured_community_budget_tiers: configuredCommunityTiersString,
       sector_visibility: sectorVisibility,
     };
 
@@ -445,47 +404,24 @@ export default function PlatformSettingsPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
-            <CommunityIcon className="mr-2 h-5 w-5 text-muted-foreground" /> Community Project Budget Tier Settings
+            <CommunityIcon className="mr-2 h-5 w-5 text-muted-foreground" /> Community Project Budget Tiers
           </CardTitle>
-          <CardDescription>Define budget tiers for community projects.</CardDescription>
+          <CardDescription>Define the budget tiers for community projects.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-8">
-            {adminCommunityBudgetTiers.map((tier) => (
-              <Card key={tier.id}>
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <span className="flex-shrink-0">{tier.icon}</span>
-                    <div className="flex-grow">
-                      <Label htmlFor={`${tier.id}-comm-budget-name`} className="text-xs font-medium text-muted-foreground">Tier Name</Label>
-                      <Input
-                        id={`${tier.id}-comm-budget-name`}
-                        value={tier.name}
-                        onChange={(e) => handleCommunityBudgetTierChange(tier.id, 'name', e.target.value)}
-                        placeholder="e.g., Small Scale Projects"
-                        className="text-lg font-headline mt-0.5"
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1">
-                    <Label htmlFor={`${tier.id}-comm-budget-description`}>Description</Label>
-                    <Textarea
-                      id={`${tier.id}-comm-budget-description`}
-                      value={tier.description}
-                      onChange={(e) => handleCommunityBudgetTierChange(tier.id, 'description', e.target.value)}
-                      placeholder="Briefly describe this budget tier..."
-                      rows={2}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-           <p className="text-xs text-muted-foreground mt-4">
-              These tiers help categorize community projects by their estimated budget. The names and descriptions will be shown when adding a new community project.
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="communityBudgetTiersText">Budget Tier Names (Comma-separated)</Label>
+            <Textarea
+              id="communityBudgetTiersText"
+              value={configuredCommunityTiersString}
+              onChange={(e) => setConfiguredCommunityTiersString(e.target.value)}
+              placeholder="e.g., Small Scale, Mid-Range, Large Impact"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter a comma-separated list of names for community project budget tiers. These names will appear in the selection dropdown when adding a project.
             </p>
+          </div>
         </CardContent>
       </Card>
 
