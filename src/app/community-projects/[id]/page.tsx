@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign } from 'lucide-react';
+import { Users2 as CommunityIcon, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign, FileHeart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import type { TablesInsert } from '@/lib/database.types';
 
 
 // Basic UUID regex for validation
@@ -139,19 +140,46 @@ export default function CommunityProjectDetailsPage() {
     }
   }, [idFromUrl, fetchProjectDetails]);
 
-  const handleInterestSubmit = (values: InterestFormValues) => {
-    console.log("Community Project Interest Submitted:", {
-      projectId: project?.id,
-      projectTitle: project?.title,
-      userEmail: authContextUser?.email,
-      ...values,
-    });
-    toast({
-      title: "Interest Expressed!",
-      description: "Thank you for your interest. We will review your submission. (This is a demo response)",
-    });
-    setIsInterestDialogOpen(false);
-    interestForm.reset();
+  const handleInterestSubmit = async (values: InterestFormValues) => {
+    if (!authContextUser) {
+      toast({ title: "Login Required", description: "Please log in to submit your interest.", variant: "default" });
+      router.push('/agents/login');
+      return;
+    }
+
+    const interestData: TablesInsert<'community_project_interests'> = {
+      project_id: project?.id || null,
+      project_title: project?.title || null,
+      user_id: authContextUser.id,
+      user_name: authContextUser.name,
+      user_email: authContextUser.email,
+      location_type: values.locationType,
+      state_capital: values.locationType === 'stateCapital' ? values.stateCapital : null,
+      lga_name: values.locationType === 'lga' ? values.lgaName : null,
+      selected_budget_tier: values.selectedBudgetTier,
+      message: values.message || null,
+      status: 'new', 
+    };
+
+    const { error } = await supabase
+      .from('community_project_interests')
+      .insert(interestData);
+
+    if (error) {
+      console.error("Error saving interest expression:", error);
+      toast({
+        title: "Submission Failed",
+        description: `Could not save your interest: ${error.message}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Interest Expressed!",
+        description: "Thank you for your interest. We have received your submission.",
+      });
+      setIsInterestDialogOpen(false);
+      interestForm.reset();
+    }
   };
   
   const handleOpenInterestDialog = () => {
@@ -160,7 +188,7 @@ export default function CommunityProjectDetailsPage() {
       router.push('/agents/login');
       return;
     }
-    interestForm.reset({ // Reset form with potentially new defaults if project/auth changes
+    interestForm.reset({ 
       locationType: undefined,
       stateCapital: '',
       lgaName: '',
@@ -230,7 +258,7 @@ export default function CommunityProjectDetailsPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-3 space-y-8">
+        <div className="lg:col-span-3 space-y-8"> {/* Changed from lg:col-span-2 */}
           <Card className="shadow-lg">
             <CardHeader> <CardTitle className="font-headline">Project Details</CardTitle> </CardHeader>
             <CardContent className="space-y-4">
@@ -378,7 +406,7 @@ export default function CommunityProjectDetailsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><MessageSquare className="w-4 h-4 mr-1 text-muted-foreground"/>Additional Message (Optional)</FormLabel>
-                    <FormControl><Textarea placeholder="Any specific details or requirements..." {...field} rows={4} /></FormControl>
+                    <FormControl><Textarea placeholder="Any specific details or requirements..." {...field} value={field.value ?? ''} rows={4} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -398,11 +426,6 @@ export default function CommunityProjectDetailsPage() {
   );
 }
 
-
-const DetailItem = ({ icon, label, value, className }: { icon: React.ReactNode, label: string, value: string | undefined | null, className?: string }) => {
-  if (value === undefined || value === null) return null;
-  return ( <div className="flex items-start"> <span className="text-accent mr-2 mt-1 shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}</span> <div> <p className="text-sm text-muted-foreground">{label}</p> <p className={cn("font-semibold", className)}>{value}</p> </div> </div> );
-};
 
 const ProjectDetailsSkeleton = () => (
   <div className="space-y-8">

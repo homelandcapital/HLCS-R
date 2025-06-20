@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon } from 'lucide-react';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon, FileHeart } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -23,6 +23,7 @@ const adminNavItems = [
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
   { href: '/admin/dashboard/property-oversight', label: 'Listing Approval', icon: <CheckSquare className="h-5 w-5" /> },
   { href: '/admin/dashboard/community-projects', label: 'Community Projects', icon: <CommunityIcon className="h-5 w-5" /> },
+  { href: '/admin/dashboard/project-interests', label: 'Project Interests', icon: <FileHeart className="h-5 w-5" /> },
   { href: '/admin/dashboard/inquiries', label: 'Inquiry Management', icon: <MailQuestion className="h-5 w-5" /> },
   { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
@@ -35,39 +36,53 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   const pathname = usePathname();
   const { toast } = useToast();
   const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0);
+  const [unreadProjectInterestsCount, setUnreadProjectInterestsCount] = useState(0);
 
-  const fetchUnreadCount = useCallback(async () => {
+  const fetchUnreadCounts = useCallback(async () => {
     if (!user || user.role !== 'platform_admin') return;
     
-    let count = 0;
+    // Fetch unread inquiries count
+    let inquiriesCount = 0;
     const { data: allInquiries, error: inquiriesError } = await supabase
       .from('inquiries')
       .select('id, status, conversation:inquiry_messages(sender_role, timestamp)')
       .order('timestamp', { foreignTable: 'inquiry_messages', ascending: false });
 
     if (inquiriesError) {
-        console.error("Error fetching unread count data:", inquiriesError);
+        console.error("Error fetching unread inquiries count data:", inquiriesError);
     } else if (allInquiries) {
         allInquiries.forEach(inq => {
             if (inq.status === 'new' && (!inq.conversation || inq.conversation.length === 0)) {
-                count++;
+                inquiriesCount++;
             } else if (inq.conversation && inq.conversation.length > 0) {
                 const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 if (sortedConversation[0]?.sender_role === 'user') {
-                    count++;
+                    inquiriesCount++;
                 }
             }
         });
     }
-    setUnreadAdminMessagesCount(count);
+    setUnreadAdminMessagesCount(inquiriesCount);
+
+    // Fetch unread project interests count
+    const { count: interestsCount, error: interestsError } = await supabase
+      .from('community_project_interests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new');
+
+    if (interestsError) {
+      console.error("Error fetching unread project interests count:", interestsError);
+    } else {
+      setUnreadProjectInterestsCount(interestsCount || 0);
+    }
 
   }, [user]);
 
   useEffect(() => {
     if (!loading && isAuthenticated && user && user.role === 'platform_admin') {
-      fetchUnreadCount();
+      fetchUnreadCounts();
     }
-  }, [isAuthenticated, user, loading, fetchUnreadCount, pathname]); 
+  }, [isAuthenticated, user, loading, fetchUnreadCounts, pathname]); 
 
   useEffect(() => {
     if (!loading) {
@@ -114,6 +129,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
               isActive = pathname.startsWith(item.href);
             }
             const isMailItem = item.href === '/admin/dashboard/inquiries';
+            const isProjectInterestItem = item.href === '/admin/dashboard/project-interests';
 
             return (
               <Link key={item.href} href={item.href} passHref legacyBehavior>
@@ -130,6 +146,11 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
                     {isMailItem && unreadAdminMessagesCount > 0 && (
                       <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
                         {unreadAdminMessagesCount}
+                      </Badge>
+                    )}
+                    {isProjectInterestItem && unreadProjectInterestsCount > 0 && (
+                      <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
+                        {unreadProjectInterestsCount}
                       </Badge>
                     )}
                   </a>

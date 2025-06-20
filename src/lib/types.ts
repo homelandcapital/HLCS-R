@@ -160,6 +160,26 @@ export interface CommunityProject {
   manager?: AuthenticatedUser | null; 
 }
 
+// Community Project Interest Types
+export type CommunityProjectInterestStatus = 'new' | 'contacted' | 'resolved';
+export const communityProjectInterestStatuses: CommunityProjectInterestStatus[] = ['new', 'contacted', 'resolved'];
+
+export interface CommunityProjectInterest {
+  id: string;
+  project_id: string | null; 
+  project_title: string | null; 
+  user_id: string | null; 
+  user_name: string | null;
+  user_email: string | null;
+  location_type: 'stateCapital' | 'lga';
+  state_capital?: string | null;
+  lga_name?: string | null;
+  selected_budget_tier: string;
+  message?: string | null;
+  created_at: string;
+  status: CommunityProjectInterestStatus;
+}
+
 
 // CMS Content Types
 export interface CmsLink {
