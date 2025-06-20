@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
-import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X, Package } from 'lucide-react'; // Added Package, X
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
@@ -55,12 +55,13 @@ export default function AddCommunityProjectPage() {
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && platformSettings.configuredCommunityBudgetTiers) {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+        setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
     } else {
-      setAvailableBudgetTiers([]);
+        setAvailableBudgetTiers([]);
     }
   }, [platformSettings]);
+
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -119,13 +120,13 @@ export default function AddCommunityProjectPage() {
             const result = await uploadPropertyImages(formData); 
             if (result.error) {
               toast({ title: 'Image Upload Failed', description: result.error, variant: 'destructive' });
-              return; // Exit if image upload fails
+              return; 
             }
             imageUrls = result.urls || [];
           } catch (e: any) {
             console.error("Image upload process error:", e);
             toast({ title: 'Image Upload Error', description: `An unexpected error occurred during image upload: ${e.message}`, variant: 'destructive' });
-            return; // Exit if image upload has an exception
+            return;
           }
         }
         
@@ -140,7 +141,7 @@ export default function AddCommunityProjectPage() {
           brochure_link: values.brochure_link || null,
           budget_tier: values.budget_tiers,
           images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-          status: 'Pending Approval' as CommunityProjectStatus, 
+          status: 'Ongoing' as CommunityProjectStatus, // Changed from 'Pending Approval'
           managed_by_user_id: currentAdmin.id,
         };
 
@@ -153,21 +154,18 @@ export default function AddCommunityProjectPage() {
         if (dbError) {
           console.error("Error saving project to DB:", dbError);
           toast({ title: 'Error Adding Project', description: `Could not save project: ${dbError.message}`, variant: 'destructive' });
-          return; // Exit if DB insert fails
+          return;
         }
 
-        toast({ title: 'Community Project Added!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is pending approval.` });
+        toast({ title: 'Community Project Published!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is now live.` });
         form.reset();
         setSelectedFiles([]);
-        setImagePreviews([]); // Clear previews
+        setImagePreviews([]); 
         router.push('/admin/dashboard/community-projects');
 
       } catch (finalError: any) {
-        // This catch is for any unexpected errors not caught by inner try-catches or if checks
         console.error("Critical error during project submission process:", finalError);
         toast({ title: 'Critical Submission Error', description: `An critical error occurred: ${finalError.message || 'Unknown error. Check console.'}`, variant: 'destructive' });
-        // The promise from startTransition will reject here due to the error, 
-        // and useTransition should set isPending (isSubmitting) to false.
       }
     });
   }
@@ -185,7 +183,7 @@ export default function AddCommunityProjectPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Community Project
         </h1>
-        <p className="text-muted-foreground">Fill in the details for the new community project. A unique ID will be generated.</p>
+        <p className="text-muted-foreground">Fill in the details for the new community project. A unique ID will be generated and it will be published immediately.</p>
       </div>
 
       <Card className="shadow-xl">
@@ -297,7 +295,7 @@ export default function AddCommunityProjectPage() {
               </FormItem>
               
               <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || authLoading}>
-                {isSubmitting ? 'Adding Project...' : 'Add Community Project'}
+                {isSubmitting ? 'Publishing Project...' : 'Publish Community Project'}
               </Button>
             </form>
           </Form>

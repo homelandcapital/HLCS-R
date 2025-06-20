@@ -42,7 +42,7 @@ export default function CommunityProjectsManagementPage() {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('community_projects')
-      .select('*, manager:users!community_projects_managed_by_user_id_fkey(id, name, email, role)')
+      .select('*, manager:users!community_projects_managed_by_user_id_fkey(id, name, email, role, avatar_url)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -53,7 +53,7 @@ export default function CommunityProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as CommunityProjectCategory,
-        budget_tiers: p.budget_tiers ? (Array.isArray(p.budget_tiers) ? p.budget_tiers : JSON.parse(String(p.budget_tiers))) : [], // Ensure budget_tiers is array
+        budget_tiers: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
         status: p.status as CommunityProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -80,7 +80,6 @@ export default function CommunityProjectsManagementPage() {
       projects = projects.filter(project => project.category === categoryFilter);
     }
     if (budgetTierFilter !== 'all') {
-      // Filter projects that include the selected budget tier in their budget_tiers array
       projects = projects.filter(project => project.budget_tiers?.includes(budgetTierFilter));
     }
     if (searchTerm) {
@@ -105,6 +104,7 @@ export default function CommunityProjectsManagementPage() {
     }
   };
 
+  // handleUpdateStatus might be simplified or removed if direct publishing means no status changes from admin here
   const handleUpdateStatus = async (projectId: string, newStatus: CommunityProjectStatus) => {
     const { error } = await supabase
       .from('community_projects')
@@ -230,13 +230,13 @@ export default function CommunityProjectsManagementPage() {
                         <Button variant="outline" size="icon" asChild title="View Project Details">
                            <Link href={`/community-projects/${project.id}`} target="_blank" rel="noopener noreferrer"><span><Eye className="h-4 w-4" /></span></Link>
                         </Button>
-                        {project.status === 'Pending Approval' && (
-                          <>
-                            <Button variant="default" size="icon" onClick={() => handleUpdateStatus(project.id, 'Ongoing')} title="Approve Project (Mark as Ongoing)" className="bg-green-500 hover:bg-green-600"><CheckCircle className="h-4 w-4" /></Button>
-                            <Button variant="destructive" size="icon" onClick={() => handleUpdateStatus(project.id, 'Rejected')} title="Reject Project"><XCircle className="h-4 w-4" /></Button>
-                          </>
-                        )}
+                        {/* Approval buttons are removed as projects are published directly */}
                         <Button variant="outline" size="icon" disabled title="Edit Project (Not Implemented)"> <Edit2 className="h-4 w-4" /> </Button>
+                         {project.status !== 'Ongoing' && project.status !== 'Funding' && project.status !== 'Completed' && project.status !== 'Planning' && (
+                          <Button variant="destructive" size="icon" onClick={() => handleUpdateStatus(project.id, 'Canceled')} title="Cancel Project (Example Action)">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
