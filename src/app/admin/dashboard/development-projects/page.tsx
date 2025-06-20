@@ -6,7 +6,7 @@ import type { DevelopmentProject, CommunityProjectStatus as DevProjectStatus, De
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Search, PlusCircle, Eye, Edit2, CheckCircle, XCircle, Filter, Link as LinkIcon, DollarSign, ExternalLink } from 'lucide-react';
+import { Zap, Search, PlusCircle, Eye, Edit2, CheckCircle, XCircle, Filter, Link as LinkIcon, DollarSign, ExternalLink, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ export default function DevelopmentProjectsManagementPage() {
       const formattedProjects = data.map(p => ({
         ...p,
         category: p.category as DevelopmentProjectCategory,
-        budget_tier: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
+        price: p.price || null,
         status: p.status as DevProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
@@ -73,7 +73,9 @@ export default function DevelopmentProjectsManagementPage() {
       projects = projects.filter(project =>
         project.title.toLowerCase().includes(lowerSearchTerm) ||
         project.human_readable_id.toLowerCase().includes(lowerSearchTerm) ||
-        (project.description && project.description.toLowerCase().includes(lowerSearchTerm))
+        (project.description && project.description.toLowerCase().includes(lowerSearchTerm)) ||
+        (project.location_area_city && project.location_area_city.toLowerCase().includes(lowerSearchTerm)) ||
+        (project.state && project.state.toLowerCase().includes(lowerSearchTerm))
       );
     }
     setFilteredProjects(projects);
@@ -143,10 +145,10 @@ export default function DevelopmentProjectsManagementPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-2xl">All Projects</CardTitle>
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="relative lg:col-span-1">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search by ID, title, description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              <Input placeholder="Search by ID, title, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
@@ -168,7 +170,12 @@ export default function DevelopmentProjectsManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title & ID</TableHead><TableHead>Category</TableHead><TableHead>Price / Budget</TableHead><TableHead>Brochure</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Title & ID</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Price / Budget</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -178,23 +185,16 @@ export default function DevelopmentProjectsManagementPage() {
                         <div className="font-medium">{project.title}</div>
                         <div className="text-xs text-muted-foreground">{project.human_readable_id}</div>
                       </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{project.location_area_city}</div>
+                        <div className="text-xs text-muted-foreground">{project.state}</div>
+                      </TableCell>
                       <TableCell><Badge variant="outline">{project.category}</Badge></TableCell>
                       <TableCell>
-                        {project.budget_tier && project.budget_tier[0] ? (
-                            <Badge variant="secondary">₦{parseInt(project.budget_tier[0], 10).toLocaleString()}</Badge>
+                        {project.price ? (
+                            <Badge variant="secondary">₦{project.price.toLocaleString()}</Badge>
                         ) : (
                             <span className="text-xs text-muted-foreground">Not specified</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {project.brochure_link ? (
-                          <Button variant="link" size="sm" asChild className="p-0 h-auto">
-                            <a href={project.brochure_link} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                              View Link <ExternalLink className="h-3 w-3 ml-1"/>
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">N/A</span>
                         )}
                       </TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(project.status)} className="capitalize text-sm px-3 py-1">{project.status === 'Ongoing' ? 'Active' : project.status}</Badge></TableCell>

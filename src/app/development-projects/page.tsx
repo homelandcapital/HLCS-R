@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Filter, Search, ArrowRight, DollarSign, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Zap, Filter, Search, ArrowRight, DollarSign, Link as LinkIcon, ExternalLink, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +48,7 @@ export default function DevelopmentProjectsPage() {
         ...p,
         category: p.category as DevelopmentProjectCategory,
         status: p.status as DevProjectStatus,
-        budget_tier: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
+        price: p.price || null,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
         manager: p.manager ? { ...p.manager, role: p.manager.role as any } : null,
       })) as DevelopmentProject[];
@@ -71,7 +71,9 @@ export default function DevelopmentProjectsPage() {
       const lowerSearch = searchTerm.toLowerCase();
       tempProjects = tempProjects.filter(p => 
         p.title.toLowerCase().includes(lowerSearch) ||
-        (p.description && p.description.toLowerCase().includes(lowerSearch))
+        (p.description && p.description.toLowerCase().includes(lowerSearch)) ||
+        (p.location_area_city && p.location_area_city.toLowerCase().includes(lowerSearch)) ||
+        (p.state && p.state.toLowerCase().includes(lowerSearch))
       );
     }
     setFilteredProjects(tempProjects);
@@ -96,7 +98,7 @@ export default function DevelopmentProjectsPage() {
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
            <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              <Input placeholder="Search projects by title, description, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
           <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
@@ -161,12 +163,16 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <Link href={`/development-projects/${project.id}`}>
-          <CardTitle className="text-xl font-headline mb-2 hover:text-primary transition-colors line-clamp-2">{project.title}</CardTitle>
+          <CardTitle className="text-xl font-headline mb-1 hover:text-primary transition-colors line-clamp-2">{project.title}</CardTitle>
         </Link>
-        {project.budget_tier && project.budget_tier[0] && (
+        <div className="flex items-center text-muted-foreground text-sm mb-2">
+            <MapPin className="w-4 h-4 mr-1 shrink-0" />
+            {project.location_area_city}, {project.state}
+        </div>
+        {project.price && (
             <div className="flex flex-wrap items-center text-sm font-semibold text-accent mb-2 gap-1">
                 <DollarSign className="w-4 h-4 shrink-0" />
-                <span>Budget: ₦{parseInt(project.budget_tier[0], 10).toLocaleString()}</span>
+                <span>Budget: ₦{project.price.toLocaleString()}</span>
             </div>
         )}
         <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Zap, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin as LocationIcon, DollarSign, Lightbulb } from 'lucide-react';
+import { Zap, ChevronLeft, ChevronRight, Link as LinkIcon, EyeOff, Hash, AlertTriangle, Info, ExternalLink, MessageSquare, MapPin, DollarSign, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,7 @@ export default function DevelopmentProjectDetailsPage() {
       const formattedProject = {
         ...data,
         category: data.category as DevelopmentProject['category'],
-        budget_tier: data.budget_tier ? (Array.isArray(data.budget_tier) ? data.budget_tier : []) : [],
+        price: data.price || null,
         status: data.status as DevelopmentProject['status'],
         images: data.images ? (Array.isArray(data.images) ? data.images : JSON.parse(String(data.images))) : [],
         manager: data.manager ? { ...data.manager, role: data.manager.role as any } as AuthenticatedUser : null,
@@ -214,7 +214,6 @@ export default function DevelopmentProjectDetailsPage() {
   const defaultImage = 'https://placehold.co/1200x800.png?text=Project+Image';
   const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
   const displayStatus = project.status === 'Ongoing' ? 'Active' : project.status;
-  const displayPrice = project.budget_tier?.[0] ? parseInt(project.budget_tier[0], 10) : null;
 
   return (
     <div className="space-y-8">
@@ -229,12 +228,18 @@ export default function DevelopmentProjectDetailsPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-headline text-primary mb-1">{project.title}</h1>
-              <div className="text-sm text-muted-foreground mb-1 flex items-center"> <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id} </div>
+              <div className="text-sm text-muted-foreground mb-1 flex items-center">
+                <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id}
+              </div>
+              <div className="flex items-center text-muted-foreground text-sm mb-2">
+                <MapPin className="w-4 h-4 mr-1" />
+                {project.location_area_city}, {project.state}
+              </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
-               {displayPrice ? (
+               {project.price ? (
                  <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right">
-                    ₦{displayPrice.toLocaleString()}
+                    ₦{project.price.toLocaleString()}
                  </div>
                ) : (
                  <div className="text-2xl font-bold text-foreground whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right capitalize">
@@ -318,7 +323,7 @@ export default function DevelopmentProjectDetailsPage() {
                 name="locationType"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel className="flex items-center"><LocationIcon className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location Type</FormLabel>
+                    <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-muted-foreground"/>Desired Location Type</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={(value) => {

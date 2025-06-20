@@ -9,15 +9,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect, useCallback } from 'react';
-import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Zap, Image as ImageIcon, X, Package } from 'lucide-react';
+import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Zap, Image as ImageIcon, X, Package, MapPin as MapPinIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { DevelopmentProjectCategory, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
-import { developmentProjectCategories } from '@/lib/types';
+import type { DevelopmentProjectCategory, PlatformAdmin, CommunityProjectStatus, NigerianState } from '@/lib/types';
+import { developmentProjectCategories, nigerianStates } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +36,8 @@ function generateDevelopmentProjectId(): string {
 const projectFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   category: z.enum(developmentProjectCategories as [DevelopmentProjectCategory, ...DevelopmentProjectCategory[]], { required_error: "Project category is required."}),
+  locationAreaCity: z.string().min(3, { message: 'Location (Area/City) is required.' }),
+  state: z.enum(nigerianStates as [NigerianState, ...NigerianState[]], { required_error: "State is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
   price: z.preprocess(
@@ -60,6 +61,8 @@ export default function AddDevelopmentProjectPage() {
     defaultValues: {
       title: '',
       category: undefined,
+      locationAreaCity: '',
+      state: undefined,
       description: '',
       brochure_link: '',
       price: '' as any,
@@ -95,78 +98,64 @@ export default function AddDevelopmentProjectPage() {
 
   async function onSubmit(values: ProjectFormValues) {
     startTransition(async () => {
-      console.log('[onSubmit] Transition started');
-      try {
-        if (authLoading || !user || user.role !== 'platform_admin') {
-          toast({ title: 'Authentication Error', description: 'You must be logged in as an admin.', variant: 'destructive' });
-          console.log('[onSubmit] Auth check failed, returning.');
-          return;
-        }
-
-        let imageUrls: string[] = [];
-        if (selectedFiles.length > 0) {
-          const formData = new FormData();
-          selectedFiles.forEach(file => {
-            formData.append('files', file);
-          });
-          
-          console.log('[onSubmit] Starting image upload...');
-          const uploadResult = await uploadPropertyImages(formData);
-          console.log('[onSubmit] Image upload finished. Result:', uploadResult);
-
-          if (uploadResult.error) {
-            toast({ title: 'Image Upload Failed', description: uploadResult.error, variant: 'destructive' });
-            console.log('[onSubmit] Image upload error, returning.');
-            return; 
-          }
-          imageUrls = uploadResult.urls || [];
-        } else {
-          console.log('[onSubmit] No files to upload.');
-        }
-        
-        const currentAdmin = user as PlatformAdmin;
-        const generatedHumanReadableId = generateDevelopmentProjectId();
-
-        const projectDataToInsert: TablesInsert<'development_projects'> = {
-          human_readable_id: generatedHumanReadableId,
-          title: values.title,
-          category: values.category,
-          description: values.description,
-          brochure_link: values.brochure_link || null,
-          budget_tier: values.price ? [String(values.price)] : null,
-          images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-          status: 'Ongoing' as CommunityProjectStatus, // Changed from 'Pending Approval'
-          managed_by_user_id: currentAdmin.id,
-        };
-        
-        console.log('[onSubmit] Starting database insert...', projectDataToInsert);
-        const { data: newProject, error: dbError } = await supabase
-          .from('development_projects')
-          .insert(projectDataToInsert)
-          .select()
-          .single();
-        console.log('[onSubmit] Database insert finished. Error:', dbError, 'Data:', newProject);
-
-        if (dbError) {
-          console.error("Error saving project to DB:", dbError);
-          toast({ title: 'Error Adding Project', description: `Could not save project: ${dbError.message}`, variant: 'destructive' });
-          console.log('[onSubmit] DB insert error, returning.');
-          return;
-        }
-
-        toast({ title: 'Development Project Published!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is now live with an "Active" status.` });
-        form.reset();
-        setSelectedFiles([]);
-        setImagePreviews([]); 
-        router.push('/admin/dashboard/development-projects');
-        console.log('[onSubmit] Submission successful.');
-
-      } catch (error: any) {
-        console.error("[onSubmit] Critical error during project submission process:", error);
-        toast({ title: 'Critical Submission Error', description: `An critical error occurred: ${error.message || 'Unknown error. Check console.'}`, variant: 'destructive' });
-      } finally {
-        console.log('[onSubmit] Transition block finished.');
+      if (authLoading || !user || user.role !== 'platform_admin') {
+        toast({ title: 'Authentication Error', description: 'You must be logged in as an admin.', variant: 'destructive' });
+        return;
       }
+
+      let imageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+        
+        const uploadResult = await uploadPropertyImages(formData);
+
+        if (uploadResult.error) {
+          toast({ title: 'Image Upload Failed', description: uploadResult.error, variant: 'destructive' });
+          return; 
+        }
+        imageUrls = uploadResult.urls || [];
+      } else {
+        imageUrls = ['https://placehold.co/600x400.png?text=Project+Image'];
+      }
+        
+      const currentAdmin = user as PlatformAdmin;
+      const generatedHumanReadableId = generateDevelopmentProjectId();
+
+      const projectDataToInsert: TablesInsert<'development_projects'> = {
+        human_readable_id: generatedHumanReadableId,
+        title: values.title,
+        category: values.category,
+        location_area_city: values.locationAreaCity,
+        state: values.state,
+        description: values.description,
+        brochure_link: values.brochure_link || null,
+        price: values.price || null,
+        images: imageUrls, 
+        status: 'Ongoing' as CommunityProjectStatus,
+        managed_by_user_id: currentAdmin.id,
+      };
+      
+      const { data: newProject, error: dbError } = await supabase
+        .from('development_projects')
+        .insert(projectDataToInsert)
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error("Error saving project to DB:", dbError);
+        toast({ title: 'Error Adding Project', description: `Could not save project: ${dbError.message}`, variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Development Project Published!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is now live with an "Active" status.` });
+      form.reset();
+      setSelectedFiles([]);
+      setImagePreviews([]); 
+      router.push('/admin/dashboard/development-projects');
+
     });
   }
  
@@ -196,6 +185,10 @@ export default function AddDevelopmentProjectPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Zap className="w-4 h-4 mr-1"/>Project Title</FormLabel> <FormControl><Input placeholder="e.g., Solar Power Plant for XYZ" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="locationAreaCity" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>Location (Area/City)</FormLabel> <FormControl><Input placeholder="e.g., Ikeja Industrial Area" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="state" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>State</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl> <SelectContent>{nigerianStates.map(state => (<SelectItem key={state} value={state}>{state}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description</FormLabel> <FormControl><Textarea placeholder="Detailed description of the project, its goals, and impact..." {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )} />
               

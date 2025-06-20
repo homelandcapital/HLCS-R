@@ -1,4 +1,6 @@
 
+import type { Database } from './database.types';
+
 export type UserRole = 'agent' | 'user' | 'platform_admin';
 
 export interface BaseUser {
@@ -190,10 +192,12 @@ export interface DevelopmentProject {
   human_readable_id: string; 
   title: string; 
   category: DevelopmentProjectCategory; 
-  description: string; 
+  description: string;
+  location_area_city: string;
+  state: NigerianState;
   brochure_link?: string | null; 
   images?: string[] | null; 
-  budget_tiers: string[] | null;
+  price?: number | null; 
   status: CommunityProjectStatus; // Reusing status from community projects
   created_at: string; 
   updated_at: string; 
@@ -407,5 +411,3 @@ export interface PlatformSettings {
   sector_visibility?: SectorVisibility | null; 
   configuredCommunityBudgetTiers: string | null;
 }
-
-import type { Database } from './database.types';
