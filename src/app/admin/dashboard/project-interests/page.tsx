@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { communityProjectInterestStatuses } from '@/lib/types';
+import { Separator } from "@/components/ui/separator";
 
 export default function ProjectInterestsManagementPage() {
   const { user, loading: authLoading } = useAuth();
