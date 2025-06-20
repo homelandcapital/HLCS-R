@@ -1,3 +1,4 @@
+
 // src/app/development-projects/[id]/page.tsx
 'use client';
 
@@ -233,7 +234,7 @@ export default function DevelopmentProjectDetailsPage() {
               </div>
               <div className="flex items-center text-muted-foreground text-sm mb-2">
                 <MapPin className="w-4 h-4 mr-1" />
-                {project.location_area_city}, {project.state}
+                {[project.location_area_city, project.state].filter(Boolean).join(', ')}
               </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">

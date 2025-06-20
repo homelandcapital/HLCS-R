@@ -193,7 +193,7 @@ export interface DevelopmentProject {
   title: string; 
   category: DevelopmentProjectCategory; 
   description: string;
-  location_area_city: string;
+  location_area_city: string | null;
   state: NigerianState;
   brochure_link?: string | null; 
   images?: string[] | null; 

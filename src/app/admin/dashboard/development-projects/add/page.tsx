@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/development-projects/add/page.tsx
 'use client';
 
@@ -36,7 +37,7 @@ function generateDevelopmentProjectId(): string {
 const projectFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
   category: z.enum(developmentProjectCategories as [DevelopmentProjectCategory, ...DevelopmentProjectCategory[]], { required_error: "Project category is required."}),
-  locationAreaCity: z.string().min(3, { message: 'Location (Area/City) is required.' }),
+  locationAreaCity: z.string().optional(),
   state: z.enum(nigerianStates as [NigerianState, ...NigerianState[]], { required_error: "State is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
@@ -128,7 +129,7 @@ export default function AddDevelopmentProjectPage() {
         human_readable_id: generatedHumanReadableId,
         title: values.title,
         category: values.category,
-        location_area_city: values.locationAreaCity,
+        location_area_city: values.locationAreaCity || null,
         state: values.state,
         description: values.description,
         brochure_link: values.brochure_link || null,
@@ -187,7 +188,7 @@ export default function AddDevelopmentProjectPage() {
                 <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="locationAreaCity" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>Location (Area/City)</FormLabel> <FormControl><Input placeholder="e.g., Ikeja Industrial Area" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="locationAreaCity" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>Location (Area/City) (Optional)</FormLabel> <FormControl><Input placeholder="e.g., Ikeja Industrial Area" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="state" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>State</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl> <SelectContent>{nigerianStates.map(state => (<SelectItem key={state} value={state}>{state}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description</FormLabel> <FormControl><Textarea placeholder="Detailed description of the project, its goals, and impact..." {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )} />

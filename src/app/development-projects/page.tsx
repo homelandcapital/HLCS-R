@@ -1,3 +1,4 @@
+
 // src/app/development-projects/page.tsx
 'use client';
 
@@ -167,7 +168,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         </Link>
         <div className="flex items-center text-muted-foreground text-sm mb-2">
             <MapPin className="w-4 h-4 mr-1 shrink-0" />
-            {project.location_area_city}, {project.state}
+            {[project.location_area_city, project.state].filter(Boolean).join(', ')}
         </div>
         {project.price && (
             <div className="flex flex-wrap items-center text-sm font-semibold text-accent mb-2 gap-1">

@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/development-projects/page.tsx
 'use client';
 
@@ -186,7 +187,7 @@ export default function DevelopmentProjectsManagementPage() {
                         <div className="text-xs text-muted-foreground">{project.human_readable_id}</div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{project.location_area_city}</div>
+                        <div className="text-sm">{project.location_area_city || 'Not specified'}</div>
                         <div className="text-xs text-muted-foreground">{project.state}</div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{project.category}</Badge></TableCell>
