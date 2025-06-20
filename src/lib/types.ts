@@ -353,8 +353,6 @@ export interface OfficeDetails {
   address: string;
   phone: string;
   email: string;
-  mapCoordinates: { lat: number; lng: number };
-  mapTitle: string;
 }
 
 export interface ContactPageContentNew {

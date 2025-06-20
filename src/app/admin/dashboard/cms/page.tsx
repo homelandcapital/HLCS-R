@@ -127,11 +127,6 @@ const OfficeDetailsSchema = z.object({
     address: z.string().min(1, "Address is required"),
     phone: z.string().min(1, "Phone number is required"),
     email: z.string().email("Invalid email address"),
-    mapCoordinates: z.object({
-        lat: z.coerce.number().min(-90, "Invalid latitude").max(90, "Invalid latitude"),
-        lng: z.coerce.number().min(-180, "Invalid longitude").max(180, "Invalid longitude")
-    }),
-    mapTitle: z.string().min(1, "Map title is required"),
 });
 
 const ContactPageContentSchema = z.object({
@@ -609,9 +604,6 @@ export default function CmsManagementPage() {
                             <Label>Address (use new lines for formatting)</Label><Textarea {...contactForm.register('officesSection.headquarters.address')} rows={3} />
                             <Label>Phone</Label><Input {...contactForm.register('officesSection.headquarters.phone')} />
                             <Label>Email</Label><Input type="email" {...contactForm.register('officesSection.headquarters.email')} />
-                            <Label>Map Latitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.headquarters.mapCoordinates.lat')} />
-                            <Label>Map Longitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.headquarters.mapCoordinates.lng')} />
-                            <Label>Map Title</Label><Input {...contactForm.register('officesSection.headquarters.mapTitle')} />
                           </AccordionContent>
                         </AccordionItem>
 
@@ -624,9 +616,6 @@ export default function CmsManagementPage() {
                             <Label>Address (use new lines for formatting)</Label><Textarea {...contactForm.register('officesSection.regionalOffice.address')} rows={3} />
                             <Label>Phone</Label><Input {...contactForm.register('officesSection.regionalOffice.phone')} />
                             <Label>Email</Label><Input type="email" {...contactForm.register('officesSection.regionalOffice.email')} />
-                            <Label>Map Latitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.regionalOffice.mapCoordinates.lat')} />
-                            <Label>Map Longitude</Label><Input type="number" step="any" {...contactForm.register('officesSection.regionalOffice.mapCoordinates.lng')} />
-                            <Label>Map Title</Label><Input {...contactForm.register('officesSection.regionalOffice.mapTitle')} />
                           </AccordionContent>
                         </AccordionItem>
                       </Accordion>
@@ -664,4 +653,3 @@ export default function CmsManagementPage() {
     </div>
   );
 }
-

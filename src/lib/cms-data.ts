@@ -220,8 +220,6 @@ export let contactPageContentData: ContactPageContentNew = {
       address: "123 Finance Street, Suite 500\nNew York, NY 10001\nUnited States",
       phone: "+1 (212) 555-7890",
       email: "info@homelandcapitalsolution.com",
-      mapCoordinates: { lat: 40.7061, lng: -74.0088 },
-      mapTitle: "Homeland Capital HQ"
     },
     regionalOffice: {
       tabName: "Regional Office",
@@ -229,8 +227,6 @@ export let contactPageContentData: ContactPageContentNew = {
       address: "157 William St, New York, NY 10038\nUnited States",
       phone: "+1 (212) 555-1234",
       email: "regional@homelandcapitalsolution.com",
-      mapCoordinates: { lat: 40.7095, lng: -74.0055 },
-      mapTitle: "Downtown Conference Center"
     }
   },
   businessHoursSection: {
