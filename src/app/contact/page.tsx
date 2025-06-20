@@ -1,3 +1,4 @@
+
 'use client'; // Keep as client component due to form interactions
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Phone, MapPin, Send, Building, Briefcase, Clock, Users, ChevronRight } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Building, Clock, ChevronRight } from 'lucide-react';
 import { contactPageContentData as defaultContent } from '@/lib/cms-data';
 import type { OfficeDetails, ContactPageContentNew } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -94,7 +95,7 @@ export default function ContactPageRedesigned() {
       <div className="container mx-auto px-4 py-12 space-y-12">
         <header className="text-center mb-12"><Skeleton className="h-12 w-3/4 mx-auto mb-4" /><Skeleton className="h-6 w-1/2 mx-auto" /></header>
         <div className="grid lg:grid-cols-5 gap-12">
-          <div className="lg:col-span-3 space-y-8"> <Skeleton className="h-96 w-full" /> <div className="grid md:grid-cols-2 gap-8"> <Skeleton className="h-48 w-full" /> <Skeleton className="h-48 w-full" /> </div> </div>
+          <div className="lg:col-span-3 space-y-8"> <Skeleton className="h-96 w-full" /> </div>
           <div className="lg:col-span-2 space-y-8"> <Skeleton className="h-80 w-full" /> </div>
         </div>
       </div>
@@ -105,7 +106,7 @@ export default function ContactPageRedesigned() {
     <div className="container mx-auto px-4 py-12">
       <header className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-headline text-primary mb-4">{content.headerTitle}</h1>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">{content.headerSubtitle}</p>
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto whitespace-pre-line">{content.headerSubtitle}</p>
       </header>
 
       <div className="grid lg:grid-cols-5 gap-12">
@@ -217,4 +218,3 @@ export default function ContactPageRedesigned() {
     </div>
   );
 }
-    

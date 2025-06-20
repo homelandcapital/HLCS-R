@@ -82,7 +82,7 @@ export default async function AboutPage() {
               {content.heroSection.title}
             </h1>
             {content.heroSection.paragraphs.map((paragraph, index) => (
-              <p key={index} className="text-foreground leading-relaxed">
+              <p key={index} className="text-foreground leading-relaxed whitespace-pre-line">
                 {paragraph}
               </p>
             ))}
@@ -96,7 +96,7 @@ export default async function AboutPage() {
           <h2 className="text-3xl font-headline text-center text-foreground mb-4">
             {content.servicesSection.title}
           </h2>
-          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto">
+          <p className="text-center text-muted-foreground mb-12 max-w-2xl mx-auto whitespace-pre-line">
             {content.servicesSection.subtitle}
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -109,7 +109,7 @@ export default async function AboutPage() {
                   <CardTitle className="font-headline text-xl text-primary">{service.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-muted-foreground">{service.description}</p>
+                  <p className="text-muted-foreground whitespace-pre-line">{service.description}</p>
                 </CardContent>
               </Card>
             ))}

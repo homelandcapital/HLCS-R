@@ -79,7 +79,7 @@ export default async function HomePageRedesigned() {
                       </h1>
                     ))}
                     {slide.subtitle && (
-                       <p className="text-xl md:text-2xl text-gray-200 mb-8 md:mb-10 max-w-3xl mx-auto">{slide.subtitle}</p>
+                       <p className="text-xl md:text-2xl text-gray-200 mb-8 md:mb-10 max-w-3xl mx-auto whitespace-pre-line">{slide.subtitle}</p>
                     )}
                     <Button size="lg" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold text-lg px-8 py-6 shadow-lg">
                       <Link href={slide.cta.href}>
@@ -100,7 +100,7 @@ export default async function HomePageRedesigned() {
       <section className="py-12 md:py-16 bg-amber-50 rounded-lg">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-headline text-center text-foreground mb-4">{content.ourServices.title}</h2>
-          <p className="text-center text-muted-foreground mb-10 md:mb-12 max-w-2xl mx-auto">{content.ourServices.subtitle}</p>
+          <p className="text-center text-muted-foreground mb-10 md:mb-12 max-w-2xl mx-auto whitespace-pre-line">{content.ourServices.subtitle}</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {content.ourServices.items.map((service: HomePageServiceItem, index: number) => (
               <Card key={index} className="text-left shadow-lg hover:shadow-xl transition-shadow bg-card flex flex-col">
@@ -111,7 +111,7 @@ export default async function HomePageRedesigned() {
                   <CardTitle className="font-headline text-xl text-primary">{service.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-muted-foreground text-sm">{service.description}</p>
+                  <p className="text-muted-foreground text-sm whitespace-pre-line">{service.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -135,7 +135,7 @@ export default async function HomePageRedesigned() {
             <h2 className="text-3xl md:text-4xl font-headline text-primary">
               {content.findYourHome.title}
             </h2>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
               {content.findYourHome.subtitle}
             </p>
             <ul className="space-y-3">
@@ -165,10 +165,10 @@ export default async function HomePageRedesigned() {
             <h2 className="text-3xl md:text-4xl font-headline text-orange-500">
               {content.developmentProjects.title}
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
               {content.developmentProjects.subtitle}
             </p>
-            <p className="text-foreground leading-relaxed">
+            <p className="text-foreground leading-relaxed whitespace-pre-line">
               {content.developmentProjects.description}
             </p>
             <Button size="md" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold">
@@ -196,10 +196,10 @@ export default async function HomePageRedesigned() {
             <h2 className="text-3xl md:text-4xl font-headline text-orange-500">
               {content.communityOutreach.title}
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
               {content.communityOutreach.subtitle}
             </p>
-            <p className="text-foreground leading-relaxed">
+            <p className="text-foreground leading-relaxed whitespace-pre-line">
               {content.communityOutreach.description}
             </p>
             <Button size="md" asChild className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold">

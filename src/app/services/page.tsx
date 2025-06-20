@@ -72,7 +72,7 @@ export default async function ServicesPage() {
         <h1 className="text-4xl md:text-5xl font-headline text-primary mb-3">
           {content.headerTitle}
         </h1>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+        <p className="text-lg text-muted-foreground max-w-3xl mx-auto whitespace-pre-line">
           {content.headerSubtitle}
         </p>
       </header>
@@ -91,7 +91,7 @@ export default async function ServicesPage() {
                   {category.title}
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="px-6 pb-6 text-foreground leading-relaxed">
+              <AccordionContent className="px-6 pb-6 text-foreground leading-relaxed whitespace-pre-line">
                 {category.description}
               </AccordionContent>
             </AccordionItem>
@@ -105,7 +105,7 @@ export default async function ServicesPage() {
           <h2 className="text-3xl font-headline text-center text-foreground mb-4">
             {content.propertyVerificationSection.title}
           </h2>
-          <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto">
+          <p className="text-center text-muted-foreground mb-10 max-w-2xl mx-auto whitespace-pre-line">
             {content.propertyVerificationSection.subtitle}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -118,7 +118,7 @@ export default async function ServicesPage() {
                   <CardTitle className="font-semibold text-lg text-primary">{item.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{item.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -132,7 +132,7 @@ export default async function ServicesPage() {
           <h2 className="text-3xl font-headline text-center text-foreground mb-2">
             {content.detailedVerificationSection.title}
           </h2>
-          <p className="text-center text-muted-foreground font-semibold mb-10">
+          <p className="text-center text-muted-foreground font-semibold mb-10 whitespace-pre-line">
             {content.detailedVerificationSection.subtitle}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -145,7 +145,7 @@ export default async function ServicesPage() {
                   <CardTitle className="font-semibold text-md text-primary">{item.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-grow">
-                  <p className="text-xs text-muted-foreground">{item.description}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line">{item.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -164,5 +164,3 @@ export default async function ServicesPage() {
     </div>
   );
 }
-
-    

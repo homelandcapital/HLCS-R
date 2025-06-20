@@ -176,7 +176,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
                 <span>Budget: ₦{project.price.toLocaleString()}</span>
             </div>
         )}
-        <p className="text-sm text-foreground line-clamp-3 mb-3">{project.description}</p>
+        <p className="text-sm text-foreground line-clamp-3 mb-3 whitespace-pre-line">{project.description}</p>
          {project.brochure_link && (
             <Button variant="link" size="sm" asChild className="p-0 h-auto text-xs mb-2">
                 <a href={project.brochure_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center">

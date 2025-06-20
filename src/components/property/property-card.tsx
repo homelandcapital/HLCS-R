@@ -81,7 +81,7 @@ const PropertyCard = ({ property }: PropertyCardProps) => {
           <Building2 className="w-4 h-4 mr-1" />
           {property.property_type}
         </div>
-        <p className="text-sm text-foreground line-clamp-3 mb-3">{property.description}</p>
+        <p className="text-sm text-foreground line-clamp-3 mb-3 whitespace-pre-line">{property.description}</p>
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-foreground">
           <div className="flex items-center">
             <BedDouble className="w-4 h-4 mr-1 text-accent" /> {property.bedrooms} Beds
