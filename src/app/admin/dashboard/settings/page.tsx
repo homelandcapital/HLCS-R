@@ -187,7 +187,7 @@ export default function PlatformSettingsPage() {
         duration: parseInt(tier.duration, 10) || 0,
         description: tier.description,
       })),
-      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({
+      community_project_budget_tiers: adminCommunityBudgetTiers.map(tier => ({ // Corrected from adminPromotionTiers
         id: tier.id,
         name: tier.name,
         description: tier.description,
