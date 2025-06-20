@@ -1,3 +1,4 @@
+
 // src/app/community-projects/[id]/page.tsx
 'use client';
 
@@ -223,6 +224,7 @@ export default function CommunityProjectDetailsPage() {
   const nextImage = () => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   const defaultImage = 'https://placehold.co/1200x800.png?text=Project+Image';
   const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
+  const displayStatus = project.status === 'Ongoing' ? 'Active' : project.status;
 
   return (
     <div className="space-y-8">
@@ -240,7 +242,16 @@ export default function CommunityProjectDetailsPage() {
               <div className="text-sm text-muted-foreground mb-1 flex items-center"> <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id} </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
-              <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="text-lg px-4 py-2 capitalize">{project.status}</Badge>
+              <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="text-lg px-4 py-2 capitalize">{displayStatus}</Badge>
+              <Button
+                onClick={handleOpenInterestDialog}
+                disabled={authLoading}
+                variant="outline"
+                size="default"
+                className="w-full md:w-auto"
+              >
+                <FileHeart className="mr-2 h-5 w-5" /> Express Interest
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -257,7 +268,7 @@ export default function CommunityProjectDetailsPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8"> {/* Changed from lg:col-span-2 */}
+        <div className="lg:col-span-2 space-y-8">
           <Card className="shadow-lg">
             <CardHeader> <CardTitle className="font-headline">Project Details</CardTitle> </CardHeader>
             <CardContent className="space-y-4">
@@ -445,3 +456,4 @@ const ProjectDetailsSkeleton = () => (
   </div>
 );
 
+    

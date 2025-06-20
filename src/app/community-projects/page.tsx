@@ -168,6 +168,7 @@ interface ProjectCardProps { project: CommunityProject; }
 const ProjectCard = ({ project }: ProjectCardProps) => {
   const defaultImage = 'https://placehold.co/600x400.png?text=Project+Image';
   const displayImage = project.images && project.images.length > 0 ? project.images[0] : defaultImage;
+  const displayStatus = project.status === 'Ongoing' ? 'Active' : project.status;
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
@@ -177,7 +178,7 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
         </Link>
          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
             <Badge variant="secondary" className="text-xs">{project.category}</Badge>
-            <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="capitalize text-xs">{project.status}</Badge>
+            <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="capitalize text-xs">{displayStatus}</Badge>
         </div>
       </CardHeader>
       <CardContent className="p-4 flex-grow">

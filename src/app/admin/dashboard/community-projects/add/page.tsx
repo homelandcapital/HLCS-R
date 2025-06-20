@@ -143,7 +143,7 @@ export default function AddCommunityProjectPage() {
           brochure_link: values.brochure_link || null,
           budget_tier: values.budget_tiers,
           images: imageUrls.length > 0 ? imageUrls : ['https://placehold.co/600x400.png?text=Project+Image'], 
-          status: 'Ongoing' as CommunityProjectStatus,
+          status: 'Ongoing' as CommunityProjectStatus, // Changed from 'Pending Approval'
           managed_by_user_id: currentAdmin.id,
         };
         
@@ -162,7 +162,7 @@ export default function AddCommunityProjectPage() {
           return;
         }
 
-        toast({ title: 'Community Project Published!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is now live.` });
+        toast({ title: 'Community Project Published!', description: `${values.title} (ID: ${generatedHumanReadableId}) has been added and is now live with an "Active" status.` });
         form.reset();
         setSelectedFiles([]);
         setImagePreviews([]); 
@@ -191,7 +191,7 @@ export default function AddCommunityProjectPage() {
         <h1 className="text-3xl font-headline flex items-center">
           <PlusCircle className="mr-3 h-8 w-8 text-primary" /> Add New Community Project
         </h1>
-        <p className="text-muted-foreground">Fill in the details for the new community project. It will be published immediately with an "Ongoing" status.</p>
+        <p className="text-muted-foreground">Fill in the details for the new community project. It will be published immediately with an "Active" status.</p>
       </div>
 
       <Card className="shadow-xl">

@@ -104,7 +104,6 @@ export default function CommunityProjectsManagementPage() {
     }
   };
 
-  // handleUpdateStatus might be simplified or removed if direct publishing means no status changes from admin here
   const handleUpdateStatus = async (projectId: string, newStatus: CommunityProjectStatus) => {
     const { error } = await supabase
       .from('community_projects')
@@ -176,7 +175,7 @@ export default function CommunityProjectsManagementPage() {
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CommunityProjectStatus | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Statuses</SelectItem>{communityProjectStatuses.map(stat => (<SelectItem key={stat} value={stat} className="capitalize">{stat}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Statuses</SelectItem>{communityProjectStatuses.map(stat => (<SelectItem key={stat} value={stat} className="capitalize">{stat === 'Ongoing' ? 'Active' : stat}</SelectItem>))}</SelectContent>
             </Select>
           </div>
         </CardHeader>
@@ -225,12 +224,11 @@ export default function CommunityProjectsManagementPage() {
                           <span className="text-xs text-muted-foreground">N/A</span>
                         )}
                       </TableCell>
-                      <TableCell><Badge variant={getStatusBadgeVariant(project.status)} className="capitalize text-sm px-3 py-1">{project.status}</Badge></TableCell>
+                      <TableCell><Badge variant={getStatusBadgeVariant(project.status)} className="capitalize text-sm px-3 py-1">{project.status === 'Ongoing' ? 'Active' : project.status}</Badge></TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="icon" asChild title="View Project Details">
                            <Link href={`/community-projects/${project.id}`} target="_blank" rel="noopener noreferrer"><span><Eye className="h-4 w-4" /></span></Link>
                         </Button>
-                        {/* Approval buttons are removed as projects are published directly */}
                         <Button variant="outline" size="icon" disabled title="Edit Project (Not Implemented)"> <Edit2 className="h-4 w-4" /> </Button>
                          {project.status !== 'Ongoing' && project.status !== 'Funding' && project.status !== 'Completed' && project.status !== 'Planning' && (
                           <Button variant="destructive" size="icon" onClick={() => handleUpdateStatus(project.id, 'Canceled')} title="Cancel Project (Example Action)">
