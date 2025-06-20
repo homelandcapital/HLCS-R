@@ -242,11 +242,13 @@ export default function CommunityProjectDetailsPage() {
               <div className="text-sm text-muted-foreground mb-1 flex items-center"> <Hash className="w-4 h-4 mr-1" /> ID: {project.human_readable_id} </div>
             </div>
             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
-              <Badge variant={project.status === 'Completed' ? 'outline' : 'default'} className="text-lg px-4 py-2 capitalize">{displayStatus}</Badge>
+              <div className="text-2xl font-bold text-foreground whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right capitalize">
+                {displayStatus}
+              </div>
               <Button
                 onClick={handleOpenInterestDialog}
                 disabled={authLoading}
-                variant="outline"
+                variant="default"
                 size="default"
                 className="w-full md:w-auto"
               >
