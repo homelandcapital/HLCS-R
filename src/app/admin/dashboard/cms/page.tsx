@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2 } from 'lucide-react';
+import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Zod Schemas for Validation (ensure these are complete and correct)
@@ -127,9 +127,9 @@ const OfficeDetailsSchema = z.object({
     address: z.string().min(1, "Address is required"),
     phone: z.string().min(1, "Phone number is required"),
     email: z.string().email("Invalid email address"),
-    mapCoordinates: z.object({ 
-        lat: z.coerce.number().min(-90, "Invalid latitude").max(90, "Invalid latitude"), 
-        lng: z.coerce.number().min(-180, "Invalid longitude").max(180, "Invalid longitude") 
+    mapCoordinates: z.object({
+        lat: z.coerce.number().min(-90, "Invalid latitude").max(90, "Invalid latitude"),
+        lng: z.coerce.number().min(-180, "Invalid longitude").max(180, "Invalid longitude")
     }),
     mapTitle: z.string().min(1, "Map title is required"),
 });
@@ -145,13 +145,13 @@ const ContactPageContentSchema = z.object({
     officesSection: z.object({
         title: z.string().min(1, "Offices section title is required"),
         headquarters: OfficeDetailsSchema,
-        regionalOffice: OfficeDetailsSchema.optional(),
+        regionalOffice: OfficeDetailsSchema.optional().or(z.literal(null)), // Allow null for optional office
     }),
     businessHoursSection: z.object({
         title: z.string().min(1, "Business hours title is required"),
-        hours: z.array(z.object({ 
-            day: z.string().min(1, "Day is required"), 
-            time: z.string().min(1, "Time is required") 
+        hours: z.array(z.object({
+            day: z.string().min(1, "Day is required"),
+            time: z.string().min(1, "Time is required")
         })).min(1, "At least one business hour entry is required"),
     }),
     investorRelationsSection: z.object({
@@ -179,13 +179,23 @@ export default function CmsManagementPage() {
   const { fields: findYourHomeFeaturesFields, append: appendFindYourHomeFeature, remove: removeFindYourHomeFeature } = useFieldArray({ control: homeForm.control, name: "findYourHome.features" });
 
   const aboutForm = useForm<AboutPageContent>({ resolver: zodResolver(AboutPageContentSchema), defaultValues: defaultAboutPageContent });
-  
+
   const servicesForm = useForm<ServicesPageContent>({ resolver: zodResolver(ServicesPageContentSchema), defaultValues: defaultServicesPageContent });
   const { fields: mainCategoriesFields, append: appendMainCategory, remove: removeMainCategory } = useFieldArray({ control: servicesForm.control, name: "mainCategories" });
   const { fields: propertyVerificationItemsFields, append: appendPropertyVerificationItem, remove: removePropertyVerificationItem } = useFieldArray({ control: servicesForm.control, name: "propertyVerificationSection.items" });
   const { fields: detailedVerificationItemsFields, append: appendDetailedVerificationItem, remove: removeDetailedVerificationItem } = useFieldArray({ control: servicesForm.control, name: "detailedVerificationSection.items" });
 
-  const contactForm = useForm<ContactPageContentNew>({ resolver: zodResolver(ContactPageContentSchema), defaultValues: defaultContactPageContent });
+  const contactForm = useForm<ContactPageContentNew>({
+    resolver: zodResolver(ContactPageContentSchema),
+    defaultValues: {
+      ...defaultContactPageContent,
+      officesSection: {
+        ...defaultContactPageContent.officesSection,
+        // Ensure regionalOffice is explicitly null if not provided in defaults, matching Zod schema
+        regionalOffice: defaultContactPageContent.officesSection.regionalOffice || null,
+      }
+    }
+  });
   const { fields: inquiryTypesFields, append: appendInquiryType, remove: removeInquiryType } = useFieldArray({ control: contactForm.control, name: "formSection.inquiryTypes" });
   const { fields: businessHoursFields, append: appendBusinessHour, remove: removeBusinessHour } = useFieldArray({ control: contactForm.control, name: "businessHoursSection.hours" });
 
@@ -198,7 +208,7 @@ export default function CmsManagementPage() {
       .eq('page_id', pageId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine for initial load
+    if (error && error.code !== 'PGRST116') {
       toast({ title: `Error loading ${pageId} content`, description: error.message, variant: 'destructive' });
     }
 
@@ -215,7 +225,7 @@ export default function CmsManagementPage() {
         servicesForm.reset(contentToLoad || defaultServicesPageContent);
         break;
       case 'contact':
-        contactForm.reset(contentToLoad || defaultContactPageContent);
+        contactForm.reset(contentToLoad || { ...defaultContactPageContent, officesSection: { ...defaultContactPageContent.officesSection, regionalOffice: null }});
         break;
     }
     setIsUiBlockingLoading(false);
@@ -236,21 +246,23 @@ export default function CmsManagementPage() {
       console.error(`Error saving ${pageId} content to Supabase:`, error);
       throw error;
     }
-    return upsertData || content; 
+    return upsertData || content;
   };
-  
-  const handleSubmitLogic = async ( pageId: PageId, data: any, formInstance: any ) => {
+
+  const handleSubmitLogic = async (pageId: PageId, data: any, formInstance: any) => {
     try {
-      await performSaveOnlyDb(pageId, data); 
+      await performSaveOnlyDb(pageId, data);
+      // Defer UI updates to allow RHF to finish its state updates first
       setTimeout(() => {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Page Content Saved`, description: 'Your changes have been successfully saved.' });
-        formInstance.reset(data); 
+        formInstance.reset(data); // Reset with the data that was just successfully submitted
       }, 0);
     } catch (error: any) {
+      // Defer error toast as well
       setTimeout(() => {
         toast({ title: `Error saving ${pageId} page content`, description: error.message, variant: 'destructive' });
       }, 0);
-      throw error; 
+      throw error; // Re-throw the error so react-hook-form's handleSubmit knows the submission failed
     }
   };
 
@@ -315,7 +327,7 @@ export default function CmsManagementPage() {
                           {homeForm.formState.errors.hero?.slides?.[index]?.titleLines && (
                             <p className="text-sm font-medium text-destructive">
                               {/* @ts-ignore */}
-                              {homeForm.formState.errors.hero?.slides?.[index]?.titleLines?.message || 
+                              {homeForm.formState.errors.hero?.slides?.[index]?.titleLines?.message ||
                                homeForm.formState.errors.hero?.slides?.[index]?.titleLines?.[0]?.message}
                             </p>
                           )}
@@ -588,12 +600,12 @@ export default function CmsManagementPage() {
                       <Button type="button" variant="outline" onClick={() => appendInquiryType("New Inquiry Type")}><PlusCircle className="mr-2 h-4 w-4" /> Add Inquiry Type</Button>
                     </AccordionContent>
                   </AccordionItem>
-                  
+
                   <AccordionItem value="contact-offices-section">
                     <AccordionTrigger className="text-lg font-semibold">Offices Section</AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-3">
                       <Label>Section Title</Label><Input {...contactForm.register('officesSection.title')} placeholder="Offices Section Title" />
-                      
+
                       <Accordion type="single" collapsible defaultValue="contact-hq" className="w-full space-y-3">
                         <AccordionItem value="contact-hq">
                           <AccordionTrigger className="text-md font-medium bg-muted/70 px-3 py-2 rounded-md">Headquarters Details</AccordionTrigger>
@@ -668,3 +680,4 @@ export default function CmsManagementPage() {
     </div>
   );
 }
+
