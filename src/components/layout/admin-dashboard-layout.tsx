@@ -1,4 +1,3 @@
-
 // src/components/layout/admin-dashboard-layout.tsx
 "use client";
 
@@ -13,26 +12,64 @@ import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabaseClient';
+import { Separator } from '../ui/separator';
+import React from 'react';
 
 interface AdminDashboardLayoutProps {
   children: ReactNode;
 }
 
-const adminNavItems = [
-  { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
-  { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
-  { href: '/admin/dashboard/property-oversight', label: 'Listing Approval', icon: <CheckSquare className="h-5 w-5" /> },
-  { href: '/admin/dashboard/machinery-oversight', label: 'Machinery Approval', icon: <Package className="h-5 w-5" /> },
-  { href: '/admin/dashboard/community-projects', label: 'Community Projects', icon: <CommunityIcon className="h-5 w-5" /> },
-  { href: '/admin/dashboard/project-interests', label: 'Community Interests', icon: <FileHeart className="h-5 w-5" /> },
-  { href: '/admin/dashboard/development-projects', label: 'Dev Projects', icon: <Zap className="h-5 w-5" /> },
-  { href: '/admin/dashboard/development-project-interests', label: 'Dev Interests', icon: <Lightbulb className="h-5 w-5" /> },
-  { href: '/admin/dashboard/inquiries', label: 'Property Inquiries', icon: <MailQuestion className="h-5 w-5" /> },
-  { href: '/admin/dashboard/machinery-inquiries', label: 'Machinery Inquiries', icon: <Wrench className="h-5 w-5" /> },
-  { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
-  { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
-  { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+const navGroups = [
+    {
+        title: "General",
+        items: [
+            { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
+            { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
+        ]
+    },
+    {
+        title: "Content & Users",
+        items: [
+            { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
+            { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
+        ]
+    },
+    {
+        title: "Real Estate",
+        items: [
+            { href: '/admin/dashboard/property-oversight', label: 'Listing Approval', icon: <CheckSquare className="h-5 w-5" /> },
+            { href: '/admin/dashboard/inquiries', label: 'Property Inquiries', icon: <MailQuestion className="h-5 w-5" />, notificationKey: 'propertyInquiries' },
+        ]
+    },
+    {
+        title: "Machinery",
+        items: [
+            { href: '/admin/dashboard/machinery-oversight', label: 'Machinery Approval', icon: <Package className="h-5 w-5" /> },
+            { href: '/admin/dashboard/machinery-inquiries', label: 'Machinery Inquiries', icon: <Wrench className="h-5 w-5" />, notificationKey: 'machineryInquiries' },
+        ]
+    },
+    {
+        title: "Community Projects",
+        items: [
+            { href: '/admin/dashboard/community-projects', label: 'Manage Projects', icon: <CommunityIcon className="h-5 w-5" /> },
+            { href: '/admin/dashboard/project-interests', label: 'View Interests', icon: <FileHeart className="h-5 w-5" />, notificationKey: 'communityInterests' },
+        ]
+    },
+    {
+        title: "Development Projects",
+        items: [
+            { href: '/admin/dashboard/development-projects', label: 'Manage Projects', icon: <Zap className="h-5 w-5" /> },
+            { href: '/admin/dashboard/development-project-interests', label: 'View Interests', icon: <Lightbulb className="h-5 w-5" />, notificationKey: 'devInterests' },
+        ]
+    },
+    {
+        title: "Configuration",
+        items: [
+            { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+        ]
+    }
 ];
+
 
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
   const { isAuthenticated, user, loading, signOut } = useAuth();
@@ -40,6 +77,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   const pathname = usePathname();
   const { toast } = useToast();
   const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0);
+  const [unreadMachineryInquiriesCount, setUnreadMachineryInquiriesCount] = useState(0);
   const [unreadProjectInterestsCount, setUnreadProjectInterestsCount] = useState(0);
   const [unreadDevInterestsCount, setUnreadDevInterestsCount] = useState(0);
 
@@ -69,6 +107,30 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
         });
     }
     setUnreadAdminMessagesCount(inquiriesCount);
+
+    // Fetch unread machinery inquiries count
+    let machineryInquiriesCount = 0;
+    const { data: allMachineryInquiries, error: machineryInquiriesError } = await supabase
+      .from('machinery_inquiries')
+      .select('id, status, conversation:machinery_inquiry_messages(sender_role, timestamp)')
+      .order('timestamp', { foreignTable: 'machinery_inquiry_messages', ascending: false });
+
+    if (machineryInquiriesError) {
+        console.error("Error fetching unread machinery inquiries count data:", machineryInquiriesError);
+    } else if (allMachineryInquiries) {
+        allMachineryInquiries.forEach(inq => {
+            if (inq.status === 'new' && (!inq.conversation || inq.conversation.length === 0)) {
+                machineryInquiriesCount++;
+            } else if (inq.conversation && inq.conversation.length > 0) {
+                const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                if (sortedConversation[0]?.sender_role === 'user') {
+                    machineryInquiriesCount++;
+                }
+            }
+        });
+    }
+    setUnreadMachineryInquiriesCount(machineryInquiriesCount);
+
 
     // Fetch unread community project interests count
     const { count: interestsCount, error: interestsError } = await supabase
@@ -118,6 +180,22 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
     }
   }, [isAuthenticated, user, loading, router, toast]);
 
+  const getNotificationCount = (key?: string) => {
+    switch (key) {
+      case 'propertyInquiries':
+        return unreadAdminMessagesCount;
+      case 'machineryInquiries':
+        return unreadMachineryInquiriesCount;
+      case 'communityInterests':
+        return unreadProjectInterestsCount;
+      case 'devInterests':
+        return unreadDevInterestsCount;
+      default:
+        return 0;
+    }
+  };
+
+
   if (loading || !isAuthenticated || (user && user.role !== 'platform_admin')) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -139,50 +217,48 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
             <h2 className="text-xl font-headline font-semibold">{currentAdmin?.name}</h2>
             <p className="text-sm text-muted-foreground">Platform Administrator</p>
         </div>
-        <nav className="flex flex-col space-y-2">
-          {adminNavItems.map((item) => {
-            let isActive = false;
-            if (item.href === '/admin/dashboard') {
-              isActive = pathname === item.href;
-            } else {
-              isActive = pathname.startsWith(item.href);
-            }
-            const isMailItem = item.href === '/admin/dashboard/inquiries';
-            const isProjectInterestItem = item.href === '/admin/dashboard/project-interests';
-            const isDevInterestItem = item.href === '/admin/dashboard/development-project-interests';
+        <nav className="flex flex-col space-y-1">
+          {navGroups.map((group, groupIndex) => (
+            <React.Fragment key={group.title}>
+              {groupIndex > 0 && <Separator className="my-2 bg-sidebar-border" />}
+              <h3 className="px-2 pt-2 pb-1 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
+                {group.title}
+              </h3>
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  let isActive = false;
+                  if (item.href === '/admin/dashboard') {
+                    isActive = pathname === item.href;
+                  } else {
+                    isActive = pathname.startsWith(item.href);
+                  }
+                  const notificationCount = getNotificationCount(item.notificationKey);
 
-            return (
-              <Link key={item.href} href={item.href} passHref legacyBehavior>
-                <Button
-                  variant={isActive ? 'default' : 'ghost'}
-                  className="w-full justify-start"
-                  asChild
-                >
-                  <a className="flex items-center justify-between w-full">
-                    <span className="flex items-center"> 
-                      {item.icon}
-                      <span className="ml-2">{item.label}</span>
-                    </span>
-                    {isMailItem && unreadAdminMessagesCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
-                        {unreadAdminMessagesCount}
-                      </Badge>
-                    )}
-                    {isProjectInterestItem && unreadProjectInterestsCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
-                        {unreadProjectInterestsCount}
-                      </Badge>
-                    )}
-                     {isDevInterestItem && unreadDevInterestsCount > 0 && (
-                      <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
-                        {unreadDevInterestsCount}
-                      </Badge>
-                    )}
-                  </a>
-                </Button>
-              </Link>
-            );
-          })}
+                  return (
+                    <Link key={item.href} href={item.href} passHref legacyBehavior>
+                      <Button
+                        variant={isActive ? 'default' : 'ghost'}
+                        className="w-full justify-start"
+                        asChild
+                      >
+                        <a className="flex items-center justify-between w-full">
+                          <span className="flex items-center">
+                            {item.icon}
+                            <span className="ml-2">{item.label}</span>
+                          </span>
+                          {notificationCount > 0 && (
+                            <Badge variant="destructive" className="ml-auto h-5 px-1.5 text-xs rounded-full">
+                              {notificationCount}
+                            </Badge>
+                          )}
+                        </a>
+                      </Button>
+                    </Link>
+                  );
+                })}
+              </div>
+            </React.Fragment>
+          ))}
         </nav>
         <Button variant="outline" className="w-full mt-auto justify-start" onClick={signOut}>
           <LogOut className="h-5 w-5" />
