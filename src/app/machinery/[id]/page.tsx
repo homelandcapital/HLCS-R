@@ -136,6 +136,7 @@ export default function MachineryDetailsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-foreground">
                 <DetailItem icon={<Tag />} label="Category" value={machinery.category} />
                 <DetailItem icon={<Info />} label="Condition" value={machinery.condition} />
+                <DetailItem icon={<Tag />} label="Listing Type" value={machinery.listing_type} />
                 {machinery.manufacturer && <DetailItem icon={<Wrench />} label="Manufacturer" value={machinery.manufacturer} />}
                 {machinery.model && <DetailItem icon={<Wrench />} label="Model" value={machinery.model} />}
                 {machinery.year && <DetailItem icon={<CalendarDays />} label="Year" value={machinery.year.toString()} />}

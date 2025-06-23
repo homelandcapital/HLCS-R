@@ -337,6 +337,7 @@ export type Database = {
           human_readable_id: string
           id: string
           images: Json | null
+          listing_type: Database["public"]["Enums"]["listing_type_enum"]
           location_city: string
           manufacturer: string | null
           model: string | null
@@ -358,6 +359,7 @@ export type Database = {
           human_readable_id: string
           id?: string
           images?: Json | null
+          listing_type: Database["public"]["Enums"]["listing_type_enum"]
           location_city: string
           manufacturer?: string | null
           model?: string | null
@@ -379,6 +381,7 @@ export type Database = {
           human_readable_id?: string
           id?: string
           images?: Json | null
+          listing_type?: Database["public"]["Enums"]["listing_type_enum"]
           location_city?: string
           manufacturer?: string | null
           model?: string | null

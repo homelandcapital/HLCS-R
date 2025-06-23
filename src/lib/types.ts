@@ -153,6 +153,7 @@ export interface Machinery {
   year?: number | null;
   condition: MachineryCondition;
   price: number;
+  listing_type: ListingType;
   location_city: string;
   state: NigerianState;
   images?: string[] | null;

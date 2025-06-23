@@ -142,6 +142,7 @@ const MachineryCard = ({ machinery }: MachineryCardProps) => {
         </Link>
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <Badge variant="secondary" className="text-xs">{machinery.category}</Badge>
+          <Badge variant="outline" className="text-xs">{machinery.listing_type}</Badge>
         </div>
         <div className="absolute bottom-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm font-semibold">
           ₦{machinery.price.toLocaleString()}

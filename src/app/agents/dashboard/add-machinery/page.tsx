@@ -15,8 +15,8 @@ import { useState, useTransition, useEffect } from 'react';
 import { PlusCircle, UploadCloud, Wrench, MapPin, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Tag, X, FileJson, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { Agent, NigerianState, MachineryCondition } from '@/lib/types';
-import { nigerianStates, machineryConditions } from '@/lib/types';
+import type { Agent, NigerianState, MachineryCondition, ListingType } from '@/lib/types';
+import { nigerianStates, machineryConditions, listingTypes } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,6 +35,7 @@ function generateMachineryId(): string {
 
 const machineryFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
+  listingType: z.enum(listingTypes, { required_error: "Listing type is required." }),
   category: z.string().min(3, { message: 'Category is required (e.g., Tractor, Excavator).' }),
   condition: z.enum(machineryConditions, { required_error: "Condition is required." }),
   location_city: z.string().min(3, { message: 'Location city is required.' }),
@@ -72,6 +73,7 @@ export default function AddMachineryPage() {
     resolver: zodResolver(machineryFormSchema),
     defaultValues: {
       title: '',
+      listingType: undefined,
       category: '',
       condition: undefined,
       location_city: '',
@@ -135,6 +137,7 @@ export default function AddMachineryPage() {
       const machineryDataToInsert: TablesInsert<'machinery'> = {
         human_readable_id: generatedHumanReadableId,
         title: values.title,
+        listing_type: values.listingType,
         description: values.description,
         price: values.price,
         category: values.category,
@@ -189,11 +192,15 @@ export default function AddMachineryPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem className="lg:col-span-3"> <FormLabel className="flex items-center"><Wrench className="w-4 h-4 mr-1"/>Title</FormLabel> <FormControl><Input placeholder="e.g., 2018 Caterpillar 320D Excavator" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                
+                <FormField control={form.control} name="listingType" render={({ field }) => ( <FormItem> <FormLabel>Listing Type</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select listing type" /></SelectTrigger></FormControl> <SelectContent>{listingTypes.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel>Category</FormLabel> <FormControl><Input placeholder="e.g., Construction, Agriculture" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="condition" render={({ field }) => ( <FormItem> <FormLabel>Condition</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select condition" /></SelectTrigger></FormControl> <SelectContent>{machineryConditions.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+                
                 <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Price</FormLabel> <FormControl><Input type="number" placeholder="e.g., 15000000" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="location_city" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPin className="w-4 h-4 mr-1"/>Location City</FormLabel> <FormControl><Input placeholder="e.g., Port Harcourt" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="state" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIconLucide className="w-4 h-4 mr-1"/>State</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger></FormControl> <SelectContent>{nigerianStates.map(s => (<SelectItem key={s} value={s}>{s}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+
                 <FormField control={form.control} name="manufacturer" render={({ field }) => ( <FormItem> <FormLabel>Manufacturer (Optional)</FormLabel> <FormControl><Input placeholder="e.g., Caterpillar" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="model" render={({ field }) => ( <FormItem> <FormLabel>Model (Optional)</FormLabel> <FormControl><Input placeholder="e.g., 320D" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="year" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><CalendarDays className="w-4 h-4 mr-1"/>Year (Optional)</FormLabel> <FormControl><Input type="number" placeholder="e.g., 2018" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
