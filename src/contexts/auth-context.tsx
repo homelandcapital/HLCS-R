@@ -72,6 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         predefinedAmenities: data.predefined_amenities || "",
         propertyTypes: data.property_types || [],
         configuredCommunityBudgetTiers: data.configured_community_budget_tiers || "",
+        machineryCategories: data.machinery_categories || null,
     } as PlatformSettingsType;
   }, []);
 

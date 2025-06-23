@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users, Users2 as CommunityIcon } from 'lucide-react';
+import { Settings, Save, Palette, Bell, Shield, Home, ListPlus, KeyRound, CreditCard, Paintbrush, SlidersHorizontal, Star, TrendingUp, Zap, Gem, Eye, Package, Users, Users2 as CommunityIcon, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -60,6 +60,7 @@ export default function PlatformSettingsPage() {
 
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym");
   const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land");
+  const [machineryCategories, setMachineryCategories] = useState('Construction,Agriculture,Manufacturing,Lifting & Material Handling,Power Generation,Other');
 
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
@@ -88,6 +89,7 @@ export default function PlatformSettingsPage() {
     setNotificationEmail(settingsData.notification_email || 'admin@homelandcapital.com');
     setPredefinedAmenities((settingsData.predefined_amenities as string || "Pool,Garage,Gym"));
     setPropertyTypes((settingsData.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
+    setMachineryCategories(settingsData.machinery_categories || 'Construction,Agriculture,Manufacturing,Lifting & Material Handling,Power Generation,Other');
     setPromotionsEnabled(settingsData.promotions_enabled ?? true);
 
     let finalUiPromotionTiers = initialAdminPromotionTiersUI.map(initialTier => ({ ...initialTier }));
@@ -136,7 +138,7 @@ export default function PlatformSettingsPage() {
   };
 
   const handleSaveChanges = async () => {
-    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'configuredCommunityBudgetTiers'> & { promotion_tiers: PromotionTierConfig[], configured_community_budget_tiers: string | null, property_types: string[], sector_visibility: SectorVisibility } & { id: number } = {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'configuredCommunityBudgetTiers' | 'machineryCategories'> & { promotion_tiers: PromotionTierConfig[], configured_community_budget_tiers: string | null, property_types: string[], machinery_categories: string | null, sector_visibility: SectorVisibility } & { id: number } = {
       id: 1,
       site_name: siteName,
       maintenance_mode: maintenanceMode,
@@ -144,6 +146,7 @@ export default function PlatformSettingsPage() {
       notification_email: notificationEmail,
       predefined_amenities: predefinedAmenities,
       property_types: propertyTypes.split(',').map(pt => pt.trim()).filter(Boolean),
+      machinery_categories: machineryCategories,
       promotions_enabled: promotionsEnabled,
       promotion_tiers: adminPromotionTiers.map(tier => ({
         id: tier.id,
@@ -304,13 +307,28 @@ export default function PlatformSettingsPage() {
               Comma-separated list of available property types. These will appear in the property type selection dropdown for agents.
             </p>
           </div>
-           <div className="space-y-2">
-            <Label htmlFor="customFields">Manage Custom Fields for Properties</Label>
-             <Button variant="outline" disabled className="w-full justify-start">
-              <ListPlus className="mr-2 h-4 w-4" /> Define Custom Fields (Placeholder)
-            </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Wrench className="mr-2 h-5 w-5 text-muted-foreground" /> Machinery Listing Settings
+          </CardTitle>
+          <CardDescription>Configure options related to machinery listings.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="machineryCategories">Manage Machinery Categories</Label>
+            <Textarea
+              id="machineryCategories"
+              value={machineryCategories}
+              onChange={(e) => setMachineryCategories(e.target.value)}
+              placeholder="Enter comma-separated categories, e.g., Construction,Agriculture"
+              rows={3}
+            />
             <p className="text-xs text-muted-foreground">
-              (Placeholder) Allow defining additional custom fields for property listings (e.g., Pet Policy: Yes/No).
+              Comma-separated list of available machinery categories. These will appear in the machinery category selection dropdown for agents.
             </p>
           </div>
         </CardContent>
@@ -448,86 +466,6 @@ export default function PlatformSettingsPage() {
         </CardContent>
       </Card>
 
-       <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-             <Shield className="mr-2 h-5 w-5 text-muted-foreground" /> Security & Compliance (Placeholders)
-          </CardTitle>
-          <CardDescription>Manage security policies and compliance features.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="twoFactorAuth">Two-Factor Authentication (2FA)</Label>
-            <Select defaultValue="admins_only">
-              <SelectTrigger id="twoFactorAuth">
-                <SelectValue placeholder="Select 2FA policy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="disabled">Disabled for all users</SelectItem>
-                <SelectItem value="optional">Optional for all users</SelectItem>
-                <SelectItem value="agents_mandatory">Mandatory for Agents & Admins</SelectItem>
-                <SelectItem value="admins_only">Mandatory for Admins only</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Configure 2FA requirements for user roles.</p>
-          </div>
-           <div className="space-y-2">
-            <Label htmlFor="dataRetention">Data Retention Policy</Label>
-            <Input
-              id="dataRetention"
-              placeholder="e.g., Keep user data for 5 years after inactivity"
-              disabled
-            />
-             <p className="text-xs text-muted-foreground">This setting is a placeholder for a more complex feature.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-8 shadow-lg">
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">Advanced Settings & Integrations</CardTitle>
-          <CardDescription>Manage integrations and advanced customization options for the platform.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="apiKeyManagement">API Key Management</Label>
-            <Button variant="outline" disabled className="w-full justify-start">
-              <KeyRound className="mr-2 h-4 w-4" /> Manage API Keys (Placeholder)
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Manage API keys for third-party services like mapping, analytics, etc.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="emailTemplates">Email Template Customization</Label>
-            <Button variant="outline" disabled className="w-full justify-start">
-              <SlidersHorizontal className="mr-2 h-4 w-4" /> Customize Email Templates (Placeholder)
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Customize the content and branding of system-generated emails.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="paymentGateways">Payment Gateway Integration</Label>
-            <Button variant="outline" disabled className="w-full justify-start">
-              <CreditCard className="mr-2 h-4 w-4" /> Configure Payment Gateways (Placeholder)
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Integrate with payment gateways for premium listings or agent subscriptions.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="customBranding">Custom Branding Options</Label>
-            <Button variant="outline" disabled className="w-full justify-start">
-              <Paintbrush className="mr-2 h-4 w-4" /> Manage Custom Branding (Placeholder)
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              (Placeholder) Customize logos, color schemes, and other branding elements.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="flex justify-end pt-4">
         <Button onClick={handleSaveChanges} size="lg" disabled={loading}>
           <Save className="mr-2 h-5 w-5" /> {loading ? 'Saving...' : 'Save Changes'}
@@ -536,4 +474,3 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
-

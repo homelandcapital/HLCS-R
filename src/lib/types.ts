@@ -142,8 +142,7 @@ export interface Inquiry {
 export type MachineryCondition = Database['public']['Enums']['machinery_condition_enum'];
 export const machineryConditions: MachineryCondition[] = ['New', 'Used', 'Refurbished'];
 
-export type MachineryCategory = "Construction" | "Agriculture" | "Manufacturing" | "Lifting & Material Handling" | "Power Generation" | "Other";
-export const machineryCategories: MachineryCategory[] = ["Construction", "Agriculture", "Manufacturing", "Lifting & Material Handling", "Power Generation", "Other"];
+export type MachineryCategory = string;
 
 export interface Machinery {
   id: string;
@@ -434,4 +433,5 @@ export interface PlatformSettings {
   propertyTypes: string[] | null; 
   sector_visibility?: SectorVisibility | null; 
   configuredCommunityBudgetTiers: string | null;
+  machineryCategories: string | null;
 }
