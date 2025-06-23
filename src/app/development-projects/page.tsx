@@ -69,8 +69,10 @@ export default function DevelopmentProjectsPage() {
     fetchProjects();
   }, [fetchProjects]);
 
-  useEffect(() => {
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
     let tempProjects = [...projects];
+
     if (categoryFilter !== 'all') {
       tempProjects = tempProjects.filter(p => p.category === categoryFilter);
     }
@@ -84,7 +86,7 @@ export default function DevelopmentProjectsPage() {
       );
     }
     setFilteredProjects(tempProjects);
-  }, [searchTerm, categoryFilter, projects]);
+  };
 
 
   return (
@@ -102,15 +104,21 @@ export default function DevelopmentProjectsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center"><Filter className="w-5 h-5 mr-2"/>Filter Projects</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-           <div className="relative lg:col-span-2">
+        <CardContent>
+          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="relative lg:col-span-2">
+              <label htmlFor="search-dev" className="sr-only">Search</label>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search projects by title, description, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              <Input id="search-dev" placeholder="Search projects by title, description, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-            <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
-          </Select>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+              <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            </Select>
+            <Button type="submit" className="w-full">
+              Search
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
@@ -199,5 +207,3 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
-
-    
