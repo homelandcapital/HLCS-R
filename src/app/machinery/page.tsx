@@ -132,7 +132,7 @@ export default function MachineryPage() {
 
   return (
     <div className="space-y-8">
-      <header className="text-center py-8 bg-muted rounded-lg">
+      <header className="text-center">
         <h1 className="text-4xl md:text-5xl font-headline text-primary mb-3 flex items-center justify-center">
           <Wrench className="w-10 h-10 mr-3" />
           Machinery Marketplace
@@ -149,25 +149,23 @@ export default function MachineryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="md:col-span-2">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="relative lg:col-span-2">
               <label htmlFor="search-machinery" className="sr-only">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  id="search-machinery"
-                  placeholder="Search by name, category, manufacturer..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                id="search-machinery"
+                placeholder="Search by name, category, manufacturer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">All Categories</SelectItem>{dynamicMachineryCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
             </Select>
-            <Button type="submit" className="w-full md:w-auto md:col-start-3">Search</Button>
+            <Button type="submit" className="w-full">Search</Button>
           </form>
         </CardContent>
       </Card>
