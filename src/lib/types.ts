@@ -138,6 +138,34 @@ export interface Inquiry {
   conversation?: InquiryMessage[];
 }
 
+// Machinery Types
+export type MachineryCondition = Database['public']['Enums']['machinery_condition_enum'];
+export const machineryConditions: MachineryCondition[] = ['New', 'Used', 'Refurbished'];
+
+export interface Machinery {
+  id: string;
+  human_readable_id: string;
+  title: string;
+  description: string;
+  category: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  year?: number | null;
+  condition: MachineryCondition;
+  price: number;
+  location_city: string;
+  state: NigerianState;
+  images?: string[] | null;
+  specifications?: { [key: string]: string | number } | null;
+  agent_id: string | null;
+  agent?: Agent | null;
+  status: PropertyStatus; // Reusing status from properties
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+
 // Community Project Types
 export type CommunityProjectCategory = "Water Supply" | "Education Support" | "Health Program" | "Nutrition Support" | "Other";
 export const communityProjectCategories: CommunityProjectCategory[] = ["Water Supply", "Education Support", "Health Program", "Nutrition Support", "Other"];

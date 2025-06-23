@@ -327,6 +327,80 @@ export type Database = {
           },
         ]
       }
+      machinery: {
+        Row: {
+          agent_id: string | null
+          category: string
+          condition: Database["public"]["Enums"]["machinery_condition_enum"]
+          created_at: string
+          description: string
+          human_readable_id: string
+          id: string
+          images: Json | null
+          location_city: string
+          manufacturer: string | null
+          model: string | null
+          price: number
+          rejection_reason: string | null
+          specifications: Json | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
+          status: Database["public"]["Enums"]["property_status_enum"]
+          title: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          agent_id?: string | null
+          category: string
+          condition: Database["public"]["Enums"]["machinery_condition_enum"]
+          created_at?: string
+          description: string
+          human_readable_id: string
+          id?: string
+          images?: Json | null
+          location_city: string
+          manufacturer?: string | null
+          model?: string | null
+          price: number
+          rejection_reason?: string | null
+          specifications?: Json | null
+          state: Database["public"]["Enums"]["nigerian_state_enum"]
+          status?: Database["public"]["Enums"]["property_status_enum"]
+          title: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          agent_id?: string | null
+          category?: string
+          condition?: Database["public"]["Enums"]["machinery_condition_enum"]
+          created_at?: string
+          description?: string
+          human_readable_id?: string
+          id?: string
+          images?: Json | null
+          location_city?: string
+          manufacturer?: string | null
+          model?: string | null
+          price?: number
+          rejection_reason?: string | null
+          specifications?: Json | null
+          state?: Database["public"]["Enums"]["nigerian_state_enum"]
+          status?: Database["public"]["Enums"]["property_status_enum"]
+          title?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_content: {
         Row: {
           content: Json
@@ -594,6 +668,7 @@ export type Database = {
       inquiry_status: "new" | "contacted" | "resolved" | "archived"
       inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
+      machinery_condition_enum: "New" | "Used" | "Refurbished"
       nigerian_state_enum:
         | "Abia"
         | "Adamawa"
@@ -777,6 +852,7 @@ export const Constants = {
       inquiry_status: ["new", "contacted", "resolved", "archived"],
       inquiry_status_enum: ["new", "contacted", "resolved", "archived"],
       listing_type_enum: ["For Sale", "For Rent", "For Lease"],
+      machinery_condition_enum: ["New", "Used", "Refurbished"],
       nigerian_state_enum: [
         "Abia",
         "Adamawa",

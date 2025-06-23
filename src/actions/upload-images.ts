@@ -22,15 +22,12 @@ interface UploadResult {
   error?: string;
 }
 
-export async function uploadPropertyImages(formData: FormData): Promise<UploadResult> {
-  const files = formData.getAll('files') as File[];
-
+async function performUpload(files: File[], folder: string): Promise<UploadResult> {
   if (!files || files.length === 0) {
     return { error: 'No files selected for upload.' };
   }
 
   // Check if Cloudinary is configured. If not, try to configure it now.
-  // This provides a second chance if env vars were not available at module load or if running in certain environments.
   let isConfigured = !!(cloudinary.config().cloud_name && cloudinary.config().api_key && cloudinary.config().api_secret);
 
   if (!isConfigured) {
@@ -50,14 +47,10 @@ export async function uploadPropertyImages(formData: FormData): Promise<UploadRe
       }
     } else {
       console.error('Cloudinary environment variables still not set in process.env. Cannot configure.');
-      console.log(`DEBUG: CLOUDINARY_CLOUD_NAME is ${process.env.CLOUDINARY_CLOUD_NAME ? 'set' : 'NOT SET'}`);
-      console.log(`DEBUG: CLOUDINARY_API_KEY is ${process.env.CLOUDINARY_API_KEY ? 'set' : 'NOT SET'}`);
-      console.log(`DEBUG: CLOUDINARY_API_SECRET is ${process.env.CLOUDINARY_API_SECRET ? 'set' : 'NOT SET'}`);
       return { error: 'Cloudinary service is not configured on the server. Environment variables missing.' };
     }
   }
 
-  // Final check after attempting dynamic configuration
   if (!isConfigured) {
     console.error('Cloudinary configuration failed even after dynamic attempt. Check server logs and ensure environment variables are correctly set and accessible to the Next.js server process.');
     return { error: 'Cloudinary service configuration failed. Please check server logs and environment variables.' };
@@ -73,18 +66,27 @@ export async function uploadPropertyImages(formData: FormData): Promise<UploadRe
       const fileUri = `data:${mimeType};${encoding},${base64Data}`;
 
       const result = await cloudinary.uploader.upload(fileUri, {
-        folder: 'homeland_capital_properties', // Organize uploads in a specific folder
+        folder: folder,
       });
       uploadedUrls.push(result.secure_url);
     }
-    console.log('Images uploaded successfully to Cloudinary:', uploadedUrls);
+    console.log(`Images uploaded successfully to Cloudinary folder '${folder}':`, uploadedUrls);
     return { urls: uploadedUrls };
   } catch (error: any) {
     console.error('Error uploading to Cloudinary:', error);
-    // Log more details about the error if available
     if (error.error && error.error.message) {
         console.error('Cloudinary API Error:', error.error.message);
     }
     return { error: `Cloudinary upload failed: ${error.message || 'Unknown error'}` };
   }
+}
+
+export async function uploadPropertyImages(formData: FormData): Promise<UploadResult> {
+  const files = formData.getAll('files') as File[];
+  return performUpload(files, 'homeland_capital_properties');
+}
+
+export async function uploadMachineryImages(formData: FormData): Promise<UploadResult> {
+  const files = formData.getAll('files') as File[];
+  return performUpload(files, 'homeland_capital_machinery');
 }
