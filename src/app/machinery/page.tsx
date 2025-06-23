@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Machinery, Agent, UserRole, MachineryCategory } from '@/lib/types';
+import type { Machinery, Agent, UserRole, MachineryCategory, ListingType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/auth-context';
 import type { TablesInsert } from '@/lib/database.types';
+import { listingTypes } from '@/lib/types';
 
 
 const requestFormSchema = z.object({
@@ -39,6 +40,7 @@ export default function MachineryPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
+  const [listingTypeFilter, setListingTypeFilter] = useState<ListingType | 'all'>('all');
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const { toast } = useToast();
   const { platformSettings, user, isAuthenticated, loading: authLoading } = useAuth();
@@ -98,7 +100,8 @@ export default function MachineryPage() {
             (m.model && m.model.toLowerCase().includes(lowerSearchTerm))
         );
         const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
-        return matchesSearchTerm && matchesCategory;
+        const matchesListingType = listingTypeFilter === 'all' || m.listing_type === listingTypeFilter;
+        return matchesSearchTerm && matchesCategory && matchesListingType;
     });
     setFilteredMachinery(filtered);
   };
@@ -149,7 +152,7 @@ export default function MachineryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div className="relative lg:col-span-2">
               <label htmlFor="search-machinery" className="sr-only">Search</label>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -161,16 +164,28 @@ export default function MachineryPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as string | 'all')}>
                 <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Categories</SelectItem>{dynamicMachineryCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {dynamicMachineryCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
+                </SelectContent>
+            </Select>
+             <Select value={listingTypeFilter} onValueChange={(value) => setListingTypeFilter(value as ListingType | 'all')}>
+              <SelectTrigger><SelectValue placeholder="For Sale/Rent/Lease" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Listing Types</SelectItem>
+                {listingTypes.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             <Button type="submit" className="w-full">Search</Button>
           </form>
         </CardContent>
       </Card>
       
-      <Card className="shadow-lg bg-secondary/50 border-primary/20">
+      <Card>
         <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex-grow">
             <h3 className="text-xl font-headline text-primary flex items-center">
