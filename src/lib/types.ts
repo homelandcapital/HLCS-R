@@ -1,4 +1,5 @@
 
+
 import type { Database } from './database.types';
 
 export type UserRole = 'agent' | 'user' | 'platform_admin';
@@ -194,6 +195,23 @@ export interface MachineryInquiry {
   status: MachineryInquiryStatus;
   user_id?: string | null;
   conversation?: MachineryInquiryMessage[];
+}
+
+export type MachineryRequestStatus = 'new' | 'contacted' | 'resolved';
+export const machineryRequestStatuses: MachineryRequestStatus[] = ['new', 'contacted', 'resolved'];
+
+export interface MachineryRequest {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  user_phone: string | null;
+  machinery_title: string;
+  machinery_category: string | null;
+  message: string | null;
+  status: MachineryRequestStatus;
+  created_at: string;
+  updated_at: string;
 }
 
 

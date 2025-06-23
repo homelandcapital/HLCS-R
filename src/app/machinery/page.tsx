@@ -3,24 +3,55 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Machinery, Agent, UserRole } from '@/lib/types';
+import type { Machinery, Agent, UserRole, MachineryCategory } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Wrench, MapPin, Tag, ArrowRight, Search, ServerCrash, DollarSign, CalendarDays } from 'lucide-react';
+import { Wrench, MapPin, Tag, ArrowRight, Search, ServerCrash, DollarSign, CalendarDays, PackageSearch } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as DialogDesc, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuth } from '@/contexts/auth-context';
+import type { TablesInsert } from '@/lib/database.types';
+
+
+const requestFormSchema = z.object({
+  machinery_title: z.string().min(3, "Please provide a more descriptive title."),
+  machinery_category: z.string().optional(),
+  message: z.string().optional(),
+});
+type RequestFormValues = z.infer<typeof requestFormSchema>;
+
 
 export default function MachineryPage() {
   const [allMachinery, setAllMachinery] = useState<Machinery[]>([]);
   const [filteredMachinery, setFilteredMachinery] = useState<Machinery[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { platformSettings, user, isAuthenticated, loading: authLoading } = useAuth();
+
+  const dynamicMachineryCategories = platformSettings?.machineryCategories?.split(',').map(c => c.trim()).filter(Boolean) || [];
+
+  const requestForm = useForm<RequestFormValues>({
+    resolver: zodResolver(requestFormSchema),
+    defaultValues: {
+      machinery_title: '',
+      machinery_category: '',
+      message: '',
+    },
+  });
 
   const fetchApprovedMachinery = useCallback(async () => {
     setLoading(true);
@@ -67,6 +98,32 @@ export default function MachineryPage() {
     setFilteredMachinery(filtered);
   };
 
+  const handleRequestSubmit = async (values: RequestFormValues) => {
+    if (!isAuthenticated || !user) {
+      toast({ title: "Login Required", description: "You must be logged in to make a request." });
+      return;
+    }
+    const requestData: TablesInsert<'machinery_requests'> = {
+      user_id: user.id,
+      user_name: user.name,
+      user_email: user.email,
+      user_phone: 'phone' in user ? user.phone : null,
+      machinery_title: values.machinery_title,
+      machinery_category: values.machinery_category || null,
+      message: values.message || null,
+      status: 'new'
+    };
+
+    const { error } = await supabase.from('machinery_requests').insert(requestData);
+    if (error) {
+      toast({ title: "Request Failed", description: `Could not submit your request: ${error.message}`, variant: "destructive" });
+    } else {
+      toast({ title: "Request Submitted!", description: "Thank you, we have received your request and will follow up shortly." });
+      setIsRequestDialogOpen(false);
+      requestForm.reset();
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -97,6 +154,83 @@ export default function MachineryPage() {
         </CardContent>
       </Card>
       
+      <Card className="shadow-lg bg-secondary/50 border-primary/20">
+        <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex-grow">
+            <h3 className="text-xl font-headline text-primary flex items-center">
+              <PackageSearch className="w-6 h-6 mr-2" />
+              Can't find what you're looking for?
+            </h3>
+            <p className="text-muted-foreground mt-1">Let us know what you need, and our team will help source it for you.</p>
+          </div>
+          <Button onClick={() => setIsRequestDialogOpen(true)} className="w-full md:w-auto" disabled={authLoading}>
+            Request Machinery
+          </Button>
+        </CardContent>
+      </Card>
+      
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl">Request Machinery</DialogTitle>
+            <DialogDesc>
+              Please provide details about the machinery or equipment you need.
+            </DialogDesc>
+          </DialogHeader>
+          <Form {...requestForm}>
+            <form onSubmit={requestForm.handleSubmit(handleRequestSubmit)} className="space-y-4 py-2">
+              <FormField
+                control={requestForm.control}
+                name="machinery_title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Machinery Name / Title</FormLabel>
+                    <FormControl><Input placeholder="e.g., John Deere 5075E Tractor" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={requestForm.control}
+                name="machinery_category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a category if known" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {dynamicMachineryCategories.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={requestForm.control}
+                name="message"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Additional Details (Optional)</FormLabel>
+                    <FormControl><Textarea placeholder="Include any specific requirements, model numbers, or usage context..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button type="submit" disabled={requestForm.formState.isSubmitting}>
+                  {requestForm.formState.isSubmitting ? 'Submitting...' : 'Submit Request'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

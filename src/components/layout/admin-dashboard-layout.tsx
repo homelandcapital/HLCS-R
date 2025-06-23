@@ -1,3 +1,4 @@
+
 // src/components/layout/admin-dashboard-layout.tsx
 "use client";
 
@@ -6,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon, FileHeart, Lightbulb, Wrench } from 'lucide-react';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon, FileHeart, Lightbulb, Wrench, PackageSearch } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -46,6 +47,7 @@ const navGroups = [
         items: [
             { href: '/admin/dashboard/machinery-oversight', label: 'Machinery Approval', icon: <Package className="h-5 w-5" /> },
             { href: '/admin/dashboard/machinery-inquiries', label: 'Machinery Inquiries', icon: <Wrench className="h-5 w-5" />, notificationKey: 'machineryInquiries' },
+            { href: '/admin/dashboard/machinery-requests', label: 'Machinery Requests', icon: <PackageSearch className="h-5 w-5" />, notificationKey: 'machineryRequests' },
         ]
     },
     {
@@ -78,6 +80,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   const { toast } = useToast();
   const [unreadAdminMessagesCount, setUnreadAdminMessagesCount] = useState(0);
   const [unreadMachineryInquiriesCount, setUnreadMachineryInquiriesCount] = useState(0);
+  const [unreadMachineryRequestsCount, setUnreadMachineryRequestsCount] = useState(0);
   const [unreadProjectInterestsCount, setUnreadProjectInterestsCount] = useState(0);
   const [unreadDevInterestsCount, setUnreadDevInterestsCount] = useState(0);
 
@@ -131,6 +134,13 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
     }
     setUnreadMachineryInquiriesCount(machineryInquiriesCount);
 
+    // Fetch unread machinery requests
+    const { count: machineryRequestsCount, error: machineryRequestsError } = await supabase
+      .from('machinery_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'new');
+    if(machineryRequestsError) console.error("Error fetching unread machinery requests count:", machineryRequestsError);
+    else setUnreadMachineryRequestsCount(machineryRequestsCount || 0);
 
     // Fetch unread community project interests count
     const { count: interestsCount, error: interestsError } = await supabase
@@ -186,6 +196,8 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
         return unreadAdminMessagesCount;
       case 'machineryInquiries':
         return unreadMachineryInquiriesCount;
+      case 'machineryRequests':
+        return unreadMachineryRequestsCount;
       case 'communityInterests':
         return unreadProjectInterestsCount;
       case 'devInterests':
