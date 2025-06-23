@@ -76,7 +76,7 @@ export type Database = {
         Row: {
           brochure_link: string | null
           budget_tier: string[] | null
-          category: Database["public"]["Enums"]["community_project_category_enum"]
+          category: string
           created_at: string
           description: string
           human_readable_id: string
@@ -90,7 +90,7 @@ export type Database = {
         Insert: {
           brochure_link?: string | null
           budget_tier?: string[] | null
-          category: Database["public"]["Enums"]["community_project_category_enum"]
+          category: string
           created_at?: string
           description: string
           human_readable_id: string
@@ -104,7 +104,7 @@ export type Database = {
         Update: {
           brochure_link?: string | null
           budget_tier?: string[] | null
-          category?: Database["public"]["Enums"]["community_project_category_enum"]
+          category?: string
           created_at?: string
           description?: string
           human_readable_id?: string
@@ -191,7 +191,7 @@ export type Database = {
       development_projects: {
         Row: {
           brochure_link: string | null
-          category: Database["public"]["Enums"]["development_project_category_enum"]
+          category: string
           created_at: string
           description: string
           human_readable_id: string
@@ -207,7 +207,7 @@ export type Database = {
         }
         Insert: {
           brochure_link?: string | null
-          category: Database["public"]["Enums"]["development_project_category_enum"]
+          category: string
           created_at?: string
           description: string
           human_readable_id: string
@@ -223,7 +223,7 @@ export type Database = {
         }
         Update: {
           brochure_link?: string | null
-          category?: Database["public"]["Enums"]["development_project_category_enum"]
+          category?: string
           created_at?: string
           description?: string
           human_readable_id?: string
@@ -359,7 +359,7 @@ export type Database = {
           human_readable_id: string
           id?: string
           images?: Json | null
-          listing_type: Database["public"]["Enums"]["listing_type_enum"]
+          listing_type?: Database["public"]["Enums"]["listing_type_enum"]
           location_city: string
           manufacturer?: string | null
           model?: string | null
@@ -424,9 +424,12 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          community_project_categories: string | null
           configured_community_budget_tiers: string | null
           default_currency: string | null
+          development_project_categories: string | null
           id: number
+          machinery_categories: string | null
           maintenance_mode: boolean | null
           notification_email: string | null
           predefined_amenities: string | null
@@ -438,9 +441,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          community_project_categories?: string | null
           configured_community_budget_tiers?: string | null
           default_currency?: string | null
+          development_project_categories?: string | null
           id?: number
+          machinery_categories?: string | null
           maintenance_mode?: boolean | null
           notification_email?: string | null
           predefined_amenities?: string | null
@@ -452,9 +458,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          community_project_categories?: string | null
           configured_community_budget_tiers?: string | null
           default_currency?: string | null
+          development_project_categories?: string | null
           id?: number
+          machinery_categories?: string | null
           maintenance_mode?: boolean | null
           notification_email?: string | null
           predefined_amenities?: string | null
@@ -648,12 +657,6 @@ export type Database = {
       }
     }
     Enums: {
-      community_project_category_enum:
-        | "Water Supply"
-        | "Education Support"
-        | "Health Program"
-        | "Nutrition Support"
-        | "Other"
       community_project_status_enum:
         | "Planning"
         | "Funding"
@@ -663,11 +666,6 @@ export type Database = {
         | "Canceled"
         | "Pending Approval"
         | "Rejected"
-      development_project_category_enum:
-        | "Manufacturing"
-        | "Energy"
-        | "Agriculture"
-        | "Real Estate"
       inquiry_status: "new" | "contacted" | "resolved" | "archived"
       inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
@@ -829,13 +827,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      community_project_category_enum: [
-        "Water Supply",
-        "Education Support",
-        "Health Program",
-        "Nutrition Support",
-        "Other",
-      ],
       community_project_status_enum: [
         "Planning",
         "Funding",
@@ -845,12 +836,6 @@ export const Constants = {
         "Canceled",
         "Pending Approval",
         "Rejected",
-      ],
-      development_project_category_enum: [
-        "Manufacturing",
-        "Energy",
-        "Agriculture",
-        "Real Estate",
       ],
       inquiry_status: ["new", "contacted", "resolved", "archived"],
       inquiry_status_enum: ["new", "contacted", "resolved", "archived"],

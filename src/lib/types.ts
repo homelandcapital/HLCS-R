@@ -170,18 +170,14 @@ export interface Machinery {
 
 
 // Community Project Types
-export type CommunityProjectCategory = "Water Supply" | "Education Support" | "Health Program" | "Nutrition Support" | "Other";
-export const communityProjectCategories: CommunityProjectCategory[] = ["Water Supply", "Education Support", "Health Program", "Nutrition Support", "Other"];
-
 export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
 export const communityProjectStatuses: CommunityProjectStatus[] = ["Planning", "Funding", "Ongoing", "Completed", "On Hold", "Canceled", "Pending Approval", "Rejected"];
-
 
 export interface CommunityProject {
   id: string; 
   human_readable_id: string; 
   title: string; 
-  category: CommunityProjectCategory; 
+  category: string; 
   description: string; 
   brochure_link?: string | null; 
   images?: string[] | null; 
@@ -215,14 +211,11 @@ export interface CommunityProjectInterest {
 
 
 // Development Project Types
-export type DevelopmentProjectCategory = "Manufacturing" | "Energy" | "Agriculture" | "Real Estate";
-export const developmentProjectCategories: DevelopmentProjectCategory[] = ["Manufacturing", "Energy", "Agriculture", "Real Estate"];
-
 export interface DevelopmentProject {
   id: string; 
   human_readable_id: string; 
   title: string; 
-  category: DevelopmentProjectCategory; 
+  category: string; 
   description: string;
   location_area_city: string | null;
   state: NigerianState;
@@ -434,4 +427,8 @@ export interface PlatformSettings {
   sector_visibility?: SectorVisibility | null; 
   configuredCommunityBudgetTiers: string | null;
   machineryCategories: string | null;
+  community_project_categories: string | null;
+  development_project_categories: string | null;
 }
+
+    

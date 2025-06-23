@@ -61,6 +61,8 @@ export default function PlatformSettingsPage() {
   const [predefinedAmenities, setPredefinedAmenities] = useState("Pool,Garage,Gym");
   const [propertyTypes, setPropertyTypes] = useState("House,Apartment,Land");
   const [machineryCategories, setMachineryCategories] = useState('Construction,Agriculture,Manufacturing,Lifting & Material Handling,Power Generation,Other');
+  const [communityProjectCategories, setCommunityProjectCategories] = useState('Water Supply,Education Support,Health Program,Nutrition Support,Other');
+  const [developmentProjectCategories, setDevelopmentProjectCategories] = useState('Manufacturing,Energy,Agriculture,Real Estate');
 
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [adminPromotionTiers, setAdminPromotionTiers] = useState<AdminPromotionTier[]>(initialAdminPromotionTiersUI);
@@ -90,6 +92,8 @@ export default function PlatformSettingsPage() {
     setPredefinedAmenities((settingsData.predefined_amenities as string || "Pool,Garage,Gym"));
     setPropertyTypes((settingsData.property_types as string[] || ['House', 'Apartment', 'Land']).join(','));
     setMachineryCategories(settingsData.machinery_categories || 'Construction,Agriculture,Manufacturing,Lifting & Material Handling,Power Generation,Other');
+    setCommunityProjectCategories(settingsData.community_project_categories || 'Water Supply,Education Support,Health Program,Nutrition Support,Other');
+    setDevelopmentProjectCategories(settingsData.development_project_categories || 'Manufacturing,Energy,Agriculture,Real Estate');
     setPromotionsEnabled(settingsData.promotions_enabled ?? true);
 
     let finalUiPromotionTiers = initialAdminPromotionTiersUI.map(initialTier => ({ ...initialTier }));
@@ -138,7 +142,7 @@ export default function PlatformSettingsPage() {
   };
 
   const handleSaveChanges = async () => {
-    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'configuredCommunityBudgetTiers' | 'machineryCategories'> & { promotion_tiers: PromotionTierConfig[], configured_community_budget_tiers: string | null, property_types: string[], machinery_categories: string | null, sector_visibility: SectorVisibility } & { id: number } = {
+    const settingsToSave: Omit<PlatformSettingsType, 'promotionTiers' | 'sector_visibility' | 'configuredCommunityBudgetTiers' | 'machineryCategories' | 'communityProjectCategories' | 'developmentProjectCategories'> & { promotion_tiers: PromotionTierConfig[], configured_community_budget_tiers: string | null, property_types: string[], machinery_categories: string | null, community_project_categories: string | null, development_project_categories: string | null, sector_visibility: SectorVisibility } & { id: number } = {
       id: 1,
       site_name: siteName,
       maintenance_mode: maintenanceMode,
@@ -147,6 +151,8 @@ export default function PlatformSettingsPage() {
       predefined_amenities: predefinedAmenities,
       property_types: propertyTypes.split(',').map(pt => pt.trim()).filter(Boolean),
       machinery_categories: machineryCategories,
+      community_project_categories: communityProjectCategories,
+      development_project_categories: developmentProjectCategories,
       promotions_enabled: promotionsEnabled,
       promotion_tiers: adminPromotionTiers.map(tier => ({
         id: tier.id,
@@ -276,7 +282,7 @@ export default function PlatformSettingsPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
-            <Home className="mr-2 h-5 w-5 text-muted-foreground" /> Property Listing Settings
+            <Home className="mr-2 h-5 w-5 text-muted-foreground" /> Real Estate Settings
           </CardTitle>
           <CardDescription>Configure options related to property listings.</CardDescription>
         </CardHeader>
@@ -309,35 +315,11 @@ export default function PlatformSettingsPage() {
           </div>
         </CardContent>
       </Card>
-
+      
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
-            <Wrench className="mr-2 h-5 w-5 text-muted-foreground" /> Machinery Listing Settings
-          </CardTitle>
-          <CardDescription>Configure options related to machinery listings.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="machineryCategories">Manage Machinery Categories</Label>
-            <Textarea
-              id="machineryCategories"
-              value={machineryCategories}
-              onChange={(e) => setMachineryCategories(e.target.value)}
-              placeholder="Enter comma-separated categories, e.g., Construction,Agriculture"
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground">
-              Comma-separated list of available machinery categories. These will appear in the machinery category selection dropdown for agents.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Zap className="mr-2 h-5 w-5 text-muted-foreground" /> Promotion Tier Settings
+            <Zap className="mr-2 h-5 w-5 text-muted-foreground" /> Property Promotion Tier Settings
           </CardTitle>
           <CardDescription>Configure different property promotion packages.</CardDescription>
         </CardHeader>
@@ -418,17 +400,54 @@ export default function PlatformSettingsPage() {
           </div>
         </CardContent>
       </Card>
+      
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Wrench className="mr-2 h-5 w-5 text-muted-foreground" /> Machinery Settings
+          </CardTitle>
+          <CardDescription>Configure options related to machinery listings.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="machineryCategories">Manage Machinery Categories</Label>
+            <Textarea
+              id="machineryCategories"
+              value={machineryCategories}
+              onChange={(e) => setMachineryCategories(e.target.value)}
+              placeholder="Enter comma-separated categories, e.g., Construction,Agriculture"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated list of available machinery categories. These will appear in the machinery category selection dropdown for agents.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center">
-            <CommunityIcon className="mr-2 h-5 w-5 text-muted-foreground" /> Community Project Budget Tiers
+            <CommunityIcon className="mr-2 h-5 w-5 text-muted-foreground" /> Community Project Settings
           </CardTitle>
-          <CardDescription>Define the budget tiers for community projects.</CardDescription>
+          <CardDescription>Define the budget tiers and categories for community projects.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="communityBudgetTiersText">Budget Tier Names (Comma-separated)</Label>
+            <Label htmlFor="communityProjectCategories">Manage Community Project Categories</Label>
+            <Textarea
+              id="communityProjectCategories"
+              value={communityProjectCategories}
+              onChange={(e) => setCommunityProjectCategories(e.target.value)}
+              placeholder="Enter comma-separated categories, e.g., Water Supply,Health Program"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated list of available community project categories.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="communityBudgetTiersText">Manage Budget Tier Names</Label>
             <Textarea
               id="communityBudgetTiersText"
               value={configuredCommunityTiersString}
@@ -437,7 +456,31 @@ export default function PlatformSettingsPage() {
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Enter a comma-separated list of names for community project budget tiers. These names will appear in the selection dropdown when adding a project.
+              Comma-separated list of names for community project budget tiers.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Zap className="mr-2 h-5 w-5 text-muted-foreground" /> Development Project Settings
+          </CardTitle>
+          <CardDescription>Define the categories for development projects.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="developmentProjectCategories">Manage Development Project Categories</Label>
+            <Textarea
+              id="developmentProjectCategories"
+              value={developmentProjectCategories}
+              onChange={(e) => setDevelopmentProjectCategories(e.target.value)}
+              placeholder="Enter comma-separated categories, e.g., Manufacturing,Energy,Agriculture,Real Estate"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated list of available development project categories.
             </p>
           </div>
         </CardContent>
@@ -474,3 +517,5 @@ export default function PlatformSettingsPage() {
     </div>
   );
 }
+
+    

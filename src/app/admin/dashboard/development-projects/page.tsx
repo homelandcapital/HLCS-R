@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { DevelopmentProject, CommunityProjectStatus as DevProjectStatus, DevelopmentProjectCategory } from '@/lib/types';
+import type { DevelopmentProject, CommunityProjectStatus as DevProjectStatus } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,17 +16,24 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
-import { developmentProjectCategories, communityProjectStatuses } from '@/lib/types';
+import { communityProjectStatuses } from '@/lib/types';
 
 export default function DevelopmentProjectsManagementPage() {
-  const { user: adminUser, loading: authLoading } = useAuth();
+  const { user: adminUser, loading: authLoading, platformSettings } = useAuth();
   const [allProjects, setAllProjects] = useState<DevelopmentProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<DevelopmentProject[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DevProjectStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<DevelopmentProjectCategory | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
   const { toast } = useToast();
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.development_project_categories) {
+      setAvailableCategories(platformSettings.development_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+    }
+  }, [platformSettings]);
   
   const fetchProjects = useCallback(async () => {
     setPageLoading(true);
@@ -42,7 +49,7 @@ export default function DevelopmentProjectsManagementPage() {
     } else if (data) {
       const formattedProjects = data.map(p => ({
         ...p,
-        category: p.category as DevelopmentProjectCategory,
+        category: p.category,
         price: p.price || null,
         status: p.status as DevProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
@@ -151,9 +158,9 @@ export default function DevelopmentProjectsManagementPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search by ID, title, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as string | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Categories</SelectItem>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DevProjectStatus | 'all')}>
               <SelectTrigger><SelectValue placeholder="Filter by Status" /></SelectTrigger>
@@ -221,3 +228,5 @@ export default function DevelopmentProjectsManagementPage() {
     </div>
   );
 }
+
+    

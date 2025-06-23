@@ -16,8 +16,8 @@ import { useState, useTransition, useEffect, useCallback } from 'react';
 import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Zap, Image as ImageIcon, X, Package, MapPin as MapPinIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { DevelopmentProjectCategory, PlatformAdmin, CommunityProjectStatus, NigerianState } from '@/lib/types';
-import { developmentProjectCategories, nigerianStates } from '@/lib/types';
+import type { PlatformAdmin, CommunityProjectStatus, NigerianState } from '@/lib/types';
+import { nigerianStates } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,7 +36,7 @@ function generateDevelopmentProjectId(): string {
 
 const projectFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
-  category: z.enum(developmentProjectCategories as [DevelopmentProjectCategory, ...DevelopmentProjectCategory[]], { required_error: "Project category is required."}),
+  category: z.string({ required_error: "Project category is required."}).min(1, 'Project category is required.'),
   locationAreaCity: z.string().optional(),
   state: z.enum(nigerianStates as [NigerianState, ...NigerianState[]], { required_error: "State is required."}),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
@@ -53,9 +53,18 @@ export default function AddDevelopmentProjectPage() {
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, platformSettings } = useAuth();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.development_project_categories) {
+      setAvailableCategories(platformSettings.development_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+    } else {
+      setAvailableCategories([]);
+    }
+  }, [platformSettings]);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -160,7 +169,7 @@ export default function AddDevelopmentProjectPage() {
     });
   }
  
-  if (authLoading) {
+  if (authLoading || (platformSettings === null && !authLoading)) {
     return <Skeleton className="h-[500px] w-full" />;
   }
    if (user?.role !== 'platform_admin') {
@@ -185,7 +194,7 @@ export default function AddDevelopmentProjectPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Zap className="w-4 h-4 mr-1"/>Project Title</FormLabel> <FormControl><Input placeholder="e.g., Solar Power Plant for XYZ" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> {availableCategories.length === 0 && <FormDescription className="text-xs text-destructive">No categories configured. Please set them in Platform Settings.</FormDescription>} <FormMessage /> </FormItem> )} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="locationAreaCity" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><MapPinIcon className="w-4 h-4 mr-1"/>Location (Area/City) (Optional)</FormLabel> <FormControl><Input placeholder="e.g., Ikeja Industrial Area" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
@@ -238,3 +247,5 @@ export default function AddDevelopmentProjectPage() {
     </div>
   );
 }
+
+    

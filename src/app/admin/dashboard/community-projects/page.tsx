@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectStatus, CommunityProjectCategory } from '@/lib/types';
+import type { CommunityProject, CommunityProjectStatus } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
-import { communityProjectCategories, communityProjectStatuses } from '@/lib/types';
+import { communityProjectStatuses } from '@/lib/types';
 
 export default function CommunityProjectsManagementPage() {
   const { user: adminUser, loading: authLoading, platformSettings } = useAuth();
@@ -25,16 +25,23 @@ export default function CommunityProjectsManagementPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CommunityProjectStatus | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
   const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
   const { toast } = useToast();
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    if (platformSettings) {
+        if (typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+            setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+        }
+        if (typeof platformSettings.community_project_categories === 'string') {
+            setAvailableCategories(platformSettings.community_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+        }
     } else {
-      setAvailableBudgetTiers([]);
+        setAvailableBudgetTiers([]);
+        setAvailableCategories([]);
     }
   }, [platformSettings]);
 
@@ -52,7 +59,7 @@ export default function CommunityProjectsManagementPage() {
     } else if (data) {
       const formattedProjects = data.map(p => ({
         ...p,
-        category: p.category as CommunityProjectCategory,
+        category: p.category,
         budget_tiers: p.budget_tier ? (Array.isArray(p.budget_tier) ? p.budget_tier : []) : [],
         status: p.status as CommunityProjectStatus,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
@@ -162,9 +169,9 @@ export default function CommunityProjectsManagementPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search by ID, title, description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CommunityProjectCategory | 'all')}>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
               <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
             </Select>
             <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={availableBudgetTiers.length === 0}>
               <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
@@ -248,3 +255,4 @@ export default function CommunityProjectsManagementPage() {
   );
 }
 
+    

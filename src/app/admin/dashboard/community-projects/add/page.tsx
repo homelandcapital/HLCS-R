@@ -17,8 +17,7 @@ import { useState, useTransition, useEffect, useCallback } from 'react';
 import { PlusCircle, UploadCloud, Link as LinkIcon, DollarSign, Users2, Image as ImageIcon, X, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { CommunityProjectCategory, PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
-import { communityProjectCategories } from '@/lib/types';
+import type { PlatformAdmin, CommunityProjectStatus } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +36,7 @@ function generateCommunityProjectId(): string {
 
 const projectFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
-  category: z.enum(communityProjectCategories as [CommunityProjectCategory, ...CommunityProjectCategory[]], { required_error: "Project category is required."}),
+  category: z.string({ required_error: "Project category is required."}).min(1, "Project category is required."),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   brochure_link: z.string().url({ message: "Please enter a valid URL for the brochure." }).optional().or(z.literal('')),
   budget_tiers: z.array(z.string()).min(1, { message: "At least one budget tier must be selected." }),
@@ -53,12 +52,19 @@ export default function AddCommunityProjectPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    if (platformSettings && platformSettings.configuredCommunityBudgetTiers) {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    if (platformSettings) {
+      if (platformSettings.configuredCommunityBudgetTiers) {
+        setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+      }
+      if (platformSettings.community_project_categories) {
+        setAvailableCategories(platformSettings.community_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+      }
     } else {
       setAvailableBudgetTiers([]);
+      setAvailableCategories([]);
     }
   }, [platformSettings]);
 
@@ -203,7 +209,7 @@ export default function AddCommunityProjectPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Users2 className="w-4 h-4 mr-1"/>Project Title</FormLabel> <FormControl><Input placeholder="e.g., Clean Water Initiative for XYZ Village" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select project category" /></SelectTrigger></FormControl> <SelectContent>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent> </Select> {availableCategories.length === 0 && <FormDescription className="text-xs text-destructive">No categories configured. Please set them in Platform Settings.</FormDescription>} <FormMessage /> </FormItem> )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Description</FormLabel> <FormControl><Textarea placeholder="Detailed description of the project, its goals, and impact..." {...field} rows={5} /></FormControl> <FormMessage /> </FormItem> )} />
               
@@ -312,4 +318,6 @@ export default function AddCommunityProjectPage() {
     </div>
   );
 }
+    
+
     

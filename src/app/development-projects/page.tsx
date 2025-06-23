@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { DevelopmentProject, DevelopmentProjectCategory, CommunityProjectStatus as DevProjectStatus } from '@/lib/types';
+import type { DevelopmentProject, DevProjectStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -15,7 +15,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { developmentProjectCategories } from '@/lib/types'; 
 import { useAuth } from '@/contexts/auth-context'; 
 
 export default function DevelopmentProjectsPage() {
@@ -26,9 +25,16 @@ export default function DevelopmentProjectsPage() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<DevelopmentProjectCategory | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   
   const publicDisplayStatuses: DevProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
+
+  useEffect(() => {
+    if (platformSettings && platformSettings.development_project_categories) {
+        setAvailableCategories(platformSettings.development_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+    }
+  }, [platformSettings]);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -47,7 +53,7 @@ export default function DevelopmentProjectsPage() {
     } else if (data) {
       const formattedProjects = data.map(p => ({
         ...p,
-        category: p.category as DevelopmentProjectCategory,
+        category: p.category,
         status: p.status as DevProjectStatus,
         price: p.price || null,
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
@@ -101,9 +107,9 @@ export default function DevelopmentProjectsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search projects by title, description, location..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as DevelopmentProjectCategory | 'all')}>
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Categories</SelectItem>{developmentProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
           </Select>
         </CardContent>
       </Card>
@@ -193,3 +199,5 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
+
+    

@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { CommunityProject, CommunityProjectCategory, CommunityProjectStatus } from '@/lib/types';
+import type { CommunityProject, CommunityProjectStatus } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -15,7 +15,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { communityProjectCategories } from '@/lib/types'; 
 import { useAuth } from '@/contexts/auth-context'; 
 
 export default function CommunityProjectsPage() {
@@ -26,17 +25,24 @@ export default function CommunityProjectsPage() {
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<CommunityProjectCategory | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
   const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
   const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   
   const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
 
   useEffect(() => {
-    if (platformSettings && typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-      setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+    if (platformSettings) {
+        if (typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
+          setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
+        }
+        if (typeof platformSettings.community_project_categories === 'string') {
+            setAvailableCategories(platformSettings.community_project_categories.split(',').map(c => c.trim()).filter(Boolean));
+        }
     } else {
-      setAvailableBudgetTiers([]);
+        setAvailableBudgetTiers([]);
+        setAvailableCategories([]);
     }
   }, [platformSettings]);
 
@@ -58,7 +64,7 @@ export default function CommunityProjectsPage() {
     } else if (data) {
       const formattedProjects = data.map(p => ({
         ...p,
-        category: p.category as CommunityProjectCategory,
+        category: p.category,
         status: p.status as CommunityProjectStatus,
         budget_tiers: p.budget_tiers ? (Array.isArray(p.budget_tiers) ? p.budget_tiers : JSON.parse(String(p.budget_tiers))) : [],
         images: p.images ? (Array.isArray(p.images) ? p.images : JSON.parse(String(p.images))) : [],
@@ -68,7 +74,7 @@ export default function CommunityProjectsPage() {
       setFilteredProjects(formattedProjects); 
     }
     setLoading(false);
-  }, [toast]); // Removed publicDisplayStatuses from deps as it's constant
+  }, [toast]);
 
   useEffect(() => {
     fetchProjects();
@@ -113,9 +119,9 @@ export default function CommunityProjectsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CommunityProjectCategory | 'all')}>
+          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
             <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Categories</SelectItem>{communityProjectCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
           </Select>
           <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={authLoading || availableBudgetTiers.length === 0}>
             <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
@@ -210,3 +216,5 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
+
+    
