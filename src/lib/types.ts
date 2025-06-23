@@ -168,6 +168,34 @@ export interface Machinery {
   updated_at: string;
 }
 
+// Machinery Inquiry Types
+export type MachineryInquiryStatus = 'new' | 'contacted' | 'resolved' | 'archived';
+
+export interface MachineryInquiryMessage {
+  id: string;
+  inquiry_id: string;
+  sender_id: string | null;
+  sender_role: UserRole;
+  sender_name: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface MachineryInquiry {
+  id: string;
+  machinery_id: string;
+  machinery_title: string;
+  inquirer_name: string;
+  inquirer_email: string;
+  inquirer_phone?: string | null;
+  initial_message: string;
+  created_at: string;
+  updated_at?: string | null;
+  status: MachineryInquiryStatus;
+  user_id?: string | null;
+  conversation?: MachineryInquiryMessage[];
+}
+
 
 // Community Project Types
 export type CommunityProjectStatus = "Planning" | "Funding" | "Ongoing" | "Completed" | "On Hold" | "Canceled" | "Pending Approval" | "Rejected";
@@ -430,5 +458,3 @@ export interface PlatformSettings {
   community_project_categories: string | null;
   development_project_categories: string | null;
 }
-
-    

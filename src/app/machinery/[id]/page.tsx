@@ -6,12 +6,12 @@ import * as React from 'react';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import type { Machinery, Agent, UserRole } from '@/lib/types';
+import type { Machinery, Agent, UserRole, GeneralUser } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { MapPin, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, Wrench, ShieldAlert, EyeOff, Hash, AlertTriangle, Building, Info } from 'lucide-react';
+import { MapPin, CalendarDays, Tag, Users, Mail, Phone, ChevronLeft, ChevronRight, Wrench, ShieldAlert, EyeOff, Hash, AlertTriangle, Building, Info, MailQuestion } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import MachineryContactForm from '@/components/machinery/machinery-contact-form';
 
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,7 +32,9 @@ export default function MachineryDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [isValidId, setIsValidId] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const { user: authContextUser, loading: authLoading } = useAuth();
+  const [isInquiryDialogOpen, setIsInquiryDialogOpen] = useState(false);
+  const { user: authContextUser, isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
 
   const fetchMachineryDetails = useCallback(async (machineryId: string) => {
@@ -73,6 +76,22 @@ export default function MachineryDetailsPage() {
       }
     }
   }, [idFromUrl, fetchMachineryDetails]);
+  
+  const handleInquireClick = () => {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to make an inquiry.",
+        variant: "default",
+      });
+      router.push('/agents/login');
+    } else {
+      setIsInquiryDialogOpen(true);
+    }
+  };
+
 
   if (loading || authLoading) {
     return <MachineryDetailsSkeleton />;
@@ -96,6 +115,15 @@ export default function MachineryDetailsPage() {
   const nextImage = () => setCurrentImageIndex((prevIndex) => prevIndex === images.length - 1 ? 0 : prevIndex + 1);
   const defaultImage = 'https://placehold.co/1200x800.png';
   const mainDisplayImage = images.length > 0 ? images[currentImageIndex] : defaultImage;
+  
+  let contactFormInitialData: { name?: string; email?: string; phone?: string } = {};
+  if (authContextUser) {
+    contactFormInitialData.name = authContextUser.name;
+    contactFormInitialData.email = authContextUser.email;
+    if (authContextUser.role === 'agent' || authContextUser.role === 'user') {
+      contactFormInitialData.phone = (authContextUser as Agent | GeneralUser).phone || undefined;
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -113,10 +141,37 @@ export default function MachineryDetailsPage() {
               {machinery.human_readable_id && <div className="text-sm text-muted-foreground mb-1 flex items-center"><Hash className="w-4 h-4 mr-1" /> ID: {machinery.human_readable_id}</div>}
               <div className="flex items-center text-muted-foreground text-sm mb-2"><MapPin className="w-4 h-4 mr-1" /> {machinery.location_city}, {machinery.state}</div>
             </div>
-            <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right"> ₦{machinery.price.toLocaleString()} </div>
+             <div className="flex flex-col items-stretch md:items-end gap-2 self-start md:self-center mt-4 md:mt-0">
+                <div className="text-3xl font-bold text-accent whitespace-nowrap bg-secondary px-4 py-2 rounded-lg text-center md:text-right"> ₦{machinery.price.toLocaleString()} </div>
+                 {machinery.status === 'approved' && (
+                    <Button variant="default" size="default" className="w-full md:w-auto" onClick={handleInquireClick} disabled={authLoading}>
+                    <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : 'Inquire Now'}
+                    </Button>
+                )}
+            </div>
           </div>
         </CardContent>
       </Card>
+      
+       <Dialog open={isInquiryDialogOpen} onOpenChange={setIsInquiryDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-headline">Inquire about: {machinery.title}</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Fill out the form below. Your details will be sent to the platform administrators.
+            </p>
+          </DialogHeader>
+          <MachineryContactForm
+            machineryTitle={machinery.title}
+            machineryId={machinery.id}
+            initialName={contactFormInitialData.name}
+            initialEmail={contactFormInitialData.email}
+            initialPhone={contactFormInitialData.phone}
+            onFormSubmit={() => setIsInquiryDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
 
       <Card className="shadow-lg">
         <CardContent className="p-2 md:p-4">
@@ -149,30 +204,14 @@ export default function MachineryDetailsPage() {
           </Card>
         </div>
         <div className="space-y-8">
-          {machinery.agent ? (
-             <Card className="shadow-lg">
-              <CardHeader> <CardTitle className="font-headline">Contact Seller</CardTitle> </CardHeader>
-              <CardContent className="flex flex-col items-start space-y-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-16 h-16 border-2 border-primary">
-                    <AvatarImage src={machinery.agent.avatar_url || undefined} alt={machinery.agent.name} />
-                    <AvatarFallback>{machinery.agent.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">{machinery.agent.name}</h3>
-                    {machinery.agent.agency && <p className="text-sm text-muted-foreground">{machinery.agent.agency}</p>}
-                  </div>
-                </div>
-                <Separator />
-                <div className="space-y-2 text-sm w-full">
-                  <a href={`mailto:${machinery.agent.email}`} className="flex items-center p-2 rounded-md hover:bg-muted"><Mail className="w-4 h-4 mr-2 text-primary"/> {machinery.agent.email}</a>
-                  {machinery.agent.phone && <a href={`tel:${machinery.agent.phone}`} className="flex items-center p-2 rounded-md hover:bg-muted"><Phone className="w-4 h-4 mr-2 text-primary"/> {machinery.agent.phone}</a>}
-                </div>
-              </CardContent>
+            <Card className="shadow-lg">
+                <CardHeader> <CardTitle className="font-headline">Interested?</CardTitle> </CardHeader>
+                <CardContent>
+                    <Button variant="default" size="lg" className="w-full" onClick={handleInquireClick} disabled={authLoading}>
+                        <MailQuestion className="mr-2 h-5 w-5" /> {authLoading ? 'Loading...' : 'Inquire Now'}
+                    </Button>
+                </CardContent>
             </Card>
-          ) : (
-            <Card><CardHeader><CardTitle>Seller Information</CardTitle></CardHeader><CardContent><p>Seller details are not available.</p></CardContent></Card>
-          )}
         </div>
       </div>
     </div>
@@ -190,7 +229,7 @@ const MachineryDetailsSkeleton = () => (
     <Card><CardContent className="p-2 md:p-4"><Skeleton className="aspect-[16/10] w-full rounded-md" /><div className="mt-3 flex space-x-2 p-1">{[...Array(4)].map((_, i) => ( <Skeleton key={i} className="h-14 w-20 md:h-16 md:w-24 rounded-md shrink-0" /> ))}</div></CardContent></Card>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-8"> <Card><CardHeader><Skeleton className="h-8 w-1/3" /></CardHeader><CardContent className="space-y-4"><div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div><Skeleton className="h-px w-full my-6" /><Skeleton className="h-6 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /></CardContent></Card> </div>
-      <div className="space-y-8"><Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent className="flex flex-col items-start space-y-3"><Skeleton className="w-16 h-16 rounded-full" /><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardContent></Card></div>
+      <div className="space-y-8"><Card><CardHeader><Skeleton className="h-8 w-1/2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card></div>
     </div>
   </div>
 );

@@ -1,3 +1,4 @@
+
 // src/components/layout/admin-dashboard-layout.tsx
 "use client";
 
@@ -6,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect, type ReactNode, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon, FileHeart, Lightbulb } from 'lucide-react';
+import { Home, Users, ShieldCheck, Settings, BarChart3, LogOut, Eye, MailQuestion, Newspaper, CheckSquare, Package, Zap, Users2 as CommunityIcon, FileHeart, Lightbulb, Wrench } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
 import type { PlatformAdmin } from '@/lib/types';
@@ -26,7 +27,8 @@ const adminNavItems = [
   { href: '/admin/dashboard/project-interests', label: 'Community Interests', icon: <FileHeart className="h-5 w-5" /> },
   { href: '/admin/dashboard/development-projects', label: 'Dev Projects', icon: <Zap className="h-5 w-5" /> },
   { href: '/admin/dashboard/development-project-interests', label: 'Dev Interests', icon: <Lightbulb className="h-5 w-5" /> },
-  { href: '/admin/dashboard/inquiries', label: 'Inquiry Management', icon: <MailQuestion className="h-5 w-5" /> },
+  { href: '/admin/dashboard/inquiries', label: 'Property Inquiries', icon: <MailQuestion className="h-5 w-5" /> },
+  { href: '/admin/dashboard/machinery-inquiries', label: 'Machinery Inquiries', icon: <Wrench className="h-5 w-5" /> },
   { href: '/admin/dashboard/cms', label: 'CMS Management', icon: <Newspaper className="h-5 w-5" /> },
   { href: '/admin/dashboard/analytics', label: 'Platform Analytics', icon: <BarChart3 className="h-5 w-5" /> },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
