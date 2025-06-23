@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Building, Mail, Users2 as CommunityIcon } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, UserCircle, Home, Briefcase, Zap, Building, Mail, Users2 as CommunityIcon, Wrench } from "lucide-react";
 import { useState } from 'react';
 import ThemeToggleButton from '@/components/common/theme-toggle-button';
 import type { SectorKey } from '@/lib/types';
@@ -28,7 +28,7 @@ const baseNavLinks = [
   { href: '/about', label: 'About', alwaysVisible: true, icon: <UserCircle className="h-5 w-5"/> }, 
   { href: '/services', label: 'Services', alwaysVisible: true, icon: <Briefcase className="h-5 w-5"/> }, 
   { href: '/properties', label: 'Properties', sectorKey: 'realEstate' as SectorKey, icon: <Building className="h-5 w-5"/> },
-  { href: '/services#machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Briefcase className="h-5 w-5"/> }, 
+  { href: '/machinery', label: 'Machinery', sectorKey: 'machinery' as SectorKey, icon: <Wrench className="h-5 w-5"/> }, 
   { href: '/development-projects', label: 'Development', sectorKey: 'development' as SectorKey, icon: <Zap className="h-5 w-5"/> },
   { href: '/community-projects', label: 'Community', sectorKey: 'community' as SectorKey, icon: <CommunityIcon className="h-5 w-5"/> },
   { href: '/contact', label: 'Contact', alwaysVisible: true, icon: <Mail className="h-5 w-5"/> }, 
