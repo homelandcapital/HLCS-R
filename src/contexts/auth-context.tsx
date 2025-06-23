@@ -166,36 +166,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
-        if (!isMountedRef.current) return;
-        setSession(currentSession);
+        try {
+            if (!isMountedRef.current) return;
+            setSession(currentSession);
 
-        if (event === 'INITIAL_SESSION' && currentSession?.user) {
-          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-          if (isMountedRef.current) setUser(profile);
-        } else if (event === 'SIGNED_IN' && currentSession?.user) {
-          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-          if (isMountedRef.current) {
-            setUser(profile);
-            await refreshPlatformSettings(); 
+            if (event === 'INITIAL_SESSION' && currentSession?.user) {
+            const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+            if (isMountedRef.current) setUser(profile);
+            } else if (event === 'SIGNED_IN' && currentSession?.user) {
+            const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+            if (isMountedRef.current) {
+                setUser(profile);
+                await refreshPlatformSettings(); 
 
-            if (profile) {
-              if (profile.role === 'agent') router.push('/agents/dashboard');
-              else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
-              else router.push('/users/dashboard');
+                if (profile) {
+                if (profile.role === 'agent') router.push('/agents/dashboard');
+                else if (profile.role === 'platform_admin') router.push('/admin/dashboard');
+                else router.push('/users/dashboard');
+                }
             }
-          }
-        } else if (event === 'SIGNED_OUT') {
-          if (isMountedRef.current) setUser(null);
-        } else if (event === 'USER_UPDATED' && currentSession?.user) {
-          const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-          if (isMountedRef.current) setUser(profile);
-           await refreshPlatformSettings(); 
-        } else if (event === 'TOKEN_REFRESHED') {
-            if (currentSession?.user && currentSession.user.id !== userRef.current?.id) {
-                const profile = await fetchUserProfileAndRelatedData(currentSession.user);
-                 if (isMountedRef.current) setUser(profile);
-            } else if (!currentSession?.user && userRef.current) {
-                if (isMountedRef.current) setUser(null);
+            } else if (event === 'SIGNED_OUT') {
+            if (isMountedRef.current) setUser(null);
+            } else if (event === 'USER_UPDATED' && currentSession?.user) {
+            const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+            if (isMountedRef.current) setUser(profile);
+            await refreshPlatformSettings(); 
+            } else if (event === 'TOKEN_REFRESHED') {
+                if (currentSession?.user && currentSession.user.id !== userRef.current?.id) {
+                    const profile = await fetchUserProfileAndRelatedData(currentSession.user);
+                    if (isMountedRef.current) setUser(profile);
+                } else if (!currentSession?.user && userRef.current) {
+                    if (isMountedRef.current) setUser(null);
+                }
+            }
+        } catch (error: any) {
+            console.error("[AuthContext] Unhandled error in onAuthStateChange listener:", error);
+            toast({ title: 'Authentication Error', description: 'An unexpected error occurred. Please try logging in again.', variant: 'destructive'});
+            // Force a clean state on error
+            if (isMountedRef.current) {
+                setUser(null);
+                setSession(null);
             }
         }
       }
@@ -203,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, toast]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -285,33 +295,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async (): Promise<void> => {
-    if (!isMountedRef.current) return Promise.resolve();
-    const { data: { session: currentAuthSession } } = await supabase.auth.getSession();
-
-    if (currentAuthSession) {
-      try {
-        const { error: signOutServiceError } = await supabase.auth.signOut();
-        if (signOutServiceError) {
-          if (!(signOutServiceError.message.includes("Auth session missing") || signOutServiceError.message.includes("No active session"))) {
-            console.error("[AuthContext] signOut: Supabase signOut service error:", signOutServiceError);
-            toast({ title: 'Logout Failed', description: signOutServiceError.message, variant: 'destructive' });
-          }
+    const { error } = await supabase.auth.signOut();
+    
+    // The onAuthStateChange listener handles state changes and redirects from protected routes.
+    // We only need to handle user feedback here.
+    if (error) {
+        // We can ignore errors about no active session, as the end result is the same.
+        if (error.message !== 'Auth session missing') {
+             console.error("[AuthContext] Sign out error:", error);
+             toast({ title: "Logout Error", description: "Could not sign you out from the server, but you are logged out locally.", variant: 'destructive' });
+        } else {
+             toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
         }
-      } catch (thrownError: any) {
-         if (!(thrownError.message.includes("Auth session missing") || thrownError.message.includes("No active session"))) {
-            console.error("[AuthContext] signOut: Exception during Supabase signOut:", thrownError);
-            toast({ title: 'Logout Error', description: thrownError.message || 'An unexpected error occurred.', variant: 'destructive' });
-         }
-      }
-    }
-    if (isMountedRef.current) {
-      setUser(null);
-      setSession(null);
-      router.push('/');
-      if (user || currentAuthSession) {
+    } else {
         toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-      }
     }
+    // Pushing to '/' immediately can be good UX. The listener will ensure state is cleared.
+    router.push('/');
   };
 
   const sendPasswordResetEmail = async (email: string) => {
