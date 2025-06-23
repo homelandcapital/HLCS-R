@@ -26,22 +26,16 @@ export default function CommunityProjectsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
-  const [budgetTierFilter, setBudgetTierFilter] = useState<string | 'all'>('all');
-  const [availableBudgetTiers, setAvailableBudgetTiers] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   
   const publicDisplayStatuses: CommunityProjectStatus[] = ["Ongoing", "Funding", "Planning", "Completed"];
 
   useEffect(() => {
     if (platformSettings) {
-        if (typeof platformSettings.configuredCommunityBudgetTiers === 'string') {
-          setAvailableBudgetTiers(platformSettings.configuredCommunityBudgetTiers.split(',').map(t => t.trim()).filter(Boolean));
-        }
         if (typeof platformSettings.community_project_categories === 'string') {
             setAvailableCategories(platformSettings.community_project_categories.split(',').map(c => c.trim()).filter(Boolean));
         }
     } else {
-        setAvailableBudgetTiers([]);
         setAvailableCategories([]);
     }
   }, [platformSettings]);
@@ -79,14 +73,13 @@ export default function CommunityProjectsPage() {
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
-
-  useEffect(() => {
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
     let tempProjects = [...projects];
+
     if (categoryFilter !== 'all') {
       tempProjects = tempProjects.filter(p => p.category === categoryFilter);
-    }
-    if (budgetTierFilter !== 'all') {
-      tempProjects = tempProjects.filter(p => p.budget_tiers?.includes(budgetTierFilter));
     }
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
@@ -96,7 +89,7 @@ export default function CommunityProjectsPage() {
       );
     }
     setFilteredProjects(tempProjects);
-  }, [searchTerm, categoryFilter, budgetTierFilter, projects]);
+  };
 
 
   return (
@@ -114,22 +107,21 @@ export default function CommunityProjectsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center"><Filter className="w-5 h-5 mr-2"/>Filter Projects</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-           <div className="relative lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+        <CardContent>
+          <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="relative lg:col-span-2">
+                <label htmlFor="search-community" className="sr-only">Search</label>
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input id="search-community" placeholder="Search projects by title or description..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-          <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
-            <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
-            <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
-          </Select>
-          <Select value={budgetTierFilter} onValueChange={(value) => setBudgetTierFilter(value as string | 'all')} disabled={authLoading || availableBudgetTiers.length === 0}>
-            <SelectTrigger><SelectValue placeholder="Filter by Budget Tier" /></SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">All Budget Tiers</SelectItem>
-                {availableBudgetTiers.map(tierName => (<SelectItem key={tierName} value={tierName}>{tierName}</SelectItem>))}
-            </SelectContent>
-          </Select>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value)}>
+              <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Categories</SelectItem>{availableCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            </Select>
+            <Button type="submit" className="w-full">
+              Search
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
@@ -216,5 +208,3 @@ const ProjectCard = ({ project }: ProjectCardProps) => {
     </Card>
   );
 };
-
-    

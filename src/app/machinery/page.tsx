@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Wrench, MapPin, Tag, ArrowRight, Search, ServerCrash, DollarSign, CalendarDays, PackageSearch } from 'lucide-react';
+import { Wrench, MapPin, Tag, ArrowRight, Search, ServerCrash, DollarSign, CalendarDays, PackageSearch, Filter as FilterIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +38,7 @@ export default function MachineryPage() {
   const [filteredMachinery, setFilteredMachinery] = useState<Machinery[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | 'all'>('all');
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const { toast } = useToast();
   const { platformSettings, user, isAuthenticated, loading: authLoading } = useAuth();
@@ -88,13 +89,17 @@ export default function MachineryPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const lowerSearchTerm = searchTerm.toLowerCase();
-    const filtered = allMachinery.filter(m =>
-      m.title.toLowerCase().includes(lowerSearchTerm) ||
-      m.category.toLowerCase().includes(lowerSearchTerm) ||
-      m.description.toLowerCase().includes(lowerSearchTerm) ||
-      (m.manufacturer && m.manufacturer.toLowerCase().includes(lowerSearchTerm)) ||
-      (m.model && m.model.toLowerCase().includes(lowerSearchTerm))
-    );
+    const filtered = allMachinery.filter(m => {
+        const matchesSearchTerm = lowerSearchTerm === '' || (
+            m.title.toLowerCase().includes(lowerSearchTerm) ||
+            m.category.toLowerCase().includes(lowerSearchTerm) ||
+            m.description.toLowerCase().includes(lowerSearchTerm) ||
+            (m.manufacturer && m.manufacturer.toLowerCase().includes(lowerSearchTerm)) ||
+            (m.model && m.model.toLowerCase().includes(lowerSearchTerm))
+        );
+        const matchesCategory = categoryFilter === 'all' || m.category === categoryFilter;
+        return matchesSearchTerm && matchesCategory;
+    });
     setFilteredMachinery(filtered);
   };
 
@@ -138,18 +143,31 @@ export default function MachineryPage() {
       </header>
 
       <Card>
-        <CardContent className="p-4">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, category, manufacturer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <FilterIcon className="w-5 h-5 mr-2"/>Filter Machinery
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="md:col-span-2">
+              <label htmlFor="search-machinery" className="sr-only">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  id="search-machinery"
+                  placeholder="Search by name, category, manufacturer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <Button type="submit">Search</Button>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger><SelectValue placeholder="Filter by Category" /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All Categories</SelectItem>{dynamicMachineryCategories.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}</SelectContent>
+            </Select>
+            <Button type="submit" className="w-full md:w-auto md:col-start-3">Search</Button>
           </form>
         </CardContent>
       </Card>

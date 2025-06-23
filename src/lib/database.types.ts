@@ -404,6 +404,151 @@ export type Database = {
           },
         ]
       }
+      machinery_inquiries: {
+        Row: {
+          created_at: string
+          id: string
+          initial_message: string
+          inquirer_email: string
+          inquirer_name: string
+          inquirer_phone: string | null
+          machinery_id: string
+          machinery_title: string
+          status: Database["public"]["Enums"]["inquiry_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initial_message: string
+          inquirer_email: string
+          inquirer_name: string
+          inquirer_phone?: string | null
+          machinery_id: string
+          machinery_title: string
+          status?: Database["public"]["Enums"]["inquiry_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initial_message?: string
+          inquirer_email?: string
+          inquirer_name?: string
+          inquirer_phone?: string | null
+          machinery_id?: string
+          machinery_title?: string
+          status?: Database["public"]["Enums"]["inquiry_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_inquiries_machinery_id_fkey"
+            columns: ["machinery_id"]
+            isOneToOne: false
+            referencedRelation: "machinery"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_inquiries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_inquiry_messages: {
+        Row: {
+          content: string
+          id: string
+          inquiry_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          timestamp: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          inquiry_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          timestamp?: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          inquiry_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_inquiry_messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machinery_requests: {
+        Row: {
+          created_at: string
+          id: string
+          machinery_category: string | null
+          machinery_title: string
+          message: string | null
+          status: Database["public"]["Enums"]["machinery_request_status_enum"]
+          updated_at: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          user_phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          machinery_category?: string | null
+          machinery_title: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["machinery_request_status_enum"]
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          machinery_category?: string | null
+          machinery_title?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["machinery_request_status_enum"]
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       page_content: {
         Row: {
           content: Json
@@ -670,6 +815,7 @@ export type Database = {
       inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
       machinery_condition_enum: "New" | "Used" | "Refurbished"
+      machinery_request_status_enum: "new" | "contacted" | "resolved"
       nigerian_state_enum:
         | "Abia"
         | "Adamawa"
@@ -841,6 +987,7 @@ export const Constants = {
       inquiry_status_enum: ["new", "contacted", "resolved", "archived"],
       listing_type_enum: ["For Sale", "For Rent", "For Lease"],
       machinery_condition_enum: ["New", "Used", "Refurbished"],
+      machinery_request_status_enum: ["new", "contacted", "resolved"],
       nigerian_state_enum: [
         "Abia",
         "Adamawa",
