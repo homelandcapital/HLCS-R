@@ -21,6 +21,7 @@ const adminNavItems = [
   { href: '/admin/dashboard', label: 'Overview', icon: <Home className="h-5 w-5" /> },
   { href: '/admin/dashboard/user-management', label: 'User Management', icon: <Users className="h-5 w-5" /> },
   { href: '/admin/dashboard/property-oversight', label: 'Listing Approval', icon: <CheckSquare className="h-5 w-5" /> },
+  { href: '/admin/dashboard/machinery-oversight', label: 'Machinery Approval', icon: <Package className="h-5 w-5" /> },
   { href: '/admin/dashboard/community-projects', label: 'Community Projects', icon: <CommunityIcon className="h-5 w-5" /> },
   { href: '/admin/dashboard/project-interests', label: 'Community Interests', icon: <FileHeart className="h-5 w-5" /> },
   { href: '/admin/dashboard/development-projects', label: 'Dev Projects', icon: <Zap className="h-5 w-5" /> },
@@ -79,7 +80,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
       setUnreadProjectInterestsCount(interestsCount || 0);
     }
 
-    // Fetch unread development project interests count
+     // Fetch unread development project interests count
     const { count: devInterestsCount, error: devInterestsError } = await supabase
       .from('development_project_interests')
       .select('id', { count: 'exact', head: true })
