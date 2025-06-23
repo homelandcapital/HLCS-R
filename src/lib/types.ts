@@ -142,12 +142,15 @@ export interface Inquiry {
 export type MachineryCondition = Database['public']['Enums']['machinery_condition_enum'];
 export const machineryConditions: MachineryCondition[] = ['New', 'Used', 'Refurbished'];
 
+export type MachineryCategory = "Construction" | "Agriculture" | "Manufacturing" | "Lifting & Material Handling" | "Power Generation" | "Other";
+export const machineryCategories: MachineryCategory[] = ["Construction", "Agriculture", "Manufacturing", "Lifting & Material Handling", "Power Generation", "Other"];
+
 export interface Machinery {
   id: string;
   human_readable_id: string;
   title: string;
   description: string;
-  category: string;
+  category: MachineryCategory;
   manufacturer?: string | null;
   model?: string | null;
   year?: number | null;

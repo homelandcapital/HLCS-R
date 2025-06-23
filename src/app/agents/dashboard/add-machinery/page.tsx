@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useTransition, useEffect } from 'react';
-import { PlusCircle, UploadCloud, Wrench, MapPin, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Tag, X, FileJson, DollarSign } from 'lucide-react';
+import { PlusCircle, UploadCloud, Wrench, MapPin, CalendarDays, Image as ImageIcon, MapPinIcon as MapPinIconLucide, Tag, X, FileJson, DollarSign, Package } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import type { Agent, NigerianState, MachineryCondition, ListingType } from '@/lib/types';
-import { nigerianStates, machineryConditions, listingTypes } from '@/lib/types';
+import type { Agent, NigerianState, MachineryCondition, ListingType, MachineryCategory } from '@/lib/types';
+import { nigerianStates, machineryConditions, listingTypes, machineryCategories } from '@/lib/types';
 import { supabase } from '@/lib/supabaseClient';
 import type { TablesInsert } from '@/lib/database.types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,11 +35,11 @@ function generateMachineryId(): string {
 
 const machineryFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters.' }),
-  listingType: z.enum(listingTypes, { required_error: "Listing type is required." }),
-  category: z.string().min(3, { message: 'Category is required (e.g., Tractor, Excavator).' }),
-  condition: z.enum(machineryConditions, { required_error: "Condition is required." }),
+  listingType: z.enum(listingTypes as [ListingType, ...ListingType[]], { required_error: "Listing type is required." }),
+  category: z.enum(machineryCategories as [MachineryCategory, ...MachineryCategory[]], { required_error: 'Category is required.' }),
+  condition: z.enum(machineryConditions as [MachineryCondition, ...MachineryCondition[]], { required_error: "Condition is required." }),
   location_city: z.string().min(3, { message: 'Location city is required.' }),
-  state: z.enum(nigerianStates, { required_error: "State is required." }),
+  state: z.enum(nigerianStates as [NigerianState, ...NigerianState[]], { required_error: "State is required." }),
   price: z.coerce.number().positive({ message: 'Price must be a positive number.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   manufacturer: z.string().optional(),
@@ -74,7 +74,7 @@ export default function AddMachineryPage() {
     defaultValues: {
       title: '',
       listingType: undefined,
-      category: '',
+      category: undefined,
       condition: undefined,
       location_city: '',
       state: undefined,
@@ -194,7 +194,7 @@ export default function AddMachineryPage() {
                 <FormField control={form.control} name="title" render={({ field }) => ( <FormItem className="lg:col-span-3"> <FormLabel className="flex items-center"><Wrench className="w-4 h-4 mr-1"/>Title</FormLabel> <FormControl><Input placeholder="e.g., 2018 Caterpillar 320D Excavator" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                 
                 <FormField control={form.control} name="listingType" render={({ field }) => ( <FormItem> <FormLabel>Listing Type</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select listing type" /></SelectTrigger></FormControl> <SelectContent>{listingTypes.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
-                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel>Category</FormLabel> <FormControl><Input placeholder="e.g., Construction, Agriculture" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
+                <FormField control={form.control} name="category" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><Package className="w-4 h-4 mr-1"/>Category</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl> <SelectContent>{machineryCategories.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 <FormField control={form.control} name="condition" render={({ field }) => ( <FormItem> <FormLabel>Condition</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl><SelectTrigger><SelectValue placeholder="Select condition" /></SelectTrigger></FormControl> <SelectContent>{machineryConditions.map(c => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent> </Select> <FormMessage /> </FormItem> )} />
                 
                 <FormField control={form.control} name="price" render={({ field }) => ( <FormItem> <FormLabel className="flex items-center"><DollarSign className="w-4 h-4 mr-1"/>Price</FormLabel> <FormControl><Input type="number" placeholder="e.g., 15000000" {...field} value={field.value || ''} /></FormControl> <FormMessage /> </FormItem> )} />
