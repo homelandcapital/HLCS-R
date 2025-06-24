@@ -113,7 +113,7 @@ export default function MyMachineryPage() {
   }
 
   if (user?.role !== 'agent') {
-    return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Button asChild> <Link href="/"><span>Go to Homepage</span></Link> </Button> </div> );
+    return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Link href="/"><Button>Go to Homepage</Button></Link> </div> );
   }
 
   return (
@@ -121,17 +121,17 @@ export default function MyMachineryPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div> <h1 className="text-3xl font-headline flex items-center"> <Wrench className="mr-3 h-8 w-8 text-primary" /> My Machinery Listings </h1> <p className="text-muted-foreground">Manage your machinery listed on Homeland Capital.</p> </div>
-          <Button asChild>
-            <Link href="/agents/dashboard/add-machinery">
+          <Link href="/agents/dashboard/add-machinery">
+            <Button>
               <span className="inline-flex items-center">
                 <PlusCircle className="mr-2 h-5 w-5" /> Add New Machinery
               </span>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
 
         {agentMachinery.length === 0 ? (
-          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Machinery Yet</CardTitle> <CardDescription>You haven&apos;t added any machinery. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-machinery"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Machinery Listing</span> </Link> </Button> </CardContent> </Card>
+          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Machinery Yet</CardTitle> <CardDescription>You haven&apos;t added any machinery. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Link href="/agents/dashboard/add-machinery"><Button size="lg"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Machinery Listing</span> </Button></Link> </CardContent> </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {agentMachinery.map(machinery => (
@@ -160,13 +160,13 @@ export default function MyMachineryPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
-                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={machinery.status !== 'approved'}>
-                    <Link href={`/machinery/${machinery.id}`}>
+                  <Link href={`/machinery/${machinery.id}`}>
+                    <Button variant="outline" size="icon" title="View Public Listing (if approved)" disabled={machinery.status !== 'approved'}>
                       <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
-                  <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(machinery)} title="Delete Listing" disabled={machinery.status !== 'rejected'}> <Trash2 className="h-4 w-4" /> </Button>
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="icon" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
+                  <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(machinery)} title="Delete Listing" disabled={machinery.status !== 'rejected'}> <Trash2 className="h-4 w-4" /> </Button>
                 </CardFooter>
               </Card>
             ))}
