@@ -366,23 +366,32 @@ export default function MyListingsPage() {
         {propertyToPromote && platformSettings && (
           <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
             <DialogContent className="sm:max-w-lg">
-              <DialogHeader> <DialogTitle className="font-headline text-xl"> <span className="flex items-center"> <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier </span> </DialogTitle> <DialogDescription> <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span> </DialogDescription> </DialogHeader>
-              <div className="py-4 space-y-4">
-                <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId} className="space-y-3">
-                  {platformSettings.promotionTiers.map((tier) => (
-                    <div key={tier.id} className={cn( "flex items-start space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary bg-primary/5" )} onClick={() => setSelectedTierId(tier.id)} >
-                      <RadioGroupItem value={tier.id} id={`promo-tier-item-${tier.id}`} className="mt-1 shrink-0"/>
-                      <Label htmlFor={`promo-tier-item-${tier.id}`} className="flex-grow cursor-pointer space-y-1">
-                        <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> </div>
-                        <p className="text-sm text-muted-foreground">{tier.description}</p>
-                        <div className="text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )}
-              </div>
               <form onSubmit={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-xl">
+                    <span className="flex items-center">
+                      <Star className="h-5 w-5 mr-2 text-yellow-500" /> Choose Promotion Tier
+                    </span>
+                  </DialogTitle>
+                  <DialogDescription>
+                    <span>Select a promotion package for "<strong>{propertyToPromote.title}</strong>".</span>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                  <RadioGroup value={selectedTierId || ""} onValueChange={setSelectedTierId} className="space-y-3">
+                    {platformSettings.promotionTiers.map((tier) => (
+                      <div key={tier.id} className={cn( "flex items-start space-x-3 p-4 border rounded-lg cursor-pointer hover:border-primary transition-colors", selectedTierId === tier.id && "border-primary ring-2 ring-primary bg-primary/5" )} onClick={() => setSelectedTierId(tier.id)} >
+                        <RadioGroupItem value={tier.id} id={`promo-tier-item-${tier.id}`} className="mt-1 shrink-0"/>
+                        <Label htmlFor={`promo-tier-item-${tier.id}`} className="flex-grow cursor-pointer space-y-1">
+                          <div className="flex items-center justify-between"> <span className="font-semibold text-foreground">{tier.name}</span> </div>
+                          <p className="text-sm text-muted-foreground">{tier.description}</p>
+                          <div className="text-sm"> <span className="font-medium text-primary">Fee: NGN {tier.fee.toLocaleString()}</span> <span className="text-muted-foreground mx-1">|</span> <span className="text-muted-foreground">Duration: {tier.duration} days</span> </div>
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  {platformSettings.promotionTiers.length === 0 && ( <p className="text-muted-foreground text-center">No promotion tiers are currently configured by the administrator.</p> )}
+                </div>
                 <DialogFooter>
                   <DialogClose asChild><Button variant="outline" type="button">Cancel</Button></DialogClose>
                   <Button onClick={handleInitiatePromotionPayment} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !paystackScriptLoaded} type="button">
