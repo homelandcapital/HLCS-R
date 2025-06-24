@@ -160,7 +160,7 @@ export default function MyMachineryPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
-                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled> 
+                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={machinery.status !== 'approved'}> 
                     <Link href={`/machinery/${machinery.id}`}>
                         <span className="flex items-center">
                             <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
