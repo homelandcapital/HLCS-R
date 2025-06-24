@@ -137,9 +137,9 @@ export default function MyMachineryPage() {
             {agentMachinery.map(machinery => (
               <Card key={machinery.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col h-full group">
                 <CardHeader className="p-0 relative">
-                  <div className="block w-full h-56 relative">
+                  <Link href={`/machinery/${machinery.id}`} className="block w-full h-56 relative">
                     <Image src={machinery.images?.[0] || 'https://placehold.co/600x400.png?text=No+Image'} alt={machinery.title} layout="fill" objectFit="cover" className="group-hover:scale-105 transition-transform" />
-                  </div>
+                  </Link>
                   <div className="absolute top-2 left-2 flex flex-col gap-1 items-start z-10">
                     <Badge variant={getStatusBadgeVariant(machinery.status)} className="capitalize flex items-center text-xs px-2 py-0.5 shadow-md"> {getStatusIcon(machinery.status)} {machinery.status} </Badge>
                     <Badge variant="outline" className="capitalize text-xs px-2 py-0.5 shadow-md">{machinery.listing_type}</Badge>
@@ -160,12 +160,10 @@ export default function MyMachineryPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
-                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={machinery.status !== 'approved'}> 
+                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled={machinery.status !== 'approved'}>
                     <Link href={`/machinery/${machinery.id}`}>
-                        <span className="flex items-center">
-                            <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
-                        </span>
-                    </Link> 
+                      <Eye className="h-4 w-4" />
+                    </Link>
                   </Button>
                   <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
                   <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(machinery)} title="Delete Listing" disabled={machinery.status !== 'rejected'}> <Trash2 className="h-4 w-4" /> </Button>
@@ -177,8 +175,7 @@ export default function MyMachineryPage() {
       </div>
 
       {machineryToDelete && (
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle className="font-headline">Confirm Deletion</DialogTitle> <DialogDescription> <span>Are you sure you want to delete the listing "<strong>{machineryToDelete.title}</strong>"? This action cannot be undone.</span> </DialogDescription> </DialogHeader> <DialogFooter> <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose> <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button> </DialogFooter> </DialogContent>
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}> <DialogContent className="sm:max-w-md"> <DialogHeader> <DialogTitle className="font-headline">Confirm Deletion</DialogTitle> <DialogDescription> <span>Are you sure you want to delete the listing "<strong>{machineryToDelete.title}</strong>"? This action cannot be undone.</span> </DialogDescription> </DialogHeader> <DialogFooter> <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose> <Button variant="destructive" onClick={handleConfirmDelete}>Confirm Delete</Button> </DialogFooter> </DialogContent>
         </Dialog>
       )}
     </>
