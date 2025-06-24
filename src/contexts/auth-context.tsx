@@ -198,6 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else if (event === 'SIGNED_OUT') {
               if (isMountedRef.current) {
                 setUser(null);
+                setSession(null);
               }
             } else if (event === 'USER_UPDATED' && currentSession?.user) {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
@@ -307,9 +308,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOutUser = async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
+    
+    // Gracefully handle the case where the session is already missing on the client
+    // but the user's UI state is still logged in.
+    if (error && error.message !== 'Auth session missing!') {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
     } else {
+        // This block will run on successful logout OR if the session was already missing.
         if (isMountedRef.current) {
           setUser(null);
           setSession(null);
