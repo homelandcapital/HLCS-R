@@ -5,7 +5,7 @@ import type { AuthenticatedUser, GeneralUser, Agent, PlatformAdmin, UserRole, Pl
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useRouter, usePathname }  from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import type { AuthChangeEvent, Session, User as SupabaseAuthUser, PostgrestError } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 
@@ -54,10 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('http://localhost:54321');
-
 
   const fetchPlatformSettingsInternal = useCallback(async (): Promise<PlatformSettingsType | null> => {
     if (!isSupabaseConfigured) return null;
@@ -82,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         configuredCommunityBudgetTiers: data.configured_community_budget_tiers || "",
         machineryCategories: data.machinery_categories || null,
     } as PlatformSettingsType;
-  }, [isSupabaseConfigured]);
+  }, []);
 
   const refreshPlatformSettings = useCallback(async () => {
     if (!isMountedRef.current) return;
@@ -143,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
     return authenticatedUserToSet;
-  }, [toast, isSupabaseConfigured]);
+  }, [toast]);
 
   const refreshUser = useCallback(async () => {
     if (!session?.user) return;
@@ -242,7 +238,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, toast, isSupabaseConfigured]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, toast]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {

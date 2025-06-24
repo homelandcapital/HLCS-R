@@ -8,7 +8,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const isUrlPlaceholder = !supabaseUrl || supabaseUrl.includes('YOUR_SUPABASE_URL_HERE');
 const isKeyPlaceholder = !supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY_HERE');
 
-if (isUrlPlaceholder || isKeyPlaceholder) {
+// This flag can be imported by other parts of the app to check if Supabase is properly configured.
+export const isSupabaseConfigured = !isUrlPlaceholder && !isKeyPlaceholder;
+
+if (!isSupabaseConfigured) {
   console.warn(
     '\n>>> Supabase environment variables are not set or are using placeholder values. <<<\n' +
     'Please create or check your .env.local file and add the following:\n' +
