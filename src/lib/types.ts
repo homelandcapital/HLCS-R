@@ -10,6 +10,7 @@ export interface BaseUser {
   email: string;
   avatar_url?: string | null;
   role: UserRole;
+  banned_until?: string | null;
 }
 
 export interface Agent extends BaseUser {

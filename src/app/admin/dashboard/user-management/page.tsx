@@ -7,7 +7,7 @@ import type { AuthenticatedUser, UserRole, Agent, GeneralUser, PlatformAdmin } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Shield, Briefcase, UserCircle, Download, FileCheck2, Edit2 } from 'lucide-react';
+import { Users, Shield, Briefcase, UserCircle, Download, FileCheck2, Edit2, Ban, MoreHorizontal, CheckCircle as ReinstateIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateUserByAdmin } from '@/actions/admin-user-actions';
+import { updateUserByAdmin, updateUserBanStatus } from '@/actions/admin-user-actions';
 import { updateUserFormSchema, type UpdateUserFormValues } from '@/lib/schemas';
 
 
@@ -34,6 +36,8 @@ export default function UserManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AuthenticatedUser | null>(null);
   const [isSubmitting, startTransition] = useTransition();
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [userToManage, setUserToManage] = useState<AuthenticatedUser | null>(null);
   const { toast } = useToast();
 
   const editForm = useForm<UpdateUserFormValues>({
@@ -56,6 +60,7 @@ export default function UserManagementPage() {
         ...u,
         role: u.role as UserRole,
         avatar_url: u.avatar_url || null,
+        banned_until: u.banned_until || null,
       })) as AuthenticatedUser[];
       setAllUsers(typedUsers);
     }
@@ -112,6 +117,38 @@ export default function UserManagementPage() {
     });
   }
 
+  const handleOpenSuspendModal = (user: AuthenticatedUser) => {
+    setUserToManage(user);
+    setIsSuspendModalOpen(true);
+  };
+
+  const handleConfirmSuspend = async () => {
+    if (!userToManage) return;
+    startTransition(async () => {
+        const result = await updateUserBanStatus(userToManage.id, true);
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            fetchUsers();
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+        setIsSuspendModalOpen(false);
+        setUserToManage(null);
+    });
+  };
+
+  const handleReinstate = async (user: AuthenticatedUser) => {
+    startTransition(async () => {
+        const result = await updateUserBanStatus(user.id, false);
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            fetchUsers();
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    });
+  };
+
   const formatRole = (role: UserRole) => {
     switch (role) {
       case 'user': return 'General User';
@@ -144,11 +181,12 @@ export default function UserManagementPage() {
       const phone = (user as Agent)?.phone || ''; 
       const agency = (user as Agent)?.agency || '';
       const government_id_url = (user as Agent)?.government_id_url || '';
+      const isSuspended = user.banned_until && new Date(user.banned_until) > new Date();
       
-      return { id: user.id, name: user.name, email: user.email, role: formatRole(user.role), phone, agency, government_id_url };
+      return { id: user.id, name: user.name, email: user.email, role: formatRole(user.role), status: isSuspended ? 'Suspended' : 'Active', phone, agency, government_id_url };
     });
 
-    const headers = ['id', 'name', 'email', 'role', 'phone', 'agency', 'government_id_url'];
+    const headers = ['id', 'name', 'email', 'role', 'status', 'phone', 'agency', 'government_id_url'];
     const csvString = convertToCSV(dataToExport, headers);
     downloadCSV(csvString, 'homeland-capital-users.csv');
     toast({ title: 'Export Started', description: 'User data CSV download has started.' });
@@ -205,30 +243,68 @@ export default function UserManagementPage() {
             ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Verification ID</TableHead><TableHead>User ID</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Verification ID</TableHead><TableHead>User ID</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium flex items-center">
-                        {user.avatar_url && <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full mr-3 object-cover" data-ai-hint="professional person" />}
-                        {!user.avatar_url && <span className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mr-3 text-muted-foreground text-xs">{user.name.substring(0,2).toUpperCase()}</span>}
-                        {user.name}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell><Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center w-fit">{getRoleIcon(user.role)} {formatRole(user.role)}</Badge></TableCell>
-                      <TableCell>
-                        {user.role === 'agent' && (user as Agent).government_id_url ? (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={(user as Agent).government_id_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1"><FileCheck2 className="h-4 w-4" /> View ID</a>
-                          </Button>
-                        ) : user.role === 'agent' ? (
-                          <Badge variant="outline">No ID</Badge>
-                        ) : ( <span className="text-muted-foreground">-</span> )}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{user.id}</TableCell>
-                      <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenEditModal(user)}><Edit2 className="h-4 w-4" /></Button></TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredUsers.map((user) => {
+                    const isSuspended = user.banned_until && new Date(user.banned_until) > new Date();
+                    return (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium flex items-center">
+                            {user.avatar_url && <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full mr-3 object-cover" data-ai-hint="professional person" />}
+                            {!user.avatar_url && <span className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mr-3 text-muted-foreground text-xs">{user.name.substring(0,2).toUpperCase()}</span>}
+                            {user.name}
+                          </TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell><Badge variant={getRoleBadgeVariant(user.role)} className="flex items-center w-fit">{getRoleIcon(user.role)} {formatRole(user.role)}</Badge></TableCell>
+                          <TableCell>
+                            {isSuspended ? (
+                              <Badge variant="destructive">Suspended</Badge>
+                            ) : (
+                              <Badge variant="secondary">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {user.role === 'agent' && (user as Agent).government_id_url ? (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={(user as Agent).government_id_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1"><FileCheck2 className="h-4 w-4" /> View ID</a>
+                              </Button>
+                            ) : user.role === 'agent' ? (
+                              <Badge variant="outline">No ID</Badge>
+                            ) : ( <span className="text-muted-foreground">-</span> )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{user.id}</TableCell>
+                          <TableCell className="text-right">
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleOpenEditModal(user)}>
+                                        <Edit2 className="mr-2 h-4 w-4" />
+                                        <span>Edit User</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    {isSuspended ? (
+                                        <DropdownMenuItem onClick={() => handleReinstate(user)} className="text-green-600 focus:text-green-700">
+                                            <ReinstateIcon className="mr-2 h-4 w-4" />
+                                            <span>Reinstate User</span>
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => handleOpenSuspendModal(user)} className="text-destructive focus:text-destructive">
+                                            <Ban className="mr-2 h-4 w-4" />
+                                            <span>Suspend User</span>
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -261,6 +337,23 @@ export default function UserManagementPage() {
           </Form>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isSuspendModalOpen} onOpenChange={setIsSuspendModalOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to suspend this user?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Suspending <strong>{userToManage?.name}</strong> ({userToManage?.email}) will prevent them from logging in indefinitely. They will not be able to access their dashboard or perform any actions.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setUserToManage(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmSuspend} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                    {isSubmitting ? 'Suspending...' : 'Confirm Suspension'}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
