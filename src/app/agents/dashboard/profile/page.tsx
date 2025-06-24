@@ -1,4 +1,3 @@
-
 // src/app/agents/dashboard/profile/page.tsx
 'use client';
 
@@ -19,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { updateAgentProfile } from '@/actions/agent-actions';
+import { Label } from '@/components/ui/label';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
