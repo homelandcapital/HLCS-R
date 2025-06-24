@@ -368,9 +368,6 @@ export default function UserManagementPage() {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Agent ID</DialogTitle>
-            <DialogDescription>
-              Review the agent's government-issued ID for verification.
-            </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {selectedIdUrl && (
