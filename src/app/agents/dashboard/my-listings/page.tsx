@@ -366,7 +366,7 @@ export default function MyListingsPage() {
         {propertyToPromote && platformSettings && (
           <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
             <DialogContent className="sm:max-w-lg">
-              <form onSubmit={(e) => e.preventDefault()}>
+              <form onSubmit={(e) => { e.preventDefault(); handleInitiatePromotionPayment(); }}>
                 <DialogHeader>
                   <DialogTitle className="font-headline text-xl">
                     <span className="flex items-center">
@@ -394,7 +394,7 @@ export default function MyListingsPage() {
                 </div>
                 <DialogFooter>
                   <DialogClose asChild><Button variant="outline" type="button">Cancel</Button></DialogClose>
-                  <Button onClick={handleInitiatePromotionPayment} className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !paystackScriptLoaded} type="button">
+                  <Button type="submit" className="bg-yellow-500 hover:bg-yellow-600 text-black" disabled={!selectedTierId || platformSettings.promotionTiers.length === 0 || isProcessingPayment || !paystackScriptLoaded}>
                     {isProcessingPayment ? 'Processing...' : (selectedTierId ? `Promote (NGN ${getSelectedTierFee().toLocaleString()})` : 'Select a Tier')}
                   </Button>
                 </DialogFooter>
@@ -411,3 +411,4 @@ export default function MyListingsPage() {
     </>
   );
 }
+
