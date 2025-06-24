@@ -97,7 +97,7 @@ export default async function HomePageRedesigned() {
       </section>
 
       {/* Our Services Section */}
-      <section className="py-12 md:py-16 bg-amber-50 rounded-lg">
+      <section className="py-12 md:py-16 bg-muted rounded-lg">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-headline text-center text-foreground mb-4">{content.ourServices.title}</h2>
           <p className="text-center text-muted-foreground mb-10 md:mb-12 max-w-2xl mx-auto whitespace-pre-line">{content.ourServices.subtitle}</p>
