@@ -24,6 +24,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateUserByAdmin, updateUserBanStatus } from '@/actions/admin-user-actions';
 import { updateUserFormSchema, type UpdateUserFormValues } from '@/lib/schemas';
+import Image from 'next/image';
 
 
 export default function UserManagementPage() {
@@ -38,6 +39,8 @@ export default function UserManagementPage() {
   const [isSubmitting, startTransition] = useTransition();
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [userToManage, setUserToManage] = useState<AuthenticatedUser | null>(null);
+  const [isIdModalOpen, setIsIdModalOpen] = useState(false);
+  const [selectedIdUrl, setSelectedIdUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const editForm = useForm<UpdateUserFormValues>({
@@ -60,6 +63,7 @@ export default function UserManagementPage() {
         ...u,
         role: u.role as UserRole,
         avatar_url: u.avatar_url || null,
+        government_id_url: u.government_id_url || null,
         banned_until: u.banned_until || null,
       })) as AuthenticatedUser[];
       setAllUsers(typedUsers);
@@ -147,6 +151,11 @@ export default function UserManagementPage() {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }
     });
+  };
+
+  const handleOpenIdModal = (url: string) => {
+    setSelectedIdUrl(url);
+    setIsIdModalOpen(true);
   };
 
   const formatRole = (role: UserRole) => {
@@ -265,9 +274,9 @@ export default function UserManagementPage() {
                           </TableCell>
                           <TableCell>
                             {user.role === 'agent' && (user as Agent).government_id_url ? (
-                              <Button variant="outline" size="sm" asChild>
-                                <a href={(user as Agent).government_id_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1"><FileCheck2 className="h-4 w-4" /> View ID</a>
-                              </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleOpenIdModal((user as Agent).government_id_url!)} className="flex items-center gap-1">
+                                    <FileCheck2 className="h-4 w-4" /> View ID
+                                </Button>
                             ) : user.role === 'agent' ? (
                               <Badge variant="outline">No ID</Badge>
                             ) : ( <span className="text-muted-foreground">-</span> )}
@@ -354,6 +363,34 @@ export default function UserManagementPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isIdModalOpen} onOpenChange={setIsIdModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Agent ID</DialogTitle>
+            <DialogDescription>
+              Review the agent's government-issued ID for verification.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedIdUrl && (
+              <div className="relative h-[50vh] w-full">
+                <Image
+                  src={selectedIdUrl}
+                  alt="Agent Government ID"
+                  layout="fill"
+                  objectFit="contain"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
