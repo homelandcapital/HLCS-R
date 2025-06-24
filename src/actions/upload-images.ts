@@ -90,3 +90,8 @@ export async function uploadMachineryImages(formData: FormData): Promise<UploadR
   const files = formData.getAll('files') as File[];
   return performUpload(files, 'homeland_capital_machinery');
 }
+
+export async function uploadAgentIdImage(formData: FormData): Promise<UploadResult> {
+  const files = formData.getAll('files') as File[];
+  return performUpload(files, 'homeland_capital_agent_ids');
+}

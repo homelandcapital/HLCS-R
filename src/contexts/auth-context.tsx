@@ -26,6 +26,7 @@ interface AuthContextType {
   updateUserPassword: (newPassword: string) => Promise<{ error: Error | null }>;
   getSupabaseSession: () => Session | null;
   refreshPlatformSettings: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -125,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
       authenticatedUserToSet = { ...baseProfile, role: 'user', savedPropertyIds } as GeneralUser;
     } else if (baseProfile.role === 'agent') {
-      authenticatedUserToSet = { ...baseProfile, role: 'agent', phone: baseProfile.phone || '' } as Agent;
+      authenticatedUserToSet = { ...baseProfile, role: 'agent', phone: baseProfile.phone || '', government_id_url: baseProfile.government_id_url || null } as Agent;
     } else if (baseProfile.role === 'platform_admin') {
       authenticatedUserToSet = { ...baseProfile, role: 'platform_admin' } as PlatformAdmin;
     } else {
@@ -134,6 +135,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     return authenticatedUserToSet;
   }, [toast]);
+
+  const refreshUser = useCallback(async () => {
+    if (!session?.user) return;
+    const profile = await fetchUserProfileAndRelatedData(session.user);
+    if (isMountedRef.current) {
+        setUser(profile);
+    }
+  }, [session, fetchUserProfileAndRelatedData]);
 
 
   useEffect(() => {
@@ -188,6 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             } else if (event === 'SIGNED_OUT') {
             if (isMountedRef.current) setUser(null);
+            router.push('/');
             } else if (event === 'USER_UPDATED' && currentSession?.user) {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
@@ -271,8 +281,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           toast({ title: 'Profile Creation Failed', description: `There was an issue setting up your profile. Please contact support. Error: ${pgError.message}.`, variant: 'destructive' });
         }
         
-        // This is the fix: Remove the unsafe admin call to delete the user.
-        // Just sign them out so they can try again or contact support.
         await supabase.auth.signOut();
 
         return { error: profileError as Error, data: null };
@@ -297,9 +305,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async (): Promise<void> => {
-    await supabase.auth.signOut();
-    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    router.push('/');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+        toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
+    }
   };
 
   const sendPasswordResetEmail = async (email: string) => {
@@ -376,7 +385,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       sendPasswordResetEmail,
       updateUserPassword,
       getSupabaseSession,
-      refreshPlatformSettings
+      refreshPlatformSettings,
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

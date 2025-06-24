@@ -761,6 +761,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string
+          government_id_url: string | null
           id: string
           name: string
           phone: string | null
@@ -772,6 +773,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email: string
+          government_id_url?: string | null
           id: string
           name: string
           phone?: string | null
@@ -783,6 +785,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string
+          government_id_url?: string | null
           id?: string
           name?: string
           phone?: string | null

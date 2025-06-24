@@ -16,6 +16,7 @@ export interface Agent extends BaseUser {
   role: 'agent';
   phone: string;
   agency?: string | null;
+  government_id_url?: string | null;
 }
 
 export interface GeneralUser extends BaseUser {
