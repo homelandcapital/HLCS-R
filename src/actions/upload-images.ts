@@ -95,3 +95,8 @@ export async function uploadAgentIdImage(formData: FormData): Promise<UploadResu
   const files = formData.getAll('files') as File[];
   return performUpload(files, 'homeland_capital_agent_ids');
 }
+
+export async function uploadAvatarImage(formData: FormData): Promise<UploadResult> {
+  const files = formData.getAll('files') as File[];
+  return performUpload(files, 'homeland_capital_avatars');
+}

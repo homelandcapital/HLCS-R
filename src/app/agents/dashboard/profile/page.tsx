@@ -1,3 +1,4 @@
+
 // src/app/agents/dashboard/profile/page.tsx
 'use client';
 
@@ -32,8 +33,10 @@ export default function AgentProfilePage() {
   const { user, loading: authLoading, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, startTransition] = useTransition();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedIdFile, setSelectedIdFile] = useState<File | null>(null);
+  const [idImagePreview, setIdImagePreview] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const agent = user as Agent;
 
@@ -52,29 +55,44 @@ export default function AgentProfilePage() {
     }
   }, [agent, form]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIdFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setSelectedIdFile(file);
+      setIdImagePreview(URL.createObjectURL(file));
+    }
+  };
+  
+  const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
     }
   };
 
-  const removeImage = () => {
-    setSelectedFile(null);
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-      setImagePreview(null);
+  const removeIdImage = () => {
+    setSelectedIdFile(null);
+    if (idImagePreview) {
+      URL.revokeObjectURL(idImagePreview);
+      setIdImagePreview(null);
+    }
+  };
+  
+  const removeAvatarImage = () => {
+    setSelectedAvatarFile(null);
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+      setAvatarPreview(null);
     }
   };
   
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      if (idImagePreview) URL.revokeObjectURL(idImagePreview);
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
     };
-  }, [imagePreview]);
+  }, [idImagePreview, avatarPreview]);
 
 
   async function onSubmit(values: ProfileFormValues) {
@@ -84,17 +102,22 @@ export default function AgentProfilePage() {
       formData.append('name', values.name);
       formData.append('phone', values.phone);
       formData.append('agency', values.agency || '');
-      if (selectedFile) {
-        formData.append('government_id', selectedFile);
+      if (selectedIdFile) {
+        formData.append('government_id', selectedIdFile);
+      }
+      if (selectedAvatarFile) {
+        formData.append('avatar', selectedAvatarFile);
       }
 
       const result = await updateAgentProfile(agent.id, formData);
 
       if (result.success) {
         toast({ title: 'Success', description: result.message });
-        await refreshUser(); // Refresh user data in context
-        setSelectedFile(null);
-        removeImage();
+        await refreshUser();
+        setSelectedIdFile(null);
+        removeIdImage();
+        setSelectedAvatarFile(null);
+        removeAvatarImage();
       } else {
         toast({ title: 'Error', description: result.message, variant: 'destructive' });
       }
@@ -130,10 +153,16 @@ export default function AgentProfilePage() {
           <Card className="shadow-xl">
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-center space-x-0 sm:space-x-6 space-y-4 sm:space-y-0">
-                <Avatar className="h-28 w-28 border-2 border-primary">
-                  <AvatarImage src={agent.avatar_url || 'https://placehold.co/128x128.png'} alt={agent.name} />
-                  <AvatarFallback>{agent.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                    <Avatar className="h-28 w-28 border-2 border-primary">
+                        <AvatarImage src={avatarPreview || agent.avatar_url || undefined} alt={agent.name} />
+                        <AvatarFallback>{agent.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                     <label htmlFor="avatar-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full">
+                        <UploadCloud className="h-6 w-6" />
+                        <Input id="avatar-upload" type="file" className="sr-only" onChange={handleAvatarFileChange} accept="image/jpeg, image/png, image/webp" />
+                    </label>
+                </div>
                 <div>
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem><FormLabel className="text-sm">Full Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} className="text-2xl font-headline h-auto p-1 border-0 border-b-2 rounded-none" /></FormControl><FormMessage /></FormItem>
@@ -160,7 +189,7 @@ export default function AgentProfilePage() {
               <CardDescription>Upload a clear image of your government-issued ID for verification purposes. This enhances trust on the platform.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {agent.government_id_url && !imagePreview && (
+              {agent.government_id_url && !idImagePreview && (
                 <div>
                   <Label>Current ID on File</Label>
                   <div className="mt-2 relative w-full max-w-sm h-48 rounded-md overflow-hidden border">
@@ -171,16 +200,16 @@ export default function AgentProfilePage() {
               
               <FormItem>
                 <FormLabel className="flex items-center"><UploadCloud className="w-4 h-4 mr-1"/>{agent.government_id_url ? 'Upload New ID' : 'Upload ID'}</FormLabel>
-                <FormControl><Input type="file" onChange={handleFileChange} accept="image/jpeg, image/png, image/webp" /></FormControl>
+                <FormControl><Input type="file" onChange={handleIdFileChange} accept="image/jpeg, image/png, image/webp" /></FormControl>
                 <FormDescription>Accepted formats: JPG, PNG, WEBP. Max size: 5MB.</FormDescription>
               </FormItem>
 
-              {imagePreview && (
+              {idImagePreview && (
                 <div>
                   <Label>New ID Preview</Label>
                   <div className="mt-2 relative group w-full max-w-sm h-48 rounded-md overflow-hidden border">
-                    <NextImage src={imagePreview} alt="New ID Preview" layout="fill" objectFit="contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10" onClick={removeImage} aria-label="Remove image">
+                    <NextImage src={idImagePreview} alt="New ID Preview" layout="fill" objectFit="contain" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10" onClick={removeIdImage} aria-label="Remove image">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -190,7 +219,7 @@ export default function AgentProfilePage() {
           </Card>
           
           <div className="flex justify-end">
-            <Button type="submit" size="lg" disabled={isSubmitting || !form.formState.isDirty && !selectedFile}>
+            <Button type="submit" size="lg" disabled={isSubmitting || (!form.formState.isDirty && !selectedIdFile && !selectedAvatarFile)}>
               <Save className="mr-2 h-5 w-5" /> {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
