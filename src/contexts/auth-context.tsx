@@ -297,22 +297,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async (): Promise<void> => {
-    const { error } = await supabase.auth.signOut();
-    
-    // The onAuthStateChange listener handles state changes and redirects from protected routes.
-    // We only need to handle user feedback here.
-    if (error) {
-        // We can ignore errors about no active session, as the end result is the same.
-        if (error.message !== 'Auth session missing') {
-             console.error("[AuthContext] Sign out error:", error);
-             toast({ title: "Logout Error", description: "Could not sign you out from the server, but you are logged out locally.", variant: 'destructive' });
-        } else {
-             toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-        }
-    } else {
-        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
-    }
-    // Pushing to '/' immediately can be good UX. The listener will ensure state is cleared.
+    await supabase.auth.signOut();
+    toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
     router.push('/');
   };
 
