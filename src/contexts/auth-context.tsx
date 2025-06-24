@@ -54,7 +54,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('http://localhost:54321');
+
+
   const fetchPlatformSettingsInternal = useCallback(async (): Promise<PlatformSettingsType | null> => {
+    if (!isSupabaseConfigured) return null;
+    
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*')
@@ -75,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         configuredCommunityBudgetTiers: data.configured_community_budget_tiers || "",
         machineryCategories: data.machinery_categories || null,
     } as PlatformSettingsType;
-  }, []);
+  }, [isSupabaseConfigured]);
 
   const refreshPlatformSettings = useCallback(async () => {
     if (!isMountedRef.current) return;
@@ -87,6 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const fetchUserProfileAndRelatedData = useCallback(async (supabaseUser: SupabaseAuthUser): Promise<AuthenticatedUser | null> => {
+    if (!isSupabaseConfigured) return null;
+
     const { data: userProfilesData, error: profileQueryError } = await supabase
       .from('users')
       .select('*')
@@ -134,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
     return authenticatedUserToSet;
-  }, [toast]);
+  }, [toast, isSupabaseConfigured]);
 
   const refreshUser = useCallback(async () => {
     if (!session?.user) return;
@@ -152,6 +161,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const fetchedSettings = await fetchPlatformSettingsInternal();
       if (isMountedRef.current) {
         setPlatformSettings(fetchedSettings);
+      }
+      
+      if (!isSupabaseConfigured) {
+        setLoading(false);
+        return;
       }
 
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
@@ -173,6 +187,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeAuthAndSettings();
+
+    if (!isSupabaseConfigured) return;
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
@@ -226,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, toast]);
+  }, [fetchUserProfileAndRelatedData, fetchPlatformSettingsInternal, refreshPlatformSettings, router, toast, isSupabaseConfigured]);
 
   useEffect(() => {
     if (!loading && user && (pathname === '/agents/login' || pathname === '/agents/register')) {
@@ -238,6 +254,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const signInWithPassword = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+        toast({ title: 'Configuration Missing', description: 'Supabase is not configured. Please check your environment variables.', variant: 'destructive'});
+        return { error: new Error('Supabase not configured') };
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
@@ -251,6 +271,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userRole: UserRole,
     profileSpecificData: Partial<Omit<UserProfile, 'id' | 'email' | 'role' | 'avatar_url' | 'created_at' | 'updated_at' | 'name'> & { name: string }>
   ) => {
+    if (!isSupabaseConfigured) {
+        toast({ title: 'Configuration Missing', description: 'Supabase is not configured. Cannot create new account.', variant: 'destructive'});
+        return { error: new Error('Supabase not configured'), data: null };
+    }
+
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -307,14 +332,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async (): Promise<void> => {
+    if (!isSupabaseConfigured) {
+        if (isMountedRef.current) {
+          setUser(null);
+          setSession(null);
+        }
+        router.push('/');
+        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
+        return;
+    }
+    
     const { error } = await supabase.auth.signOut();
     
-    // Gracefully handle the case where the session is already missing on the client
-    // but the user's UI state is still logged in.
     if (error && error.message !== 'Auth session missing!') {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
     } else {
-        // This block will run on successful logout OR if the session was already missing.
         if (isMountedRef.current) {
           setUser(null);
           setSession(null);
@@ -325,6 +357,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendPasswordResetEmail = async (email: string) => {
+     if (!isSupabaseConfigured) {
+        toast({ title: 'Configuration Missing', description: 'Supabase is not configured. Cannot send reset email.', variant: 'destructive'});
+        return { error: new Error('Supabase not configured') };
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/update-password` });
     if (error) {
       toast({ title: 'Password Reset Error', description: error.message, variant: 'destructive' });
@@ -335,6 +371,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserPassword = async (newPassword: string) => {
+     if (!isSupabaseConfigured) {
+        toast({ title: 'Configuration Missing', description: 'Supabase is not configured. Cannot update password.', variant: 'destructive'});
+        return { error: new Error('Supabase not configured') };
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       toast({ title: 'Password Update Failed', description: error.message, variant: 'destructive' });
@@ -354,6 +394,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const toggleSaveProperty = useCallback(async (propertyId: string) => {
+    if (!isSupabaseConfigured) {
+      toast({ title: 'Configuration Missing', description: 'Supabase is not configured. Cannot save property.', variant: 'destructive'});
+      return;
+    }
     if (!user || user.role !== 'user') {
       toast({ title: "Login Required", description: "Log in as a user to save properties." });
       router.push('/agents/login');
@@ -381,7 +425,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error('[AuthContext] Error toggling save property:', error.message);
       toast({ title: 'Error Saving Property', description: error.message, variant: 'destructive' });
     }
-  }, [user, router, toast]);
+  }, [user, router, toast, isSupabaseConfigured]);
 
   return (
     <AuthContext.Provider value={{
