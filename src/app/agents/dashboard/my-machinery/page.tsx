@@ -121,7 +121,13 @@ export default function MyMachineryPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div> <h1 className="text-3xl font-headline flex items-center"> <Wrench className="mr-3 h-8 w-8 text-primary" /> My Machinery Listings </h1> <p className="text-muted-foreground">Manage your machinery listed on Homeland Capital.</p> </div>
-          <Button asChild> <Link href="/agents/dashboard/add-machinery"> <PlusCircle className="mr-2 h-5 w-5" /> Add New Machinery </Link> </Button>
+          <Button asChild>
+            <Link href="/agents/dashboard/add-machinery">
+              <span className="inline-flex items-center">
+                <PlusCircle className="mr-2 h-5 w-5" /> Add New Machinery
+              </span>
+            </Link>
+          </Button>
         </div>
 
         {agentMachinery.length === 0 ? (
