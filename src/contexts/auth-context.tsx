@@ -196,8 +196,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             }
             } else if (event === 'SIGNED_OUT') {
-            if (isMountedRef.current) setUser(null);
-            router.push('/');
+              if (isMountedRef.current) {
+                setUser(null);
+              }
             } else if (event === 'USER_UPDATED' && currentSession?.user) {
             const profile = await fetchUserProfileAndRelatedData(currentSession.user);
             if (isMountedRef.current) setUser(profile);
@@ -308,6 +309,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signOut();
     if (error) {
         toast({ title: 'Logout Failed', description: error.message, variant: 'destructive' });
+    } else {
+        if (isMountedRef.current) {
+          setUser(null);
+          setSession(null);
+        }
+        router.push('/');
+        toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
     }
   };
 
