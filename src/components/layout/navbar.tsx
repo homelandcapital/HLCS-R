@@ -101,14 +101,12 @@ const Navbar = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <Link href={getDashboardPath()} passHref legacyBehavior>
-              <DropdownMenuItem asChild onClick={closeMobileMenu} className="cursor-pointer">
-                <a>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span>Dashboard</span>
-                </a>
-              </DropdownMenuItem>
-            </Link>
+            <DropdownMenuItem asChild onClick={closeMobileMenu} className="cursor-pointer">
+              <Link href={getDashboardPath()}>
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => { signOut(); closeMobileMenu(); }} className="cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
@@ -121,16 +119,12 @@ const Navbar = () => {
 
     return (
       <div className={`flex gap-2 ${isMobile ? 'flex-col pt-4 border-t border-border' : 'items-center'}`}>
-        <Link href="/agents/login" passHref legacyBehavior>
-          <Button variant={isMobile ? "outline" : "ghost"} asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
-            <a><span>Login</span></a>
-          </Button>
-        </Link>
-        <Link href="/agents/register" passHref legacyBehavior>
-          <Button asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
-            <a><span>Register</span></a>
-          </Button>
-        </Link>
+        <Button variant={isMobile ? "outline" : "ghost"} asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
+          <Link href="/agents/login">Login</Link>
+        </Button>
+        <Button asChild onClick={closeMobileMenu} size={isMobile ? "lg" : "sm"} className={isMobile ? "w-full justify-start font-bold" : "font-bold"}>
+          <Link href="/agents/register">Register</Link>
+        </Button>
       </div>
     );
   };
@@ -142,13 +136,11 @@ const Navbar = () => {
         <Logo />
         <nav className="hidden md:flex items-center space-x-1">
           {visibleNavLinks.map(link => (
-            <Link key={link.href} href={link.href} passHref legacyBehavior>
-              <Button variant="ghost" asChild className="text-foreground hover:text-primary transition-colors font-bold group px-3">
-                <a className="flex items-center">
-                  <span>{link.label}</span>
-                </a>
-              </Button>
-            </Link>
+            <Button asChild variant="ghost" className="text-foreground hover:text-primary transition-colors font-bold group px-3" key={link.href}>
+              <Link href={link.href}>
+                {link.label}
+              </Link>
+            </Button>
           ))}
         </nav>
         <div className="hidden md:flex items-center space-x-2">
@@ -170,14 +162,14 @@ const Navbar = () => {
               </SheetHeader>
               <nav className="flex flex-col space-y-1 mb-auto">
                {visibleNavLinks.map(link => (
-                  <Link key={link.href} href={link.href} passHref legacyBehavior>
-                    <Button variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
-                      <a className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
+                  <Button key={link.href} variant="ghost" asChild size="lg" className="justify-start" onClick={closeMobileMenu}>
+                    <Link href={link.href}>
+                      <span className="text-lg font-bold text-foreground hover:text-primary transition-colors py-2 flex items-center group">
                           {link.icon && React.cloneElement(link.icon, {className: "mr-2 h-5 w-5"})}
                           <span>{link.label}</span>
-                      </a>
-                    </Button>
-                  </Link>
+                      </span>
+                    </Link>
+                  </Button>
                 ))}
               </nav>
               <div className="mt-auto">

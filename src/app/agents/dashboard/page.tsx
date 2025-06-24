@@ -59,10 +59,7 @@ export default function AgentDashboardPage() {
           <h1 className="text-2xl font-headline">Access Denied</h1>
           <p className="text-muted-foreground">This dashboard is for agents only.</p>
           <Button asChild className="mt-4">
-            <Link href="/">
-              {/* Ensure Link has a single child for consistency, though text usually works */}
-              <span>Go to Homepage</span>
-            </Link>
+            <Link href="/">Go to Homepage</Link>
           </Button>
         </div>
       );
@@ -74,7 +71,7 @@ export default function AgentDashboardPage() {
         <h1 className="text-3xl font-headline">Agent Dashboard</h1>
         <Button asChild>
           <Link href="/agents/dashboard/add-property">
-            <span className="inline-flex items-center"> {/* Wrapper span */}
+            <span className="inline-flex items-center">
               <PlusCircle className="mr-2 h-5 w-5" /> Add New Property
             </span>
           </Link>
@@ -93,14 +90,14 @@ export default function AgentDashboardPage() {
           <CardContent className="space-y-3">
             <Button variant="outline" className="w-full justify-start" asChild>
               <Link href="/agents/dashboard/my-listings">
-                <span className="inline-flex items-center"> {/* Wrapper span */}
+                <span className="inline-flex items-center">
                   <ListChecks className="mr-2 h-4 w-4" /> View My Listings
                 </span>
               </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
               <Link href="/agents/dashboard/add-property">
-                <span className="inline-flex items-center"> {/* Wrapper span */}
+                <span className="inline-flex items-center">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add a New Property
                 </span>
               </Link>

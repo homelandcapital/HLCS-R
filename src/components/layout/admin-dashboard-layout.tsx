@@ -247,13 +247,14 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
                   const notificationCount = getNotificationCount(item.notificationKey);
 
                   return (
-                    <Link key={item.href} href={item.href} passHref legacyBehavior>
-                      <Button
-                        variant={isActive ? 'default' : 'ghost'}
-                        className="w-full justify-start"
-                        asChild
-                      >
-                        <a className="flex items-center justify-between w-full">
+                    <Button
+                      key={item.href}
+                      variant={isActive ? 'default' : 'ghost'}
+                      className="w-full justify-start"
+                      asChild
+                    >
+                      <Link href={item.href}>
+                        <span className="flex items-center justify-between w-full">
                           <span className="flex items-center">
                             {item.icon}
                             <span className="ml-2">{item.label}</span>
@@ -263,9 +264,9 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
                               {notificationCount}
                             </Badge>
                           )}
-                        </a>
-                      </Button>
-                    </Link>
+                        </span>
+                      </Link>
+                    </Button>
                   );
                 })}
               </div>

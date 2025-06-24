@@ -81,11 +81,9 @@ export default function SavedPropertiesPage() {
         <div className="text-center py-12">
           <h1 className="text-2xl font-headline">Access Denied</h1>
           <p className="text-muted-foreground">You need to be logged in as a user to view this page.</p>
-          <Link href="/" passHref legacyBehavior>
-            <Button asChild className="mt-4">
-              <a><span>Go to Homepage</span></a>
-            </Button>
-          </Link>
+          <Button asChild className="mt-4">
+            <Link href="/">Go to Homepage</Link>
+          </Button>
         </div>
      );
   }
@@ -101,11 +99,9 @@ export default function SavedPropertiesPage() {
             <CardDescription>You haven&apos;t saved any properties. Start exploring and save your favorites!</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href="/properties" passHref legacyBehavior>
-              <Button asChild size="lg">
-                <a>Find Properties</a>
-              </Button>
-            </Link>
+            <Button asChild size="lg">
+              <Link href="/properties">Find Properties</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (

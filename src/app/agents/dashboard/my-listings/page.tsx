@@ -1,6 +1,6 @@
 
 // src/app/agents/dashboard/my-listings/page.tsx
-'use client';
+"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Property, Agent, PromotionTierConfig, UserRole, PlatformSettings } from '@/lib/types';
@@ -277,7 +277,7 @@ export default function MyListingsPage() {
   }
 
   if (user?.role !== 'agent') {
-     return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Button asChild className="mt-4"> <Link href="/"><span>Go to Homepage</span></Link> </Button> </div> );
+     return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Button asChild className="mt-4"> <Link href="/">Go to Homepage</Link> </Button> </div> );
   }
 
   const getSelectedTierFee = () => {
@@ -307,12 +307,10 @@ export default function MyListingsPage() {
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} aria-label="Grid view" title="Grid view"> <LayoutGrid className="h-5 w-5" /> </Button>
             <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')} aria-label="List view" title="List view"> <List className="h-5 w-5" /> </Button>
             <Button asChild>
-              <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
-                <a>
-                  <span className="inline-flex items-center">
-                    <PlusCircle className="mr-2 h-5 w-5" /> Add New Listing
-                  </span>
-                </a>
+              <Link href="/agents/dashboard/add-property">
+                <span className="inline-flex items-center">
+                  <PlusCircle className="mr-2 h-5 w-5" /> Add New Listing
+                </span>
               </Link>
             </Button>
           </div>
@@ -327,13 +325,11 @@ export default function MyListingsPage() {
         {agentProperties.length === 0 ? (
           <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Listings Yet</CardTitle> <CardDescription>You haven&apos;t added any properties. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> 
             <Button asChild size="lg">
-                <Link href="/agents/dashboard/add-property" legacyBehavior passHref>
-                  <a>
-                    <span className="inline-flex items-center">
-                        <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing
-                    </span>
-                  </a>
-                </Link>
+              <Link href="/agents/dashboard/add-property">
+                <span className="inline-flex items-center">
+                    <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Listing
+                </span>
+              </Link>
             </Button> </CardContent> </Card>
         ) : (
           <div className={cn( viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col space-y-4' )}>

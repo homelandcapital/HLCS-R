@@ -1,3 +1,4 @@
+
 // src/components/layout/user-dashboard-layout.tsx
 "use client";
 
@@ -114,14 +115,15 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
             const isMyInquiriesItem = item.href === '/users/dashboard/my-inquiries';
             
             return (
-              <Link key={item.href} href={item.href} passHref legacyBehavior>
-                <Button
-                  variant={isActive ? 'default' : 'ghost'}
-                  className="w-full justify-start"
-                  asChild
-                >
-                  <a className="flex items-center justify-between w-full">
-                    <span className="flex items-center"> {/* Added span wrapper */}
+              <Button
+                key={item.href}
+                variant={isActive ? 'default' : 'ghost'}
+                className="w-full justify-start"
+                asChild
+              >
+                <Link href={item.href}>
+                  <span className="flex w-full items-center justify-between">
+                    <span className="flex items-center">
                         {item.icon}
                         <span className="ml-2">{item.label}</span>
                     </span>
@@ -130,9 +132,9 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
                           {unreadUserMessagesCount}
                         </Badge>
                     )}
-                  </a>
-                </Button>
-              </Link>
+                  </span>
+                </Link>
+              </Button>
             );
           })}
         </nav>
