@@ -191,10 +191,31 @@ export default function MyListingsPage() {
   };
 
   const handleInitiatePromotionPayment = async () => {
-    if (!propertyToPromote || !selectedTierId || !user || user.role !== 'agent' || !platformSettings || !PAYSTACK_PUBLIC_KEY) {
-      toast({ title: "Error", description: "Cannot initiate promotion. Missing details or Paystack key.", variant: "destructive" });
-      return;
+    if (!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY.includes('PLACEHOLDER')) {
+        toast({
+            title: "Paystack Key Missing",
+            description: "The Paystack public key is not configured. Please ask the site administrator to set it up.",
+            variant: "destructive",
+        });
+        return;
     }
+    if (!propertyToPromote) {
+        toast({ title: "Error", description: "No property selected. Please close the dialog and try again.", variant: "destructive" });
+        return;
+    }
+    if (!selectedTierId) {
+        toast({ title: "Error", description: "Please select a promotion tier before proceeding.", variant: "destructive" });
+        return;
+    }
+    if (!user || user.role !== 'agent') {
+        toast({ title: "Authentication Error", description: "You must be logged in as an agent.", variant: "destructive" });
+        return;
+    }
+    if (!platformSettings) {
+        toast({ title: "Configuration Error", description: "Platform promotion settings could not be loaded.", variant: "destructive" });
+        return;
+    }
+
     if (propertyToPromote.agent_id !== user.id) {
       toast({ title: "Unauthorized", description: "You can only promote your own listings.", variant: "destructive" }); return;
     }
