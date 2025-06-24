@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/user-management/page.tsx
 'use client';
 
@@ -19,8 +20,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { updateUserByAdmin, updateUserFormSchema, type UpdateUserFormValues } from '@/actions/admin-user-actions';
+import { updateUserByAdmin } from '@/actions/admin-user-actions';
+import { updateUserFormSchema, type UpdateUserFormValues } from '@/lib/schemas';
 
 
 export default function UserManagementPage() {

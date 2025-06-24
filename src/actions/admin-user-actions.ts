@@ -1,19 +1,11 @@
+
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
 import type { Database, TablesUpdate } from '@/lib/database.types';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
+import type { UpdateUserFormValues } from '@/lib/schemas';
 
-// This schema defines what an admin can update.
-export const updateUserFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  role: z.enum(['user', 'agent', 'platform_admin']),
-  phone: z.string().optional(),
-  agency: z.string().optional(),
-});
-
-export type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>;
 
 export async function updateUserByAdmin(userId: string, data: UpdateUserFormValues) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
