@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/user-management/page.tsx
 'use client';
 
@@ -7,7 +6,7 @@ import type { AuthenticatedUser, UserRole, Agent, GeneralUser, PlatformAdmin } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Shield, Briefcase, UserCircle, Download } from 'lucide-react';
+import { Users, Shield, Briefcase, UserCircle, Download, FileCheck2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -118,6 +117,7 @@ export default function UserManagementPage() {
       // Access phone and agency directly as they are nullable on the base user type from DB
       const phone = (user as Agent)?.phone || ''; 
       const agency = (user as Agent)?.agency || '';
+      const government_id_url = (user as Agent)?.government_id_url || '';
       
       return {
         id: user.id,
@@ -126,10 +126,11 @@ export default function UserManagementPage() {
         role: formatRole(user.role),
         phone: phone,
         agency: agency,
+        government_id_url: government_id_url,
       };
     });
 
-    const headers = ['id', 'name', 'email', 'role', 'phone', 'agency'];
+    const headers = ['id', 'name', 'email', 'role', 'phone', 'agency', 'government_id_url'];
     const csvString = convertToCSV(dataToExport, headers);
     downloadCSV(csvString, 'homeland-capital-users.csv');
     toast({ title: 'Export Started', description: 'User data CSV download has started.' });
@@ -156,7 +157,7 @@ export default function UserManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {[...Array(5)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-24" /></TableHead>)}
+                    {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-24" /></TableHead>)}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,6 +167,7 @@ export default function UserManagementPage() {
                       <TableCell><Skeleton className="h-8 w-full" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-8 w-16" /></TableCell>
                     </TableRow>
                   ))}
@@ -246,6 +248,7 @@ export default function UserManagementPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Verification ID</TableHead>
                   <TableHead>User ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -265,6 +268,19 @@ export default function UserManagementPage() {
                          {formatRole(user.role)}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {user.role === 'agent' && (user as Agent).government_id_url ? (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={(user as Agent).government_id_url!} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                            <FileCheck2 className="h-4 w-4" /> View ID
+                          </a>
+                        </Button>
+                      ) : user.role === 'agent' ? (
+                        <Badge variant="outline">No ID</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{user.id}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" disabled>Edit</Button>
@@ -280,4 +296,3 @@ export default function UserManagementPage() {
     </div>
   );
 }
-
