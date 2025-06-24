@@ -113,7 +113,7 @@ export default function MyMachineryPage() {
   }
 
   if (user?.role !== 'agent') {
-    return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Button asChild className="mt-4"> <Link href="/"><span>Go to Homepage</span></Link> </Button> </div> );
+    return ( <div className="text-center py-12"> <h1 className="text-2xl font-headline">Access Denied</h1> <p className="text-muted-foreground">This page is for agents only.</p> <Button asChild> <Link href="/"><span>Go to Homepage</span></Link> </Button> </div> );
   }
 
   return (
@@ -131,7 +131,7 @@ export default function MyMachineryPage() {
         </div>
 
         {agentMachinery.length === 0 ? (
-          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Machinery Yet</CardTitle> <CardDescription>You haven&apos;t added any machinery. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-machinery"> <PlusCircle className="mr-2 h-5 w-5" /> Add Your First Machinery Listing </Link> </Button> </CardContent> </Card>
+          <Card className="text-center py-12 shadow-lg"> <CardHeader> <CardTitle className="font-headline">No Machinery Yet</CardTitle> <CardDescription>You haven&apos;t added any machinery. Start by adding your first listing!</CardDescription> </CardHeader> <CardContent> <Button asChild size="lg"> <Link href="/agents/dashboard/add-machinery"> <span className="inline-flex items-center"><PlusCircle className="mr-2 h-5 w-5" /> Add Your First Machinery Listing</span> </Link> </Button> </CardContent> </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {agentMachinery.map(machinery => (
@@ -160,7 +160,13 @@ export default function MyMachineryPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-4 border-t mt-auto flex flex-wrap gap-2 justify-start">
-                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled> <Link href={`/machinery/${machinery.id}`}> <span className="flex items-center"><Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span></span> </Link> </Button>
+                  <Button variant="outline" size="sm" asChild title="View Public Listing (if approved)" disabled> 
+                    <Link href={`/machinery/${machinery.id}`}>
+                        <span className="flex items-center">
+                            <Eye className="h-4 w-4 mr-1.5 sm:mr-0" /> <span className="sm:hidden">View</span>
+                        </span>
+                    </Link> 
+                  </Button>
                   <Button variant="outline" size="sm" title="Edit Listing (Not Implemented)" disabled> <Edit3 className="h-4 w-4" /> </Button>
                   <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(machinery)} title="Delete Listing" disabled={machinery.status !== 'rejected'}> <Trash2 className="h-4 w-4" /> </Button>
                 </CardFooter>
