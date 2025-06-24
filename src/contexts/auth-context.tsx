@@ -271,9 +271,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           toast({ title: 'Profile Creation Failed', description: `There was an issue setting up your profile. Please contact support. Error: ${pgError.message}.`, variant: 'destructive' });
         }
         
-        supabase.auth.signOut().then(() => supabase.auth.admin.deleteUser(signUpData.user!.id)).catch(delErr => {
-            console.error("[AuthContext] commonSignUp: Error during cleanup after profile creation failure:", delErr);
-        });
+        // This is the fix: Remove the unsafe admin call to delete the user.
+        // Just sign them out so they can try again or contact support.
+        await supabase.auth.signOut();
+
         return { error: profileError as Error, data: null };
       }
 
