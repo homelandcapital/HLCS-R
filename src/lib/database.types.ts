@@ -45,6 +45,13 @@ export type Database = {
             referencedRelation: "community_project_interests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "community_project_interest_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       community_project_interests: {
@@ -107,13 +114,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "community_project_interest_messages_interest_id_fkey"
-            columns: ["id"]
-            isOneToOne: false
-            referencedRelation: "community_project_interest_messages"
-            referencedColumns: ["interest_id"]
           },
         ]
       }
@@ -206,6 +206,13 @@ export type Database = {
             referencedRelation: "development_project_interests"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "development_project_interest_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       development_project_interests: {
@@ -268,13 +275,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "development_project_interest_messages_interest_id_fkey"
-            columns: ["id"]
-            isOneToOne: false
-            referencedRelation: "development_project_interest_messages"
-            referencedColumns: ["interest_id"]
           },
         ]
       }
