@@ -67,6 +67,7 @@ export type Database = {
           selected_budget_tier: string
           state_capital: string | null
           status: string
+          updated_at: string
           user_email: string | null
           user_id: string | null
           user_name: string | null
@@ -82,6 +83,7 @@ export type Database = {
           selected_budget_tier: string
           state_capital?: string | null
           status?: string
+          updated_at?: string
           user_email?: string | null
           user_id?: string | null
           user_name?: string | null
@@ -97,6 +99,7 @@ export type Database = {
           selected_budget_tier?: string
           state_capital?: string | null
           status?: string
+          updated_at?: string
           user_email?: string | null
           user_id?: string | null
           user_name?: string | null
@@ -228,6 +231,7 @@ export type Database = {
           selected_budget_tier: string | null
           state_capital: string | null
           status: string
+          updated_at: string
           user_email: string | null
           user_id: string | null
           user_name: string | null
@@ -243,6 +247,7 @@ export type Database = {
           selected_budget_tier?: string | null
           state_capital?: string | null
           status?: string
+          updated_at?: string
           user_email?: string | null
           user_id?: string | null
           user_name?: string | null
@@ -258,6 +263,7 @@ export type Database = {
           selected_budget_tier?: string | null
           state_capital?: string | null
           status?: string
+          updated_at?: string
           user_email?: string | null
           user_id?: string | null
           user_name?: string | null
