@@ -38,24 +38,47 @@ export default function ProjectInterestsManagementPage() {
 
   const fetchInterests = useCallback(async () => {
     setPageLoading(true);
-    const { data, error } = await supabase
+    const { data: interestsData, error } = await supabase
       .from('community_project_interests')
-      .select('*, community_project_interest_messages(*)')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching project interests:', error);
       toast({ title: 'Error', description: 'Could not fetch project interests.', variant: 'destructive' });
       setAllInterests([]);
-    } else {
-      const formattedInterests = data.map(item => ({
+      setPageLoading(false);
+      return;
+    }
+
+    if (interestsData) {
+      const interestsWithConversations = await Promise.all(
+        interestsData.map(async (interest) => {
+          const { data: messages, error: messagesError } = await supabase
+            .from('community_project_interest_messages')
+            .select('*')
+            .eq('interest_id', interest.id)
+            .order('created_at', { ascending: true });
+
+          if (messagesError) {
+            console.error(`Error fetching messages for interest ${interest.id}:`, messagesError);
+            return { ...interest, conversation: [] };
+          }
+          return { ...interest, conversation: messages || [] };
+        })
+      );
+
+      const formattedInterests = interestsWithConversations.map(item => ({
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
         status: item.status as CommunityProjectInterestStatus,
-        conversation: (item.community_project_interest_messages as CommunityProjectInterestMessage[]).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+        conversation: item.conversation as CommunityProjectInterestMessage[],
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
+    } else {
+        setAllInterests([]);
     }
+    
     setPageLoading(false);
   }, [toast]);
 
@@ -360,3 +383,5 @@ const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
         <p className="text-sm ml-5">{value || 'N/A'}</p>
     </div>
 );
+
+    
