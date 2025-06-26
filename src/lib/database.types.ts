@@ -13,30 +13,30 @@ export type Database = {
       community_project_interest_messages: {
         Row: {
           content: string
+          id: string
           interest_id: string
           sender_id: string | null
           sender_name: string
           sender_role: Database["public"]["Enums"]["user_role"]
           timestamp: string
-          id: string
         }
         Insert: {
           content: string
+          id?: string
           interest_id: string
           sender_id?: string | null
           sender_name: string
           sender_role: Database["public"]["Enums"]["user_role"]
           timestamp?: string
-          id?: string
         }
         Update: {
           content?: string
+          id?: string
           interest_id?: string
           sender_id?: string | null
           sender_name?: string
           sender_role?: Database["public"]["Enums"]["user_role"]
           timestamp?: string
-          id?: string
         }
         Relationships: [
           {
@@ -44,6 +44,13 @@ export type Database = {
             columns: ["interest_id"]
             isOneToOne: false
             referencedRelation: "community_project_interests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_project_interest_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -198,6 +205,13 @@ export type Database = {
             columns: ["interest_id"]
             isOneToOne: false
             referencedRelation: "development_project_interests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_project_interest_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -402,6 +416,13 @@ export type Database = {
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inquiry_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       machinery: {
@@ -545,7 +566,7 @@ export type Database = {
           inquiry_id: string
           sender_id: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp: string
         }
         Insert: {
@@ -554,7 +575,7 @@ export type Database = {
           inquiry_id: string
           sender_id?: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp?: string
         }
         Update: {
@@ -563,7 +584,7 @@ export type Database = {
           inquiry_id?: string
           sender_id?: string | null
           sender_name?: string
-          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          sender_role?: Database["public"]["Enums"]["user_role"]
           timestamp?: string
         }
         Relationships: [
@@ -572,6 +593,13 @@ export type Database = {
             columns: ["inquiry_id"]
             isOneToOne: false
             referencedRelation: "machinery_inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_inquiry_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -843,7 +871,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
-          role: Database["public"]["Enums"]["user_role_enum"]
+          role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
@@ -856,7 +884,7 @@ export type Database = {
           id: string
           name: string
           phone?: string | null
-          role: Database["public"]["Enums"]["user_role_enum"]
+          role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
@@ -869,7 +897,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
-          role?: Database["public"]["Enums"]["user_role_enum"]
+          role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Relationships: []
@@ -895,7 +923,6 @@ export type Database = {
         | "Pending Approval"
         | "Rejected"
       inquiry_status: "new" | "contacted" | "resolved" | "archived"
-      inquiry_status_enum: "new" | "contacted" | "resolved" | "archived"
       listing_type_enum: "For Sale" | "For Rent" | "For Lease"
       machinery_condition_enum: "New" | "Used" | "Refurbished"
       machinery_request_status_enum: "new" | "contacted" | "resolved"
@@ -940,7 +967,6 @@ export type Database = {
       property_status_enum: "pending" | "approved" | "rejected"
       property_type_enum: "House" | "Apartment" | "Condo" | "Townhouse" | "Land"
       user_role: "agent" | "user" | "platform_admin"
-      user_role_enum: "agent" | "user" | "platform_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1067,7 +1093,6 @@ export const Constants = {
         "Rejected",
       ],
       inquiry_status: ["new", "contacted", "resolved", "archived"],
-      inquiry_status_enum: ["new", "contacted", "resolved", "archived"],
       listing_type_enum: ["For Sale", "For Rent", "For Lease"],
       machinery_condition_enum: ["New", "Used", "Refurbished"],
       machinery_request_status_enum: ["new", "contacted", "resolved"],
@@ -1113,7 +1138,6 @@ export const Constants = {
       property_status_enum: ["pending", "approved", "rejected"],
       property_type_enum: ["House", "Apartment", "Condo", "Townhouse", "Land"],
       user_role: ["agent", "user", "platform_admin"],
-      user_role_enum: ["agent", "user", "platform_admin"],
     },
   },
 } as const

@@ -1,5 +1,4 @@
 
-
 import type { Database } from './database.types';
 
 export type UserRole = 'agent' | 'user' | 'platform_admin';

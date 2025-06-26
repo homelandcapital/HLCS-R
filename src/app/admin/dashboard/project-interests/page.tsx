@@ -40,43 +40,24 @@ export default function ProjectInterestsManagementPage() {
     setPageLoading(true);
     const { data: interestsData, error } = await supabase
       .from('community_project_interests')
-      .select('*')
+      .select('*, conversation:community_project_interest_messages(*)')
       .order('created_at', { ascending: false });
-
+  
     if (error) {
       console.error('Error fetching project interests:', error);
       toast({ title: 'Error', description: 'Could not fetch project interests.', variant: 'destructive' });
       setAllInterests([]);
-      setPageLoading(false);
-      return;
-    }
-
-    if (interestsData) {
-      const interestsWithConversations = await Promise.all(
-        interestsData.map(async (interest) => {
-          const { data: messages, error: messagesError } = await supabase
-            .from('community_project_interest_messages')
-            .select('*')
-            .eq('interest_id', interest.id)
-            .order('timestamp', { ascending: true });
-
-          if (messagesError) {
-            console.error(`Error fetching messages for interest ${interest.id}:`, messagesError);
-            return { ...interest, conversation: [] };
-          }
-          return { ...interest, conversation: messages || [] };
-        })
-      );
-
-      const formattedInterests = interestsWithConversations.map(item => ({
+    } else {
+        const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
         status: item.status as CommunityProjectInterestStatus,
-        conversation: item.conversation as CommunityProjectInterestMessage[],
+        conversation: item.conversation.map(msg => ({
+            ...msg,
+            timestamp: msg.timestamp,
+        })) as CommunityProjectInterestMessage[],
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
-    } else {
-        setAllInterests([]);
     }
     
     setPageLoading(false);
@@ -149,10 +130,10 @@ export default function ProjectInterestsManagementPage() {
     if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
   
     const currentAdmin = user as PlatformAdmin;
-    const newMessageData = {
+    const newMessageData: TablesInsert<'community_project_interest_messages'> = {
       interest_id: selectedInterest.id,
       sender_id: currentAdmin.id,
-      sender_role: 'platform_admin' as UserRole,
+      sender_role: 'platform_admin',
       sender_name: currentAdmin.name,
       content: replyMessage.trim(),
     };
@@ -172,8 +153,10 @@ export default function ProjectInterestsManagementPage() {
       await handleUpdateStatus(selectedInterest.id, 'contacted');
     }
   
-    fetchInterests();
-    setIsModalOpen(false);
+    fetchInterests(); // Refetch all interests to get the latest conversation
+    setIsModalOpen(false); // Close modal
+    
+    // Re-open with updated data after a short delay
     setTimeout(() => {
         const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
         if (updatedInterest) {
@@ -276,7 +259,7 @@ export default function ProjectInterestsManagementPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{interest.location_type === 'stateCapital' ? interest.state_capital : interest.lga_name}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{interest.location_type.replace('stateCapital', 'State Capital')}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{interest.location_type === 'stateCapital' ? 'State Capital' : 'LGA'}</div>
                     </TableCell>
                     <TableCell><Badge variant="outline">{interest.selected_budget_tier}</Badge></TableCell>
                     <TableCell>

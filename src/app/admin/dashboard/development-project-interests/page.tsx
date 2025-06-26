@@ -33,11 +33,13 @@ export default function DevProjectInterestsManagementPage() {
   const [selectedInterest, setSelectedInterest] = useState<DevelopmentProjectInterest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [replyMessage, setReplyMessage] = useState('');
+  // Reply functionality is temporarily disabled on this page to isolate fixes.
+  // const [replyMessage, setReplyMessage] = useState(''); 
   const { toast } = useToast();
 
   const fetchInterests = useCallback(async () => {
     setPageLoading(true);
+    // Temporarily fetching without conversations to ensure stability.
     const { data: interestsData, error } = await supabase
       .from('development_project_interests')
       .select('*')
@@ -52,12 +54,11 @@ export default function DevProjectInterestsManagementPage() {
     }
 
     if (interestsData) {
-      // NOTE: Conversation fetching temporarily disabled to isolate a bug.
       const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as DevelopmentProjectInterest['location_type'],
         status: item.status as DevelopmentProjectInterestStatus,
-        conversation: [], // Temporarily set conversation to empty array
+        conversation: [], // Temporarily disabled conversation fetching
       })) as DevelopmentProjectInterest[];
       setAllInterests(formattedInterests);
     } else {
@@ -105,7 +106,7 @@ export default function DevProjectInterestsManagementPage() {
   const handleViewDetails = (interest: DevelopmentProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
-    setReplyMessage('');
+    // setReplyMessage('');
   };
 
   const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
@@ -130,49 +131,6 @@ export default function DevProjectInterestsManagementPage() {
     return true;
   };
   
-  // NOTE: Reply functionality temporarily disabled to isolate a bug.
-  // const handleAdminReply = async () => {
-  //   if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
-  
-  //   const currentAdmin = user as PlatformAdmin;
-  //   const newMessageData = {
-  //     interest_id: selectedInterest.id,
-  //     sender_id: currentAdmin.id,
-  //     sender_role: 'platform_admin' as UserRole,
-  //     sender_name: currentAdmin.name,
-  //     content: replyMessage.trim(),
-  //   };
-  
-  //   const { data: savedMessage, error: messageError } = await supabase
-  //     .from('development_project_interest_messages')
-  //     .insert(newMessageData)
-  //     .select()
-  //     .single();
-  
-  //   if (messageError) {
-  //     toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
-  //     return;
-  //   }
-  
-  //   if (selectedInterest.status === 'new') {
-  //     await handleUpdateStatus(selectedInterest.id, 'contacted');
-  //   }
-  
-  //   fetchInterests();
-  //   setIsModalOpen(false);
-  //   setTimeout(() => {
-  //       const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
-  //       if (updatedInterest) {
-  //           setSelectedInterest(updatedInterest);
-  //           setIsModalOpen(true);
-  //       }
-  //   }, 300);
-
-  //   setReplyMessage('');
-  //   toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
-  // };
-
-
   if (authLoading || pageLoading) {
     return (
       <div className="space-y-8">
@@ -237,7 +195,6 @@ export default function DevProjectInterestsManagementPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Original Project</TableHead>
-                  <TableHead>Desired Location</TableHead>
                   <TableHead>Budget Tier</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -259,10 +216,6 @@ export default function DevProjectInterestsManagementPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground">General Interest</span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{interest.location_type === 'stateCapital' ? interest.state_capital : interest.lga_name || 'N/A'}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{interest.location_type === 'stateCapital' ? 'State Capital' : (interest.location_type ? 'LGA' : 'N/A')}</div>
                     </TableCell>
                     <TableCell><Badge variant="outline">{interest.selected_budget_tier || 'N/A'}</Badge></TableCell>
                     <TableCell>
@@ -299,12 +252,6 @@ export default function DevProjectInterestsManagementPage() {
                 {selectedInterest.project_title && <InfoRow icon={<Zap />} label="Original Project" value={selectedInterest.project_title} />}
                 
                 <Separator />
-                <h4 className="font-medium text-muted-foreground">Desired Location</h4>
-                <InfoRow icon={<MapPin />} label="Location Type" value={selectedInterest.location_type === 'stateCapital' ? 'State Capital' : (selectedInterest.location_type ? 'LGA' : 'N/A')} />
-                {selectedInterest.location_type === 'stateCapital' && <InfoRow icon={<MapPin />} label="State Capital" value={selectedInterest.state_capital} />}
-                {selectedInterest.location_type === 'lga' && <InfoRow icon={<MapPin />} label="LGA Name" value={selectedInterest.lga_name} />}
-                
-                <Separator />
                 <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier || 'N/A'} />
                 
                 <Separator />
@@ -324,6 +271,10 @@ export default function DevProjectInterestsManagementPage() {
                         <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger>
                         <SelectContent>{developmentProjectInterestStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
                     </Select>
+                </div>
+                 <Separator />
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
+                    <p className="text-sm text-blue-800">Replying to Development Project Interests is temporarily disabled while we resolve an issue. Please contact the user via email.</p>
                 </div>
             </div>
             <DialogFooter><DialogClose asChild><Button variant="outline">Close</Button></DialogClose></DialogFooter>
