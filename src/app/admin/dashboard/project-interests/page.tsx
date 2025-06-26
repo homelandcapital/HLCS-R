@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/project-interests/page.tsx
 'use client';
 
@@ -37,34 +36,15 @@ export default function ProjectInterestsManagementPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [replyMessage, setReplyMessage] = useState('');
   const { toast } = useToast();
+  const [currentConversation, setCurrentConversation] = useState<CommunityProjectInterestMessage[]>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
 
   const fetchInterests = useCallback(async () => {
     setPageLoading(true);
     const { data: interestsData, error } = await supabase
       .from('community_project_interests')
-      .select(`
-        id,
-        created_at,
-        project_id,
-        project_title,
-        user_id,
-        user_name,
-        user_email,
-        location_type,
-        state_capital,
-        lga_name,
-        selected_budget_tier,
-        message,
-        status,
-        conversation:community_project_interest_messages (
-          id,
-          content,
-          sender_id,
-          sender_name,
-          sender_role,
-          timestamp
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
   
     if (error) {
@@ -80,10 +60,7 @@ export default function ProjectInterestsManagementPage() {
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
         status: item.status as CommunityProjectInterestStatus,
-        conversation: item.conversation.map(msg => ({
-            ...msg,
-            timestamp: msg.timestamp,
-        })) as CommunityProjectInterestMessage[],
+        conversation: [], // Initialize with empty array
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
     } else {
@@ -132,7 +109,31 @@ export default function ProjectInterestsManagementPage() {
     setSelectedInterest(interest);
     setIsModalOpen(true);
     setReplyMessage('');
+    setCurrentConversation([]);
   };
+
+  useEffect(() => {
+    if (selectedInterest?.id && isModalOpen) {
+      const fetchConversation = async () => {
+        setIsLoadingConversation(true);
+        const { data, error } = await supabase
+          .from('community_project_interest_messages')
+          .select('*')
+          .eq('interest_id', selectedInterest.id)
+          .order('timestamp', { ascending: true });
+        
+        if (error) {
+          toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
+          setCurrentConversation([]);
+        } else {
+          setCurrentConversation(data as CommunityProjectInterestMessage[]);
+        }
+        setIsLoadingConversation(false);
+      };
+      fetchConversation();
+    }
+  }, [selectedInterest, isModalOpen, toast]);
+
 
   const handleUpdateStatus = async (interestId: string, newStatus: CommunityProjectInterestStatus) => {
     const { error } = await supabase
@@ -145,13 +146,11 @@ export default function ProjectInterestsManagementPage() {
       return false;
     }
     
-    setAllInterests(prev => prev.map(item =>
-      item.id === interestId ? { ...item, status: newStatus } : item
-    ));
-    
-    if (selectedInterest && selectedInterest.id === interestId) {
-      setSelectedInterest({ ...selectedInterest, status: newStatus });
-    }
+    // Update local state for immediate feedback
+    const updateLocalState = (interest: CommunityProjectInterest | null) => interest && interest.id === interestId ? { ...interest, status: newStatus } : interest;
+    setAllInterests(prev => prev.map(updateLocalState) as CommunityProjectInterest[]);
+    setSelectedInterest(prev => updateLocalState(prev));
+
     toast({ title: 'Status Updated', description: `Interest status changed to "${newStatus}".` });
     return true;
   };
@@ -179,22 +178,12 @@ export default function ProjectInterestsManagementPage() {
       return;
     }
   
+    setCurrentConversation(prev => [...prev, savedMessage as CommunityProjectInterestMessage]);
+    
     if (selectedInterest.status === 'new') {
       await handleUpdateStatus(selectedInterest.id, 'contacted');
     }
   
-    fetchInterests(); // Refetch all interests to get the latest conversation
-    setIsModalOpen(false); // Close modal
-    
-    // Re-open with updated data after a short delay
-    setTimeout(() => {
-        const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
-        if (updatedInterest) {
-            setSelectedInterest(updatedInterest);
-            setIsModalOpen(true);
-        }
-    }, 300);
-
     setReplyMessage('');
     toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
   };
@@ -341,9 +330,11 @@ export default function ProjectInterestsManagementPage() {
                     <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
                     <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
                   </div>
-                  {(selectedInterest.conversation && selectedInterest.conversation.length > 0) ? (
+                  {isLoadingConversation ? (
+                    <div className="space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
+                  ) : currentConversation.length > 0 ? (
                       <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
-                          {selectedInterest.conversation.map(msg => (
+                          {currentConversation.map(msg => (
                               <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
                                   <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                   <p className="whitespace-pre-line">{msg.content}</p>
@@ -357,7 +348,7 @@ export default function ProjectInterestsManagementPage() {
                       <div className="pt-4 space-y-2 border-t mt-4">
                           <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
                           <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
-                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim()}>
+                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation}>
                               <Send className="mr-2 h-4 w-4" /> Send Reply
                           </Button>
                       </div>
@@ -394,5 +385,3 @@ const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
         <p className="text-sm ml-5">{value || 'N/A'}</p>
     </div>
 );
-
-    

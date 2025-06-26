@@ -1,4 +1,3 @@
-
 // src/app/admin/dashboard/development-project-interests/page.tsx
 'use client';
 
@@ -33,8 +32,6 @@ export default function DevProjectInterestsManagementPage() {
   const [selectedInterest, setSelectedInterest] = useState<DevelopmentProjectInterest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  // Reply functionality is temporarily disabled on this page to isolate fixes.
-  // const [replyMessage, setReplyMessage] = useState(''); 
   const { toast } = useToast();
 
   const fetchInterests = useCallback(async () => {
@@ -106,7 +103,6 @@ export default function DevProjectInterestsManagementPage() {
   const handleViewDetails = (interest: DevelopmentProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
-    // setReplyMessage('');
   };
 
   const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
@@ -274,7 +270,7 @@ export default function DevProjectInterestsManagementPage() {
                 </div>
                  <Separator />
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
-                    <p className="text-sm text-blue-800">Replying to Development Project Interests is temporarily disabled while we resolve an issue. Please contact the user via email.</p>
+                    <p className="text-sm text-blue-800">Replying to Development Project Interests is temporarily disabled. Please contact the user via email.</p>
                 </div>
             </div>
             <DialogFooter><DialogClose asChild><Button variant="outline">Close</Button></DialogClose></DialogFooter>
