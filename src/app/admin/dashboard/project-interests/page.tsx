@@ -23,6 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { communityProjectInterestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from '@/components/ui/textarea';
+import type { TablesInsert } from '@/lib/database.types';
+
 
 export default function ProjectInterestsManagementPage() {
   const { user, loading: authLoading } = useAuth();
@@ -40,14 +42,40 @@ export default function ProjectInterestsManagementPage() {
     setPageLoading(true);
     const { data: interestsData, error } = await supabase
       .from('community_project_interests')
-      .select('*, conversation:community_project_interest_messages(*)')
+      .select(`
+        id,
+        created_at,
+        project_id,
+        project_title,
+        user_id,
+        user_name,
+        user_email,
+        location_type,
+        state_capital,
+        lga_name,
+        selected_budget_tier,
+        message,
+        status,
+        conversation:community_project_interest_messages (
+          id,
+          content,
+          sender_id,
+          sender_name,
+          sender_role,
+          timestamp
+        )
+      `)
       .order('created_at', { ascending: false });
   
     if (error) {
       console.error('Error fetching project interests:', error);
       toast({ title: 'Error', description: 'Could not fetch project interests.', variant: 'destructive' });
       setAllInterests([]);
-    } else {
+      setPageLoading(false);
+      return;
+    }
+    
+    if (interestsData) {
         const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
@@ -58,6 +86,8 @@ export default function ProjectInterestsManagementPage() {
         })) as CommunityProjectInterestMessage[],
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
+    } else {
+        setAllInterests([]);
     }
     
     setPageLoading(false);
@@ -364,3 +394,5 @@ const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
         <p className="text-sm ml-5">{value || 'N/A'}</p>
     </div>
 );
+
+    
