@@ -80,3 +80,8 @@ export async function uploadAvatarImage(formData: FormData): Promise<UploadResul
   const files = formData.getAll('files') as File[];
   return performUpload(files, 'homeland_capital_avatars');
 }
+
+export async function uploadCmsImages(formData: FormData): Promise<UploadResult> {
+  const files = formData.getAll('files') as File[];
+  return performUpload(files, 'homeland_capital_cms');
+}

@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/cms/page.tsx
 'use client';
 
@@ -14,17 +15,19 @@ import {
   servicesPageContentData as defaultServicesPageContent,
   contactPageContentData as defaultContactPageContent,
 } from '@/lib/cms-data';
-
-import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, Users, Building, HelpCircle } from 'lucide-react';
+import { Newspaper, Save, Home, Info, Briefcase, Mail, PlusCircle, Trash2, Users, Building, HelpCircle, UploadCloud } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { uploadCmsImages } from '@/actions/upload-images';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Zod Schemas for Validation (ensure these are complete and correct)
 const CmsLinkSchema = z.object({ text: z.string().min(1), href: z.string().min(1) });
@@ -180,7 +183,6 @@ export default function CmsManagementPage() {
       ...defaultContactPageContent,
       officesSection: {
         ...defaultContactPageContent.officesSection,
-        // Ensure regionalOffice is explicitly null if not provided in defaults, matching Zod schema
         regionalOffice: defaultContactPageContent.officesSection.regionalOffice || null,
       }
     }
@@ -198,13 +200,12 @@ export default function CmsManagementPage() {
         .eq('page_id', pageId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found, which is a valid state we handle with defaults.
+      if (error && error.code !== 'PGRST116') {
         toast({
           title: `Error loading ${pageId} content`,
           description: error.message,
           variant: 'destructive',
         });
-        // Check for specific auth error to give a better message
         if (error.message.toLowerCase().includes('jwt')) {
             toast({
                 title: "Session Expired",
@@ -232,7 +233,6 @@ export default function CmsManagementPage() {
           break;
       }
     } catch (e: any) {
-        // This will catch network errors or other exceptions not handled by Supabase's `{ data, error }` pattern.
         toast({
             title: "An Unexpected Error Occurred",
             description: "There was a problem loading content. Please check your connection and refresh the page.",
@@ -241,7 +241,6 @@ export default function CmsManagementPage() {
         });
         console.error("Critical error in loadPageContent:", e);
     } finally {
-        // This block ensures the loading spinner is always turned off, preventing the UI from getting stuck.
         setIsUiBlockingLoading(false);
     }
   }, [toast, homeForm, aboutForm, servicesForm, contactForm]);
@@ -267,17 +266,15 @@ export default function CmsManagementPage() {
   const handleSubmitLogic = async (pageId: PageId, data: any, formInstance: any) => {
     try {
       await performSaveOnlyDb(pageId, data);
-      // Defer UI updates to allow RHF to finish its state updates first
       setTimeout(() => {
         toast({ title: `${pageId.charAt(0).toUpperCase() + pageId.slice(1)} Page Content Saved`, description: 'Your changes have been successfully saved.' });
-        formInstance.reset(data); // Reset with the data that was just successfully submitted
+        formInstance.reset(data);
       }, 0);
     } catch (error: any) {
-      // Defer error toast as well
       setTimeout(() => {
         toast({ title: `Error saving ${pageId} page content`, description: error.message, variant: 'destructive' });
       }, 0);
-      throw error; // Re-throw the error so react-hook-form's handleSubmit knows the submission failed
+      throw error;
     }
   };
 
@@ -285,6 +282,67 @@ export default function CmsManagementPage() {
   const onAboutSubmit = (data: AboutPageContent) => handleSubmitLogic('about', data, aboutForm);
   const onServicesSubmit = (data: ServicesPageContent) => handleSubmitLogic('services', data, servicesForm);
   const onContactSubmit = (data: ContactPageContentNew) => handleSubmitLogic('contact', data, contactForm);
+
+  const ImageUploadControl = ({ name, label, form }: { name: string; label: string; form: any }) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
+    const currentImageUrl = form.watch(name);
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      setIsUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('files', file);
+        const result = await uploadCmsImages(formData);
+        if (result.error || !result.urls?.[0]) {
+          throw new Error(result.error || "Upload did not return a URL.");
+        }
+        form.setValue(name, result.urls[0], { shouldDirty: true, shouldValidate: true });
+        toast({ title: "Image Uploaded", description: "URL has been updated." });
+      } catch (error: any) {
+        toast({ title: "Upload Failed", description: error.message, variant: "destructive" });
+      } finally {
+        setIsUploading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-2">
+        <FormField
+          control={form.control}
+          name={name}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{label}</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="https://placehold.co/... or upload new" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="flex items-center gap-2">
+          <label htmlFor={`${name}-upload`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'cursor-pointer')}>
+            <UploadCloud className="mr-2 h-4 w-4" />
+            {isUploading ? "Uploading..." : "Upload New Image"}
+          </label>
+          <input id={`${name}-upload`} type="file" className="sr-only" onChange={handleFileChange} disabled={isUploading} accept="image/*,.webp" />
+          {isUploading && <p className="text-xs text-muted-foreground">Please wait...</p>}
+        </div>
+        {currentImageUrl && typeof currentImageUrl === 'string' && (
+          <div className="mt-2">
+            <Label className="text-xs text-muted-foreground">Current Image Preview:</Label>
+            <div className="mt-1 relative w-40 h-24 rounded border overflow-hidden bg-muted">
+              <Image src={currentImageUrl} alt="Current image preview" layout="fill" objectFit="contain" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
 
   if (isUiBlockingLoading && !homeForm.formState.isDirty && !aboutForm.formState.isDirty && !servicesForm.formState.isDirty && !contactForm.formState.isDirty) {
@@ -350,7 +408,11 @@ export default function CmsManagementPage() {
                           <Label>Subtitle</Label><Textarea {...homeForm.register(`hero.slides.${index}.subtitle`)} placeholder="Hero Subtitle" />
                           <Label>CTA Text</Label><Input {...homeForm.register(`hero.slides.${index}.cta.text` as const)} placeholder="Explore Now" />
                           <Label>CTA Link</Label><Input {...homeForm.register(`hero.slides.${index}.cta.href` as const)} placeholder="/properties" />
-                          <Label>Background Image URL</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageUrl` as const)} placeholder="https://placehold.co/..." />
+                          <ImageUploadControl
+                            label="Background Image URL"
+                            name={`hero.slides.${index}.backgroundImageUrl`}
+                            form={homeForm}
+                          />
                           <Label>Image Alt Text</Label><Input {...homeForm.register(`hero.slides.${index}.backgroundImageAlt` as const)} placeholder="Alt text for image" />
                           <Button type="button" variant="destructive" size="sm" onClick={() => removeHeroSlide(index)}><Trash2 className="mr-1 h-4 w-4"/>Remove Slide</Button>
                         </Card>
@@ -384,7 +446,11 @@ export default function CmsManagementPage() {
                      <AccordionContent className="space-y-3 pt-3">
                         <Label>Section Title</Label><Input {...homeForm.register('findYourHome.title')} />
                         <Label>Section Subtitle</Label><Textarea {...homeForm.register('findYourHome.subtitle')} />
-                        <Label>Image URL</Label><Input {...homeForm.register('findYourHome.imageUrl')} />
+                        <ImageUploadControl
+                          label="Image URL"
+                          name="findYourHome.imageUrl"
+                          form={homeForm}
+                        />
                         <Label>Image Alt Text</Label><Input {...homeForm.register('findYourHome.imageAlt')} />
                         <Label>CTA Text</Label><Input {...homeForm.register('findYourHome.cta.text')} />
                         <Label>CTA Link</Label><Input {...homeForm.register('findYourHome.cta.href')} />
@@ -407,7 +473,11 @@ export default function CmsManagementPage() {
                             <Label>Section Title</Label><Input {...homeForm.register('developmentProjects.title')} />
                             <Label>Section Subtitle</Label><Textarea {...homeForm.register('developmentProjects.subtitle')} />
                             <Label>Description</Label><Textarea {...homeForm.register('developmentProjects.description')} rows={3} />
-                            <Label>Image URL</Label><Input {...homeForm.register('developmentProjects.imageUrl')} />
+                            <ImageUploadControl
+                              label="Image URL"
+                              name="developmentProjects.imageUrl"
+                              form={homeForm}
+                            />
                             <Label>Image Alt Text</Label><Input {...homeForm.register('developmentProjects.imageAlt')} />
                             <Label>CTA Text</Label><Input {...homeForm.register('developmentProjects.cta.text')} />
                             <Label>CTA Link</Label><Input {...homeForm.register('developmentProjects.cta.href')} />
@@ -431,7 +501,11 @@ export default function CmsManagementPage() {
                             <Label>Section Title</Label><Input {...homeForm.register('communityOutreach.title')} />
                             <Label>Section Subtitle</Label><Textarea {...homeForm.register('communityOutreach.subtitle')} />
                             <Label>Description</Label><Textarea {...homeForm.register('communityOutreach.description')} rows={3} />
-                            <Label>Image URL</Label><Input {...homeForm.register('communityOutreach.imageUrl')} />
+                            <ImageUploadControl
+                              label="Image URL"
+                              name="communityOutreach.imageUrl"
+                              form={homeForm}
+                            />
                             <Label>Image Alt Text</Label><Input {...homeForm.register('communityOutreach.imageAlt')} />
                             <Label>CTA Text</Label><Input {...homeForm.register('communityOutreach.cta.text')} />
                             <Label>CTA Link</Label><Input {...homeForm.register('communityOutreach.cta.href')} />
@@ -475,7 +549,11 @@ export default function CmsManagementPage() {
                                 <Textarea {...aboutForm.register(`heroSection.paragraphs.${index}` as const)} rows={4} />
                               </div>
                             ))}
-                            <Label>Image URL</Label><Input {...aboutForm.register('heroSection.imageUrl')} />
+                            <ImageUploadControl
+                              label="Image URL"
+                              name="heroSection.imageUrl"
+                              form={aboutForm}
+                            />
                             <Label>Image Alt Text</Label><Input {...aboutForm.register('heroSection.imageAlt')} />
                             <Label>Badge Text (use \n for new line)</Label><Input {...aboutForm.register('heroSection.badgeText')} />
                         </AccordionContent>
