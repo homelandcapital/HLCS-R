@@ -3,11 +3,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { DevelopmentProjectInterest, CommunityProjectInterestStatus as DevProjectInterestStatus } from '@/lib/types';
+import type { DevelopmentProjectInterest, DevelopmentProjectInterestStatus, PlatformAdmin, UserRole, DevelopmentProjectInterestMessage } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Search, Filter, User, CalendarDays, Info, MessageSquare, MapPin, DollarSign, ExternalLink } from 'lucide-react';
+import { Zap, Search, Filter, User, CalendarDays, Info, MessageSquare, MapPin, DollarSign, ExternalLink, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -22,23 +22,25 @@ import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { developmentProjectInterestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from '@/components/ui/textarea';
 
 export default function DevProjectInterestsManagementPage() {
   const { user, loading: authLoading } = useAuth();
   const [allInterests, setAllInterests] = useState<DevelopmentProjectInterest[]>([]);
   const [filteredInterests, setFilteredInterests] = useState<DevelopmentProjectInterest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<DevProjectInterestStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<DevelopmentProjectInterestStatus | 'all'>('all');
   const [selectedInterest, setSelectedInterest] = useState<DevelopmentProjectInterest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [replyMessage, setReplyMessage] = useState('');
   const { toast } = useToast();
 
   const fetchInterests = useCallback(async () => {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('development_project_interests')
-      .select('*')
+      .select('*, conversation:development_project_interest_messages(*)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -49,7 +51,8 @@ export default function DevProjectInterestsManagementPage() {
       const formattedInterests = data.map(item => ({
         ...item,
         location_type: item.location_type as DevelopmentProjectInterest['location_type'],
-        status: item.status as DevProjectInterestStatus,
+        status: item.status as DevelopmentProjectInterestStatus,
+        conversation: (item.conversation as DevelopmentProjectInterestMessage[]).sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
       })) as DevelopmentProjectInterest[];
       setAllInterests(formattedInterests);
     }
@@ -82,7 +85,7 @@ export default function DevProjectInterestsManagementPage() {
     setFilteredInterests(interests);
   }, [searchTerm, statusFilter, allInterests]);
 
-  const getStatusBadgeVariant = (status: DevProjectInterestStatus): "default" | "secondary" | "destructive" | "outline" => {
+  const getStatusBadgeVariant = (status: DevelopmentProjectInterestStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'new': return 'default';
       case 'contacted': return 'secondary';
@@ -94,9 +97,10 @@ export default function DevProjectInterestsManagementPage() {
   const handleViewDetails = (interest: DevelopmentProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
+    setReplyMessage('');
   };
 
-  const handleUpdateStatus = async (interestId: string, newStatus: DevProjectInterestStatus) => {
+  const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
     const { error } = await supabase
       .from('development_project_interests')
       .update({ status: newStatus })
@@ -104,7 +108,7 @@ export default function DevProjectInterestsManagementPage() {
 
     if (error) {
       toast({ title: 'Error Updating Status', description: error.message, variant: 'destructive' });
-      return;
+      return false;
     }
     
     setAllInterests(prev => prev.map(item =>
@@ -115,6 +119,48 @@ export default function DevProjectInterestsManagementPage() {
       setSelectedInterest({ ...selectedInterest, status: newStatus });
     }
     toast({ title: 'Status Updated', description: `Interest status changed to "${newStatus}".` });
+    return true;
+  };
+
+  const handleAdminReply = async () => {
+    if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
+  
+    const currentAdmin = user as PlatformAdmin;
+    const newMessageData = {
+      interest_id: selectedInterest.id,
+      sender_id: currentAdmin.id,
+      sender_role: 'platform_admin' as UserRole,
+      sender_name: currentAdmin.name,
+      content: replyMessage.trim(),
+    };
+  
+    const { data: savedMessage, error: messageError } = await supabase
+      .from('development_project_interest_messages')
+      .insert(newMessageData)
+      .select()
+      .single();
+  
+    if (messageError) {
+      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+      return;
+    }
+  
+    if (selectedInterest.status === 'new') {
+      await handleUpdateStatus(selectedInterest.id, 'contacted');
+    }
+  
+    fetchInterests();
+    setIsModalOpen(false);
+    setTimeout(() => {
+        const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
+        if (updatedInterest) {
+            setSelectedInterest(updatedInterest);
+            setIsModalOpen(true);
+        }
+    }, 300);
+
+    setReplyMessage('');
+    toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
   };
 
 
@@ -156,7 +202,7 @@ export default function DevProjectInterestsManagementPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input placeholder="Search interests..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
             </div>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DevProjectInterestStatus | 'all')}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DevelopmentProjectInterestStatus | 'all')}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
@@ -230,7 +276,7 @@ export default function DevProjectInterestsManagementPage() {
 
       {selectedInterest && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="font-headline text-xl flex items-center"><Zap className="mr-2 h-6 w-6 text-primary" /> Interest Details</DialogTitle>
               <DialogDescription>
@@ -252,15 +298,35 @@ export default function DevProjectInterestsManagementPage() {
                 <Separator />
                 <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier || 'N/A'} />
                 
-                {selectedInterest.message && (
-                    <>
-                        <Separator />
-                        <div>
-                            <Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquare className="w-4 h-4 mr-1.5"/> User Message</Label>
-                            <p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedInterest.message}</p>
-                        </div>
-                    </>
-                )}
+                <Separator />
+                 <div className="space-y-4 pt-4">
+                  <h4 className="font-semibold text-lg">Conversation</h4>
+                  <div className="p-3 rounded-md bg-muted/30 border">
+                    <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
+                    <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
+                  </div>
+                  {(selectedInterest.conversation && selectedInterest.conversation.length > 0) ? (
+                      <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
+                          {selectedInterest.conversation.map(msg => (
+                              <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
+                                  <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
+                                  <p className="whitespace-pre-line">{msg.content}</p>
+                                  <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.created_at), "MMM d, yyyy 'at' p")}</p>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (<p className="text-sm text-muted-foreground text-center py-3">No replies yet.</p>)}
+                  
+                  {!authLoading && user && user.role === 'platform_admin' && (
+                      <div className="pt-4 space-y-2 border-t mt-4">
+                          <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
+                          <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
+                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim()}>
+                              <Send className="mr-2 h-4 w-4" /> Send Reply
+                          </Button>
+                      </div>
+                  )}
+                </div>
                 
                 <Separator />
                 <div className="space-y-1">
@@ -269,7 +335,7 @@ export default function DevProjectInterestsManagementPage() {
                 </div>
                 <div className="space-y-1">
                     <Label htmlFor="status-update-dialog" className="text-sm font-medium">Update Status</Label>
-                    <Select defaultValue={selectedInterest.status} onValueChange={(newStatus) => handleUpdateStatus(selectedInterest.id, newStatus as DevProjectInterestStatus)}>
+                    <Select defaultValue={selectedInterest.status} onValueChange={(newStatus) => handleUpdateStatus(selectedInterest.id, newStatus as DevelopmentProjectInterestStatus)}>
                         <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger>
                         <SelectContent>{developmentProjectInterestStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
                     </Select>

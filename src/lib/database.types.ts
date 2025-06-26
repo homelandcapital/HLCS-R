@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      community_project_interest_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          interest_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          interest_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          interest_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_project_interest_messages_interest_id_fkey"
+            columns: ["interest_id"]
+            isOneToOne: false
+            referencedRelation: "community_project_interests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_project_interests: {
         Row: {
           created_at: string
@@ -121,6 +159,44 @@ export type Database = {
             columns: ["managed_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      development_project_interest_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          interest_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          interest_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          interest_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "development_project_interest_messages_interest_id_fkey"
+            columns: ["interest_id"]
+            isOneToOne: false
+            referencedRelation: "development_project_interests"
             referencedColumns: ["id"]
           },
         ]
@@ -759,6 +835,7 @@ export type Database = {
         Row: {
           agency: string | null
           avatar_url: string | null
+          banned_until: string | null
           created_at: string
           email: string
           government_id_url: string | null
@@ -771,6 +848,7 @@ export type Database = {
         Insert: {
           agency?: string | null
           avatar_url?: string | null
+          banned_until?: string | null
           created_at?: string
           email: string
           government_id_url?: string | null
@@ -783,6 +861,7 @@ export type Database = {
         Update: {
           agency?: string | null
           avatar_url?: string | null
+          banned_until?: string | null
           created_at?: string
           email?: string
           government_id_url?: string | null
