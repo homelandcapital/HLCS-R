@@ -248,7 +248,7 @@ export interface CommunityProjectInterestMessage {
   sender_name: string;
   sender_role: UserRole;
   content: string;
-  created_at: string;
+  timestamp: string;
 }
 
 export interface CommunityProjectInterest {
@@ -299,7 +299,7 @@ export interface DevelopmentProjectInterestMessage {
   sender_name: string;
   sender_role: UserRole;
   content: string;
-  created_at: string;
+  timestamp: string;
 }
 
 export interface DevelopmentProjectInterest {

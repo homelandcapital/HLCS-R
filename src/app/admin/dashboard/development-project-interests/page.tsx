@@ -58,7 +58,7 @@ export default function DevProjectInterestsManagementPage() {
             .from('development_project_interest_messages')
             .select('*')
             .eq('interest_id', interest.id)
-            .order('created_at', { ascending: true });
+            .order('timestamp', { ascending: true });
 
           if (messagesError) {
             console.error(`Error fetching messages for interest ${interest.id}:`, messagesError);
@@ -334,7 +334,7 @@ export default function DevProjectInterestsManagementPage() {
                               <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
                                   <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                   <p className="whitespace-pre-line">{msg.content}</p>
-                                  <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.created_at), "MMM d, yyyy 'at' p")}</p>
+                                  <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
                               </div>
                           ))}
                       </div>

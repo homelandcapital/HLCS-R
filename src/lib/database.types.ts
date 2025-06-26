@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -12,30 +13,30 @@ export type Database = {
       community_project_interest_messages: {
         Row: {
           content: string
-          created_at: string
-          id: string
           interest_id: string
           sender_id: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp: string
+          id: string
         }
         Insert: {
           content: string
-          created_at?: string
-          id?: string
           interest_id: string
           sender_id?: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
+          id?: string
         }
         Update: {
           content?: string
-          created_at?: string
-          id?: string
           interest_id?: string
           sender_id?: string | null
           sender_name?: string
-          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          sender_role?: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
+          id?: string
         }
         Relationships: [
           {
@@ -173,30 +174,30 @@ export type Database = {
       development_project_interest_messages: {
         Row: {
           content: string
-          created_at: string
           id: string
           interest_id: string
           sender_id: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp: string
         }
         Insert: {
           content: string
-          created_at?: string
           id?: string
           interest_id: string
           sender_id?: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
         }
         Update: {
           content?: string
-          created_at?: string
           id?: string
           interest_id?: string
           sender_id?: string | null
           sender_name?: string
-          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          sender_role?: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
         }
         Relationships: [
           {
