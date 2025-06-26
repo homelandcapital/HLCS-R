@@ -16,7 +16,7 @@ export type Database = {
           interest_id: string
           sender_id: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp: string
           id: string
         }
@@ -25,7 +25,7 @@ export type Database = {
           interest_id: string
           sender_id?: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp?: string
           id?: string
         }
@@ -34,7 +34,7 @@ export type Database = {
           interest_id?: string
           sender_id?: string | null
           sender_name?: string
-          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          sender_role?: Database["public"]["Enums"]["user_role"]
           timestamp?: string
           id?: string
         }
@@ -178,7 +178,7 @@ export type Database = {
           interest_id: string
           sender_id: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp: string
         }
         Insert: {
@@ -187,7 +187,7 @@ export type Database = {
           interest_id: string
           sender_id?: string | null
           sender_name: string
-          sender_role: Database["public"]["Enums"]["user_role_enum"]
+          sender_role: Database["public"]["Enums"]["user_role"]
           timestamp?: string
         }
         Update: {
@@ -196,7 +196,7 @@ export type Database = {
           interest_id?: string
           sender_id?: string | null
           sender_name?: string
-          sender_role?: Database["public"]["Enums"]["user_role_enum"]
+          sender_role?: Database["public"]["Enums"]["user_role"]
           timestamp?: string
         }
         Relationships: [

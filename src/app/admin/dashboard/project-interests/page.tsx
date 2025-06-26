@@ -172,9 +172,7 @@ export default function ProjectInterestsManagementPage() {
       await handleUpdateStatus(selectedInterest.id, 'contacted');
     }
   
-    // Refresh the full interest list to show the new message
     fetchInterests();
-    // Close and reopen the dialog to see the new message
     setIsModalOpen(false);
     setTimeout(() => {
         const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
@@ -383,5 +381,3 @@ const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
         <p className="text-sm ml-5">{value || 'N/A'}</p>
     </div>
 );
-
-    

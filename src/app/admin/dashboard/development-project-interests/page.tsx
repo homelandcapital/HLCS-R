@@ -52,27 +52,12 @@ export default function DevProjectInterestsManagementPage() {
     }
 
     if (interestsData) {
-      const interestsWithConversations = await Promise.all(
-        interestsData.map(async (interest) => {
-          const { data: messages, error: messagesError } = await supabase
-            .from('development_project_interest_messages')
-            .select('*')
-            .eq('interest_id', interest.id)
-            .order('timestamp', { ascending: true });
-
-          if (messagesError) {
-            console.error(`Error fetching messages for interest ${interest.id}:`, messagesError);
-            return { ...interest, conversation: [] };
-          }
-          return { ...interest, conversation: messages || [] };
-        })
-      );
-
-      const formattedInterests = interestsWithConversations.map(item => ({
+      // NOTE: Conversation fetching temporarily disabled to isolate a bug.
+      const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as DevelopmentProjectInterest['location_type'],
         status: item.status as DevelopmentProjectInterestStatus,
-        conversation: item.conversation as DevelopmentProjectInterestMessage[],
+        conversation: [], // Temporarily set conversation to empty array
       })) as DevelopmentProjectInterest[];
       setAllInterests(formattedInterests);
     } else {
@@ -144,47 +129,48 @@ export default function DevProjectInterestsManagementPage() {
     toast({ title: 'Status Updated', description: `Interest status changed to "${newStatus}".` });
     return true;
   };
+  
+  // NOTE: Reply functionality temporarily disabled to isolate a bug.
+  // const handleAdminReply = async () => {
+  //   if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
+  
+  //   const currentAdmin = user as PlatformAdmin;
+  //   const newMessageData = {
+  //     interest_id: selectedInterest.id,
+  //     sender_id: currentAdmin.id,
+  //     sender_role: 'platform_admin' as UserRole,
+  //     sender_name: currentAdmin.name,
+  //     content: replyMessage.trim(),
+  //   };
+  
+  //   const { data: savedMessage, error: messageError } = await supabase
+  //     .from('development_project_interest_messages')
+  //     .insert(newMessageData)
+  //     .select()
+  //     .single();
+  
+  //   if (messageError) {
+  //     toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+  //     return;
+  //   }
+  
+  //   if (selectedInterest.status === 'new') {
+  //     await handleUpdateStatus(selectedInterest.id, 'contacted');
+  //   }
+  
+  //   fetchInterests();
+  //   setIsModalOpen(false);
+  //   setTimeout(() => {
+  //       const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
+  //       if (updatedInterest) {
+  //           setSelectedInterest(updatedInterest);
+  //           setIsModalOpen(true);
+  //       }
+  //   }, 300);
 
-  const handleAdminReply = async () => {
-    if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
-  
-    const currentAdmin = user as PlatformAdmin;
-    const newMessageData = {
-      interest_id: selectedInterest.id,
-      sender_id: currentAdmin.id,
-      sender_role: 'platform_admin' as UserRole,
-      sender_name: currentAdmin.name,
-      content: replyMessage.trim(),
-    };
-  
-    const { data: savedMessage, error: messageError } = await supabase
-      .from('development_project_interest_messages')
-      .insert(newMessageData)
-      .select()
-      .single();
-  
-    if (messageError) {
-      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
-      return;
-    }
-  
-    if (selectedInterest.status === 'new') {
-      await handleUpdateStatus(selectedInterest.id, 'contacted');
-    }
-  
-    fetchInterests();
-    setIsModalOpen(false);
-    setTimeout(() => {
-        const updatedInterest = allInterests.find(i => i.id === selectedInterest.id);
-        if (updatedInterest) {
-            setSelectedInterest(updatedInterest);
-            setIsModalOpen(true);
-        }
-    }, 300);
-
-    setReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
-  };
+  //   setReplyMessage('');
+  //   toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
+  // };
 
 
   if (authLoading || pageLoading) {
@@ -322,33 +308,9 @@ export default function DevProjectInterestsManagementPage() {
                 <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier || 'N/A'} />
                 
                 <Separator />
-                 <div className="space-y-4 pt-4">
-                  <h4 className="font-semibold text-lg">Conversation</h4>
-                  <div className="p-3 rounded-md bg-muted/30 border">
-                    <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
-                    <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
-                  </div>
-                  {(selectedInterest.conversation && selectedInterest.conversation.length > 0) ? (
-                      <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
-                          {selectedInterest.conversation.map(msg => (
-                              <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
-                                  <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
-                                  <p className="whitespace-pre-line">{msg.content}</p>
-                                  <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
-                              </div>
-                          ))}
-                      </div>
-                  ) : (<p className="text-sm text-muted-foreground text-center py-3">No replies yet.</p>)}
-                  
-                  {!authLoading && user && user.role === 'platform_admin' && (
-                      <div className="pt-4 space-y-2 border-t mt-4">
-                          <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
-                          <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
-                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim()}>
-                              <Send className="mr-2 h-4 w-4" /> Send Reply
-                          </Button>
-                      </div>
-                  )}
+                <div className="p-3 rounded-md bg-muted/30 border">
+                  <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
+                  <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
                 </div>
                 
                 <Separator />
