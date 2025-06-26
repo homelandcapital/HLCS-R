@@ -343,5 +343,3 @@ const InfoRow = ({ icon, label, value, className }: InfoRowProps) => (
         <p className="text-sm ml-5">{value || 'N/A'}</p>
     </div>
 );
-
-    
