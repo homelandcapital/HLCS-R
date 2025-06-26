@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/project-interests/page.tsx
 'use client';
 
@@ -138,7 +139,7 @@ export default function ProjectInterestsManagementPage() {
   const handleUpdateStatus = async (interestId: string, newStatus: CommunityProjectInterestStatus) => {
     const { error } = await supabase
       .from('community_project_interests')
-      .update({ status: newStatus })
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', interestId);
 
     if (error) {

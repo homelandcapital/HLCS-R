@@ -1,3 +1,4 @@
+
 // src/app/admin/dashboard/development-project-interests/page.tsx
 'use client';
 
@@ -22,6 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { developmentProjectInterestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from '@/components/ui/textarea';
+import type { TablesInsert } from '@/lib/database.types';
+
 
 export default function DevProjectInterestsManagementPage() {
   const { user, loading: authLoading } = useAuth();
@@ -33,10 +36,13 @@ export default function DevProjectInterestsManagementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const { toast } = useToast();
+  const [replyMessage, setReplyMessage] = useState('');
+  const [currentConversation, setCurrentConversation] = useState<DevelopmentProjectInterestMessage[]>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
 
   const fetchInterests = useCallback(async () => {
     setPageLoading(true);
-    // Temporarily fetching without conversations to ensure stability.
     const { data: interestsData, error } = await supabase
       .from('development_project_interests')
       .select('*')
@@ -55,7 +61,7 @@ export default function DevProjectInterestsManagementPage() {
         ...item,
         location_type: item.location_type as DevelopmentProjectInterest['location_type'],
         status: item.status as DevelopmentProjectInterestStatus,
-        conversation: [], // Temporarily disabled conversation fetching
+        conversation: [], // Initialize with empty array, will fetch on-demand
       })) as DevelopmentProjectInterest[];
       setAllInterests(formattedInterests);
     } else {
@@ -90,7 +96,7 @@ export default function DevProjectInterestsManagementPage() {
     }
     setFilteredInterests(interests);
   }, [searchTerm, statusFilter, allInterests]);
-
+  
   const getStatusBadgeVariant = (status: DevelopmentProjectInterestStatus): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'new': return 'default';
@@ -103,12 +109,36 @@ export default function DevProjectInterestsManagementPage() {
   const handleViewDetails = (interest: DevelopmentProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
+    setReplyMessage('');
+    setCurrentConversation([]);
   };
+
+  useEffect(() => {
+    if (selectedInterest?.id && isModalOpen) {
+      const fetchConversation = async () => {
+        setIsLoadingConversation(true);
+        const { data, error } = await supabase
+          .from('development_project_interest_messages')
+          .select('*')
+          .eq('interest_id', selectedInterest.id)
+          .order('timestamp', { ascending: true });
+        
+        if (error) {
+          toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
+          setCurrentConversation([]);
+        } else {
+          setCurrentConversation(data as DevelopmentProjectInterestMessage[]);
+        }
+        setIsLoadingConversation(false);
+      };
+      fetchConversation();
+    }
+  }, [selectedInterest, isModalOpen, toast]);
 
   const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
     const { error } = await supabase
       .from('development_project_interests')
-      .update({ status: newStatus })
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
       .eq('id', interestId);
 
     if (error) {
@@ -127,6 +157,40 @@ export default function DevProjectInterestsManagementPage() {
     return true;
   };
   
+  const handleAdminReply = async () => {
+    if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
+  
+    const currentAdmin = user as PlatformAdmin;
+    const newMessageData: TablesInsert<'development_project_interest_messages'> = {
+      interest_id: selectedInterest.id,
+      sender_id: currentAdmin.id,
+      sender_role: 'platform_admin',
+      sender_name: currentAdmin.name,
+      content: replyMessage.trim(),
+    };
+  
+    const { data: savedMessage, error: messageError } = await supabase
+      .from('development_project_interest_messages')
+      .insert(newMessageData)
+      .select()
+      .single();
+  
+    if (messageError) {
+      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+      return;
+    }
+  
+    setCurrentConversation(prev => [...prev, savedMessage as DevelopmentProjectInterestMessage]);
+    
+    if (selectedInterest.status === 'new') {
+      await handleUpdateStatus(selectedInterest.id, 'contacted');
+    }
+  
+    setReplyMessage('');
+    toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
+  };
+
+
   if (authLoading || pageLoading) {
     return (
       <div className="space-y-8">
@@ -251,9 +315,35 @@ export default function DevProjectInterestsManagementPage() {
                 <InfoRow icon={<DollarSign />} label="Selected Budget Tier" value={selectedInterest.selected_budget_tier || 'N/A'} />
                 
                 <Separator />
-                <div className="p-3 rounded-md bg-muted/30 border">
-                  <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
-                  <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
+                <div className="space-y-4 pt-4">
+                  <h4 className="font-semibold text-lg">Conversation</h4>
+                  <div className="p-3 rounded-md bg-muted/30 border">
+                    <p className="text-sm font-semibold text-muted-foreground">Initial message from user:</p>
+                    <p className="text-sm whitespace-pre-line">{selectedInterest.message || "No initial message provided."}</p>
+                  </div>
+                  {isLoadingConversation ? (
+                    <div className="space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
+                  ) : currentConversation.length > 0 ? (
+                      <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
+                          {currentConversation.map(msg => (
+                              <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
+                                  <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
+                                  <p className="whitespace-pre-line">{msg.content}</p>
+                                  <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
+                              </div>
+                          ))}
+                      </div>
+                  ) : (<p className="text-sm text-muted-foreground text-center py-3">No replies yet.</p>)}
+                  
+                  {!authLoading && user && user.role === 'platform_admin' && (
+                      <div className="pt-4 space-y-2 border-t mt-4">
+                          <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
+                          <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
+                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation}>
+                              <Send className="mr-2 h-4 w-4" /> Send Reply
+                          </Button>
+                      </div>
+                  )}
                 </div>
                 
                 <Separator />
@@ -267,10 +357,6 @@ export default function DevProjectInterestsManagementPage() {
                         <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger>
                         <SelectContent>{developmentProjectInterestStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
                     </Select>
-                </div>
-                 <Separator />
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-center">
-                    <p className="text-sm text-blue-800">Replying to Development Project Interests is temporarily disabled. Please contact the user via email.</p>
                 </div>
             </div>
             <DialogFooter><DialogClose asChild><Button variant="outline">Close</Button></DialogClose></DialogFooter>
