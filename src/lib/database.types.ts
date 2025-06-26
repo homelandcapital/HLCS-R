@@ -108,6 +108,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "community_project_interest_messages_interest_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "community_project_interest_messages"
+            referencedColumns: ["interest_id"]
+          },
         ]
       }
       community_projects: {
@@ -261,6 +268,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "development_project_interest_messages_interest_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "development_project_interest_messages"
+            referencedColumns: ["interest_id"]
           },
         ]
       }
