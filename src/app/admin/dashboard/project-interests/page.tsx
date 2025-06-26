@@ -40,7 +40,7 @@ export default function ProjectInterestsManagementPage() {
     setPageLoading(true);
     const { data, error } = await supabase
       .from('community_project_interests')
-      .select('*, conversation:community_project_interest_messages(*)')
+      .select('*, community_project_interest_messages(*)')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -52,7 +52,7 @@ export default function ProjectInterestsManagementPage() {
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
         status: item.status as CommunityProjectInterestStatus,
-        conversation: (item.conversation as CommunityProjectInterestMessage[]).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
+        conversation: (item.community_project_interest_messages as CommunityProjectInterestMessage[]).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()),
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
     }
