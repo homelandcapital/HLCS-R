@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -1051,7 +1050,7 @@ export type TablesUpdate<
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
-      ? U
+      ? I
       : never
     : never
 

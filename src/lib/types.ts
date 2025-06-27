@@ -1,4 +1,3 @@
-
 import type { Database } from './database.types';
 
 export type UserRole = 'agent' | 'user' | 'platform_admin';
@@ -479,6 +478,7 @@ export interface FooterContent {
   tagline: string;
   columns: FooterLinkColumn[];
   copyrightText: string;
+  builtWithText: string;
   builtWithText: string;
 }
 
