@@ -1,7 +1,7 @@
 // src/app/admin/dashboard/project-interests/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import type { CommunityProjectInterest, CommunityProjectInterestStatus, UserRole, PlatformAdmin, CommunityProjectInterestMessage } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { communityProjectInterestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from '@/components/ui/textarea';
-import type { TablesInsert } from '@/lib/database.types';
+import { getCommunityInterestConversation, replyToCommunityInterest } from '@/actions/admin-interest-actions';
 
 
 export default function ProjectInterestsManagementPage() {
@@ -37,6 +37,7 @@ export default function ProjectInterestsManagementPage() {
   const [replyMessage, setReplyMessage] = useState('');
   const { toast } = useToast();
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [isSubmittingReply, startReplyTransition] = useTransition();
 
 
   const fetchInterests = useCallback(async () => {
@@ -55,7 +56,7 @@ export default function ProjectInterestsManagementPage() {
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
         status: item.status as CommunityProjectInterestStatus,
-        conversation: [], // Initialize with empty array
+        conversation: [],
       })) as CommunityProjectInterest[];
       setAllInterests(formattedInterests);
     } else {
@@ -100,34 +101,22 @@ export default function ProjectInterestsManagementPage() {
     }
   };
 
-  const handleViewDetails = (interest: CommunityProjectInterest) => {
+  const handleViewDetails = async (interest: CommunityProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
     setReplyMessage('');
-  };
+    setIsLoadingConversation(true);
+    
+    const result = await getCommunityInterestConversation(interest.id);
 
-  useEffect(() => {
-    if (selectedInterest?.id && isModalOpen) {
-      const fetchConversation = async () => {
-        setIsLoadingConversation(true);
-        const { data, error } = await supabase
-          .from('community_project_interest_messages')
-          .select('*')
-          .eq('interest_id', selectedInterest.id)
-          .order('timestamp', { ascending: true });
-        
-        if (error) {
-          toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
-           if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: [] });
-        } else {
-          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: data as CommunityProjectInterestMessage[] });
-        }
-        setIsLoadingConversation(false);
-      };
-      fetchConversation();
+    if (result.success && result.data) {
+      setSelectedInterest({ ...interest, conversation: result.data as CommunityProjectInterestMessage[] });
+    } else {
+      toast({ title: 'Error', description: result.message || 'Could not fetch conversation.', variant: 'destructive' });
+      setSelectedInterest({ ...interest, conversation: [] });
     }
-  }, [selectedInterest?.id, isModalOpen, toast]);
-
+    setIsLoadingConversation(false);
+  };
 
   const handleUpdateStatus = async (interestId: string, newStatus: CommunityProjectInterestStatus) => {
     const { error } = await supabase
@@ -140,7 +129,6 @@ export default function ProjectInterestsManagementPage() {
       return false;
     }
     
-    // Update local state for immediate feedback
     setAllInterests(prev => prev.map(item => 
         item.id === interestId ? { ...item, status: newStatus, updated_at: new Date().toISOString() } : item
     ));
@@ -156,38 +144,23 @@ export default function ProjectInterestsManagementPage() {
   const handleAdminReply = async () => {
     if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
   
-    const currentAdmin = user as PlatformAdmin;
-    const newMessageData: TablesInsert<'community_project_interest_messages'> = {
-      interest_id: selectedInterest.id,
-      sender_id: currentAdmin.id,
-      sender_role: 'platform_admin',
-      sender_name: currentAdmin.name,
-      content: replyMessage.trim(),
-    };
-  
-    const { data: savedMessage, error: messageError } = await supabase
-      .from('community_project_interest_messages')
-      .insert(newMessageData)
-      .select()
-      .single();
-  
-    if (messageError) {
-      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
-      return;
-    }
-    
-    const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
-    if (selectedInterest.status === 'new') {
-      await handleUpdateStatus(selectedInterest.id, 'contacted');
-    }
+    startReplyTransition(async () => {
+        const result = await replyToCommunityInterest(selectedInterest.id, replyMessage.trim(), selectedInterest.status, user as PlatformAdmin);
 
-    const updatedConversation = [...(selectedInterest.conversation || []), savedMessage as CommunityProjectInterestMessage];
-    const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
-    
-    setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
-    setSelectedInterest(updatedInterest);
-    setReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+        if (result.success && result.data) {
+            toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+            
+            const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
+            const updatedConversation = [...(selectedInterest.conversation || []), result.data as CommunityProjectInterestMessage];
+            const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
+            
+            setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
+            setSelectedInterest(updatedInterest);
+            setReplyMessage('');
+        } else {
+            toast({ title: 'Error Sending Reply', description: result.message, variant: 'destructive' });
+        }
+    });
   };
 
 
@@ -350,8 +323,8 @@ export default function ProjectInterestsManagementPage() {
                       <div className="pt-4 space-y-2 border-t mt-4">
                           <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
                           <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
-                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation}>
-                              <Send className="mr-2 h-4 w-4" /> Send Reply
+                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation || isSubmittingReply}>
+                              {isSubmittingReply ? "Sending..." : <><Send className="mr-2 h-4 w-4" /> Send Reply</>}
                           </Button>
                       </div>
                   )}

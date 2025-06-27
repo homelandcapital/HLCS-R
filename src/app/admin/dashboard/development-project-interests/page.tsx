@@ -1,7 +1,7 @@
 // src/app/admin/dashboard/development-project-interests/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
 import type { DevelopmentProjectInterest, DevelopmentProjectInterestStatus, PlatformAdmin, UserRole, DevelopmentProjectInterestMessage } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { developmentProjectInterestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from '@/components/ui/textarea';
-import type { TablesInsert } from '@/lib/database.types';
+import { getDevelopmentInterestConversation, replyToDevelopmentInterest } from '@/actions/admin-interest-actions';
 
 
 export default function DevProjectInterestsManagementPage() {
@@ -37,6 +37,7 @@ export default function DevProjectInterestsManagementPage() {
   const { toast } = useToast();
   const [replyMessage, setReplyMessage] = useState('');
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [isSubmittingReply, startReplyTransition] = useTransition();
 
 
   const fetchInterests = useCallback(async () => {
@@ -100,33 +101,22 @@ export default function DevProjectInterestsManagementPage() {
     }
   };
 
-  const handleViewDetails = (interest: DevelopmentProjectInterest) => {
+  const handleViewDetails = async (interest: DevelopmentProjectInterest) => {
     setSelectedInterest(interest);
     setIsModalOpen(true);
     setReplyMessage('');
-  };
+    setIsLoadingConversation(true);
 
-  useEffect(() => {
-    if (selectedInterest?.id && isModalOpen) {
-      const fetchConversation = async () => {
-        setIsLoadingConversation(true);
-        const { data, error } = await supabase
-          .from('development_project_interest_messages')
-          .select('*')
-          .eq('interest_id', selectedInterest.id)
-          .order('timestamp', { ascending: true });
-        
-        if (error) {
-          toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
-          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: [] });
-        } else {
-          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: data as DevelopmentProjectInterestMessage[] });
-        }
-        setIsLoadingConversation(false);
-      };
-      fetchConversation();
+    const result = await getDevelopmentInterestConversation(interest.id);
+
+    if (result.success && result.data) {
+        setSelectedInterest({ ...interest, conversation: result.data as DevelopmentProjectInterestMessage[] });
+    } else {
+        toast({ title: 'Error', description: result.message || 'Could not fetch conversation.', variant: 'destructive' });
+        setSelectedInterest({ ...interest, conversation: [] });
     }
-  }, [selectedInterest?.id, isModalOpen, toast]);
+    setIsLoadingConversation(false);
+  };
 
   const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
     const { error } = await supabase
@@ -153,38 +143,23 @@ export default function DevProjectInterestsManagementPage() {
   const handleAdminReply = async () => {
     if (!selectedInterest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
   
-    const currentAdmin = user as PlatformAdmin;
-    const newMessageData: TablesInsert<'development_project_interest_messages'> = {
-      interest_id: selectedInterest.id,
-      sender_id: currentAdmin.id,
-      sender_role: 'platform_admin',
-      sender_name: currentAdmin.name,
-      content: replyMessage.trim(),
-    };
-  
-    const { data: savedMessage, error: messageError } = await supabase
-      .from('development_project_interest_messages')
-      .insert(newMessageData)
-      .select()
-      .single();
-  
-    if (messageError) {
-      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
-      return;
-    }
-    
-    const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
-    if (selectedInterest.status === 'new') {
-      await handleUpdateStatus(selectedInterest.id, 'contacted');
-    }
+    startReplyTransition(async () => {
+        const result = await replyToDevelopmentInterest(selectedInterest.id, replyMessage.trim(), selectedInterest.status, user as PlatformAdmin);
+        
+        if (result.success && result.data) {
+            toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
 
-    const updatedConversation = [...(selectedInterest.conversation || []), savedMessage as DevelopmentProjectInterestMessage];
-    const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
-    
-    setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
-    setSelectedInterest(updatedInterest);
-    setReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+            const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
+            const updatedConversation = [...(selectedInterest.conversation || []), result.data as DevelopmentProjectInterestMessage];
+            const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
+
+            setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
+            setSelectedInterest(updatedInterest);
+            setReplyMessage('');
+        } else {
+            toast({ title: 'Error Sending Reply', description: result.message, variant: 'destructive' });
+        }
+    });
   };
 
 
@@ -336,8 +311,8 @@ export default function DevProjectInterestsManagementPage() {
                       <div className="pt-4 space-y-2 border-t mt-4">
                           <Label htmlFor="admin-reply" className="font-medium">Your Reply</Label>
                           <Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
-                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation}>
-                              <Send className="mr-2 h-4 w-4" /> Send Reply
+                          <Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isLoadingConversation || isSubmittingReply}>
+                              {isSubmittingReply ? "Sending..." : <><Send className="mr-2 h-4 w-4" /> Send Reply</>}
                           </Button>
                       </div>
                   )}
