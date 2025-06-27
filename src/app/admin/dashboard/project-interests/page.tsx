@@ -37,7 +37,6 @@ export default function ProjectInterestsManagementPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [replyMessage, setReplyMessage] = useState('');
   const { toast } = useToast();
-  const [currentConversation, setCurrentConversation] = useState<CommunityProjectInterestMessage[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
 
@@ -52,11 +51,7 @@ export default function ProjectInterestsManagementPage() {
       console.error('Error fetching project interests:', error);
       toast({ title: 'Error', description: 'Could not fetch project interests.', variant: 'destructive' });
       setAllInterests([]);
-      setPageLoading(false);
-      return;
-    }
-    
-    if (interestsData) {
+    } else if (interestsData) {
         const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as CommunityProjectInterest['location_type'],
@@ -110,7 +105,6 @@ export default function ProjectInterestsManagementPage() {
     setSelectedInterest(interest);
     setIsModalOpen(true);
     setReplyMessage('');
-    setCurrentConversation([]);
   };
 
   useEffect(() => {
@@ -125,15 +119,15 @@ export default function ProjectInterestsManagementPage() {
         
         if (error) {
           toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
-          setCurrentConversation([]);
+           if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: [] });
         } else {
-          setCurrentConversation(data as CommunityProjectInterestMessage[]);
+          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: data as CommunityProjectInterestMessage[] });
         }
         setIsLoadingConversation(false);
       };
       fetchConversation();
     }
-  }, [selectedInterest, isModalOpen, toast]);
+  }, [selectedInterest?.id, isModalOpen, toast]);
 
 
   const handleUpdateStatus = async (interestId: string, newStatus: CommunityProjectInterestStatus) => {
@@ -148,9 +142,13 @@ export default function ProjectInterestsManagementPage() {
     }
     
     // Update local state for immediate feedback
-    const updateLocalState = (interest: CommunityProjectInterest | null) => interest && interest.id === interestId ? { ...interest, status: newStatus } : interest;
-    setAllInterests(prev => prev.map(updateLocalState) as CommunityProjectInterest[]);
-    setSelectedInterest(prev => updateLocalState(prev));
+    setAllInterests(prev => prev.map(item => 
+        item.id === interestId ? { ...item, status: newStatus, updated_at: new Date().toISOString() } : item
+    ));
+
+    if (selectedInterest && selectedInterest.id === interestId) {
+        setSelectedInterest(prev => prev ? { ...prev, status: newStatus, updated_at: new Date().toISOString() } : null);
+    }
 
     toast({ title: 'Status Updated', description: `Interest status changed to "${newStatus}".` });
     return true;
@@ -178,15 +176,19 @@ export default function ProjectInterestsManagementPage() {
       toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
       return;
     }
-  
-    setCurrentConversation(prev => [...prev, savedMessage as CommunityProjectInterestMessage]);
     
+    const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
     if (selectedInterest.status === 'new') {
       await handleUpdateStatus(selectedInterest.id, 'contacted');
     }
-  
+
+    const updatedConversation = [...(selectedInterest.conversation || []), savedMessage as CommunityProjectInterestMessage];
+    const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
+    
+    setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
+    setSelectedInterest(updatedInterest);
     setReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
+    toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
   };
 
 
@@ -333,9 +335,9 @@ export default function ProjectInterestsManagementPage() {
                   </div>
                   {isLoadingConversation ? (
                     <div className="space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
-                  ) : currentConversation.length > 0 ? (
+                  ) : selectedInterest.conversation && selectedInterest.conversation.length > 0 ? (
                       <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
-                          {currentConversation.map(msg => (
+                          {selectedInterest.conversation.map(msg => (
                               <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
                                   <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                   <p className="whitespace-pre-line">{msg.content}</p>

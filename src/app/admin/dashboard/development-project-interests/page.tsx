@@ -37,7 +37,6 @@ export default function DevProjectInterestsManagementPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const { toast } = useToast();
   const [replyMessage, setReplyMessage] = useState('');
-  const [currentConversation, setCurrentConversation] = useState<DevelopmentProjectInterestMessage[]>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
 
@@ -52,11 +51,7 @@ export default function DevProjectInterestsManagementPage() {
       console.error('Error fetching project interests:', error);
       toast({ title: 'Error', description: 'Could not fetch project interests.', variant: 'destructive' });
       setAllInterests([]);
-      setPageLoading(false);
-      return;
-    }
-
-    if (interestsData) {
+    } else if (interestsData) {
       const formattedInterests = interestsData.map(item => ({
         ...item,
         location_type: item.location_type as DevelopmentProjectInterest['location_type'],
@@ -110,7 +105,6 @@ export default function DevProjectInterestsManagementPage() {
     setSelectedInterest(interest);
     setIsModalOpen(true);
     setReplyMessage('');
-    setCurrentConversation([]);
   };
 
   useEffect(() => {
@@ -125,15 +119,15 @@ export default function DevProjectInterestsManagementPage() {
         
         if (error) {
           toast({ title: 'Error', description: 'Could not fetch conversation.', variant: 'destructive' });
-          setCurrentConversation([]);
+          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: [] });
         } else {
-          setCurrentConversation(data as DevelopmentProjectInterestMessage[]);
+          if(selectedInterest) setSelectedInterest({ ...selectedInterest, conversation: data as DevelopmentProjectInterestMessage[] });
         }
         setIsLoadingConversation(false);
       };
       fetchConversation();
     }
-  }, [selectedInterest, isModalOpen, toast]);
+  }, [selectedInterest?.id, isModalOpen, toast]);
 
   const handleUpdateStatus = async (interestId: string, newStatus: DevelopmentProjectInterestStatus) => {
     const { error } = await supabase
@@ -147,11 +141,11 @@ export default function DevProjectInterestsManagementPage() {
     }
     
     setAllInterests(prev => prev.map(item =>
-      item.id === interestId ? { ...item, status: newStatus } : item
+      item.id === interestId ? { ...item, status: newStatus, updated_at: new Date().toISOString() } : item
     ));
     
     if (selectedInterest && selectedInterest.id === interestId) {
-      setSelectedInterest({ ...selectedInterest, status: newStatus });
+      setSelectedInterest({ ...selectedInterest, status: newStatus, updated_at: new Date().toISOString() });
     }
     toast({ title: 'Status Updated', description: `Interest status changed to "${newStatus}".` });
     return true;
@@ -179,15 +173,19 @@ export default function DevProjectInterestsManagementPage() {
       toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
       return;
     }
-  
-    setCurrentConversation(prev => [...prev, savedMessage as DevelopmentProjectInterestMessage]);
     
+    const newStatus = selectedInterest.status === 'new' ? 'contacted' : selectedInterest.status;
     if (selectedInterest.status === 'new') {
       await handleUpdateStatus(selectedInterest.id, 'contacted');
     }
-  
+
+    const updatedConversation = [...(selectedInterest.conversation || []), savedMessage as DevelopmentProjectInterestMessage];
+    const updatedInterest = { ...selectedInterest, conversation: updatedConversation, status: newStatus };
+    
+    setAllInterests(prev => prev.map(item => item.id === selectedInterest.id ? updatedInterest : item));
+    setSelectedInterest(updatedInterest);
     setReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been sent.' });
+    toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
   };
 
 
@@ -323,9 +321,9 @@ export default function DevProjectInterestsManagementPage() {
                   </div>
                   {isLoadingConversation ? (
                     <div className="space-y-2"><Skeleton className="h-16 w-full" /><Skeleton className="h-16 w-full" /></div>
-                  ) : currentConversation.length > 0 ? (
+                  ) : selectedInterest.conversation && selectedInterest.conversation.length > 0 ? (
                       <div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">
-                          {currentConversation.map(msg => (
+                          {selectedInterest.conversation.map(msg => (
                               <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
                                   <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
                                   <p className="whitespace-pre-line">{msg.content}</p>

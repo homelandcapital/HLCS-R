@@ -263,6 +263,7 @@ export interface CommunityProjectInterest {
   selected_budget_tier: string;
   message?: string | null;
   created_at: string;
+  updated_at: string;
   status: CommunityProjectInterestStatus;
   conversation?: CommunityProjectInterestMessage[];
 }
@@ -314,6 +315,7 @@ export interface DevelopmentProjectInterest {
   selected_budget_tier: string | null;
   message?: string | null;
   created_at: string;
+  updated_at: string;
   status: DevelopmentProjectInterestStatus;
   conversation?: DevelopmentProjectInterestMessage[];
 }
