@@ -239,6 +239,16 @@ export interface CommunityProject {
 export type CommunityProjectInterestStatus = 'new' | 'contacted' | 'resolved';
 export const communityProjectInterestStatuses: CommunityProjectInterestStatus[] = ['new', 'contacted', 'resolved'];
 
+export interface CommunityProjectInterestMessage {
+    id: string;
+    interest_id: string;
+    sender_id: string | null;
+    sender_role: UserRole;
+    sender_name: string;
+    content: string;
+    timestamp: string;
+}
+
 export interface CommunityProjectInterest {
   id: string;
   project_id: string | null; 
@@ -254,6 +264,7 @@ export interface CommunityProjectInterest {
   created_at: string;
   updated_at: string;
   status: CommunityProjectInterestStatus;
+  conversation?: CommunityProjectInterestMessage[];
 }
 
 
@@ -280,6 +291,16 @@ export interface DevelopmentProject {
 export type DevelopmentProjectInterestStatus = 'new' | 'contacted' | 'resolved';
 export const developmentProjectInterestStatuses: DevelopmentProjectInterestStatus[] = ['new', 'contacted', 'resolved'];
 
+export interface DevelopmentProjectInterestMessage {
+    id: string;
+    interest_id: string;
+    sender_id: string | null;
+    sender_role: UserRole;
+    sender_name: string;
+    content: string;
+    timestamp: string;
+}
+
 export interface DevelopmentProjectInterest {
   id: string;
   project_id: string | null; 
@@ -295,6 +316,7 @@ export interface DevelopmentProjectInterest {
   created_at: string;
   updated_at: string;
   status: DevelopmentProjectInterestStatus;
+  conversation?: DevelopmentProjectInterestMessage[];
 }
 
 
