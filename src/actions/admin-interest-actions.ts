@@ -1,27 +1,36 @@
 // src/actions/admin-interest-actions.ts
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
-import type { Database, TablesInsert } from '@/lib/database.types';
-import type { AuthenticatedUser, CommunityProjectInterest, DevelopmentProjectInterest, CommunityProjectInterestMessage, DevelopmentProjectInterestMessage } from '@/lib/types';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
+import type { AuthenticatedUser, CommunityProjectInterest, DevelopmentProjectInterest } from '@/lib/types';
 
 type ProjectType = 'community' | 'development';
 
-async function getAdminSupabaseClient() {
+// This function now returns an object with either the client or an error,
+// allowing us to handle the missing configuration gracefully.
+async function getAdminSupabaseClient(): Promise<{ client: SupabaseClient<Database> | null; error: string | null }> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Server is not configured for admin actions. Supabase URL or Service Role Key is missing.');
+    if (!supabaseUrl || !supabaseServiceKey || supabaseUrl.includes('YOUR_SUPABASE_URL') || supabaseServiceKey.includes('YOUR_SUPABASE_KEY')) {
+        const errorMessage = 'Server is not configured for admin actions. Supabase URL or Service Role Key is missing or using placeholder values in the production environment.';
+        console.error(errorMessage);
+        return { client: null, error: errorMessage };
     }
-    return createClient<Database>(supabaseUrl, supabaseServiceKey);
+    return { client: createClient<Database>(supabaseUrl, supabaseServiceKey), error: null };
 }
 
 export async function fetchInterestWithConversation(
     interestId: string,
     projectType: ProjectType
 ): Promise<(CommunityProjectInterest | DevelopmentProjectInterest) & { conversation: any[] }> {
-    const supabaseAdmin = await getAdminSupabaseClient();
+    const { client: supabaseAdmin, error: clientError } = await getAdminSupabaseClient();
+    if (clientError || !supabaseAdmin) {
+        // This specific error message will be shown to the user in production, guiding them to the fix.
+        throw new Error('Server configuration error. Please ensure environment variables are set correctly for the production environment.');
+    }
+
     const interestTable = projectType === 'community' ? 'community_project_interests' : 'development_project_interests';
     const messageTable = projectType === 'community' ? 'community_project_interest_messages' : 'development_project_interest_messages';
 
@@ -60,7 +69,11 @@ export async function addAdminReplyToInterest(
   adminUser: AuthenticatedUser,
   replyMessage: string
 ): Promise<{ success: boolean; message: string; newMessage?: any }> {
-  const supabaseAdmin = await getAdminSupabaseClient();
+  const { client: supabaseAdmin, error: clientError } = await getAdminSupabaseClient();
+  if (clientError || !supabaseAdmin) {
+    return { success: false, message: 'Cannot send reply: Server is not configured correctly. Please contact support.' };
+  }
+
   const messageTable = projectType === 'community' ? 'community_project_interest_messages' : 'development_project_interest_messages';
   const interestTable = projectType === 'community' ? 'community_project_interests' : 'development_project_interests';
   
@@ -74,7 +87,7 @@ export async function addAdminReplyToInterest(
 
   const { data: savedMessage, error: messageError } = await supabaseAdmin
     .from(messageTable)
-    .insert(newMessageData as any) // Using 'as any' because TS can't reconcile the union type here easily
+    .insert(newMessageData as any) 
     .select()
     .single();
 
