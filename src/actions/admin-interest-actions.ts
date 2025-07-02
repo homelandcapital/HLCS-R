@@ -3,9 +3,9 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import type { AuthenticatedUser, CommunityProjectInterest, DevelopmentProjectInterest } from '@/lib/types';
+import type { AuthenticatedUser, CommunityProjectInterest, DevelopmentProjectInterest, MachineryRequest } from '@/lib/types';
 
-type ProjectType = 'community' | 'development';
+type ProjectType = 'community' | 'development' | 'machinery_request';
 
 // This function now returns an object with either the client or an error,
 // allowing us to handle the missing configuration gracefully.
@@ -24,15 +24,36 @@ async function getAdminSupabaseClient(): Promise<{ client: SupabaseClient<Databa
 export async function fetchInterestWithConversation(
     interestId: string,
     projectType: ProjectType
-): Promise<(CommunityProjectInterest | DevelopmentProjectInterest) & { conversation: any[] }> {
+): Promise<(CommunityProjectInterest | DevelopmentProjectInterest | MachineryRequest) & { conversation: any[] }> {
     const { client: supabaseAdmin, error: clientError } = await getAdminSupabaseClient();
     if (clientError || !supabaseAdmin) {
         // This specific error message will be shown to the user in production, guiding them to the fix.
         throw new Error('Server configuration error. Please ensure environment variables are set correctly for the production environment.');
     }
 
-    const interestTable = projectType === 'community' ? 'community_project_interests' : 'development_project_interests';
-    const messageTable = projectType === 'community' ? 'community_project_interest_messages' : 'development_project_interest_messages';
+    let interestTable: string;
+    let messageTable: string;
+    let messageForeignKey: string;
+
+    switch (projectType) {
+        case 'community':
+            interestTable = 'community_project_interests';
+            messageTable = 'community_project_interest_messages';
+            messageForeignKey = 'interest_id';
+            break;
+        case 'development':
+            interestTable = 'development_project_interests';
+            messageTable = 'development_project_interest_messages';
+            messageForeignKey = 'interest_id';
+            break;
+        case 'machinery_request':
+            interestTable = 'machinery_requests';
+            messageTable = 'machinery_request_messages';
+            messageForeignKey = 'request_id';
+            break;
+        default:
+            throw new Error(`Invalid project type: ${projectType}`);
+    }
 
     // Fetch the main interest object
     const { data: interestData, error: interestError } = await supabaseAdmin
@@ -50,7 +71,7 @@ export async function fetchInterestWithConversation(
     const { data: messages, error: messagesError } = await supabaseAdmin
         .from(messageTable)
         .select('*')
-        .eq('interest_id', interestId)
+        .eq(messageForeignKey, interestId)
         .order('timestamp', { ascending: true });
 
     if (messagesError) {
@@ -74,11 +95,32 @@ export async function addAdminReplyToInterest(
     return { success: false, message: 'Cannot send reply: Server is not configured correctly. Please contact support.' };
   }
 
-  const messageTable = projectType === 'community' ? 'community_project_interest_messages' : 'development_project_interest_messages';
-  const interestTable = projectType === 'community' ? 'community_project_interests' : 'development_project_interests';
+  let interestTable: string;
+  let messageTable: string;
+  let messageForeignKey: string;
+
+  switch (projectType) {
+      case 'community':
+          interestTable = 'community_project_interests';
+          messageTable = 'community_project_interest_messages';
+          messageForeignKey = 'interest_id';
+          break;
+      case 'development':
+          interestTable = 'development_project_interests';
+          messageTable = 'development_project_interest_messages';
+          messageForeignKey = 'interest_id';
+          break;
+      case 'machinery_request':
+          interestTable = 'machinery_requests';
+          messageTable = 'machinery_request_messages';
+          messageForeignKey = 'request_id';
+          break;
+      default:
+        return { success: false, message: `Invalid project type: ${projectType}` };
+  }
   
   const newMessageData = {
-    interest_id: interestId,
+    [messageForeignKey]: interestId,
     sender_id: adminUser.id,
     sender_role: 'platform_admin' as const,
     sender_name: adminUser.name,

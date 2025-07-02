@@ -1,18 +1,18 @@
-
 // src/app/admin/dashboard/machinery-requests/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import type { MachineryRequest, MachineryRequestStatus } from '@/lib/types';
+import React, { useState, useEffect, useCallback, useTransition } from 'react';
+import type { MachineryRequest, MachineryRequestStatus, PlatformAdmin, MachineryRequestMessage, UserRole } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PackageSearch, Search, Filter, User, CalendarDays, Info, MessageSquare, Tag } from 'lucide-react';
+import { PackageSearch, Search, Filter, User, CalendarDays, Info, MessageSquare, Tag, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
@@ -21,6 +21,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { machineryRequestStatuses } from '@/lib/types';
 import { Separator } from "@/components/ui/separator";
+import { fetchInterestWithConversation, addAdminReplyToInterest } from '@/actions/admin-interest-actions';
+
+type RequestWithConversation = MachineryRequest & { conversation: MachineryRequestMessage[] };
 
 export default function MachineryRequestsManagementPage() {
   const { user, loading: authLoading } = useAuth();
@@ -28,9 +31,12 @@ export default function MachineryRequestsManagementPage() {
   const [filteredRequests, setFilteredRequests] = useState<MachineryRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MachineryRequestStatus | 'all'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<MachineryRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<RequestWithConversation | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [isDialogLoading, setIsDialogLoading] = useState(false);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [isReplying, startReplyTransition] = useTransition();
   const { toast } = useToast();
 
   const fetchRequests = useCallback(async () => {
@@ -83,9 +89,35 @@ export default function MachineryRequestsManagementPage() {
     }
   };
 
-  const handleViewDetails = (request: MachineryRequest) => {
-    setSelectedRequest(request);
+  const handleViewDetails = async (request: MachineryRequest) => {
     setIsModalOpen(true);
+    setIsDialogLoading(true);
+    setReplyMessage('');
+    try {
+      const fullRequestData = await fetchInterestWithConversation(request.id, 'machinery_request');
+      setSelectedRequest(fullRequestData as RequestWithConversation);
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not fetch conversation: ${error.message}`, variant: "destructive" });
+      setSelectedRequest({ ...request, conversation: [] });
+    } finally {
+      setIsDialogLoading(false);
+    }
+  };
+
+  const handleAdminReply = () => {
+    if (!selectedRequest || !replyMessage.trim() || !user || user.role !== 'platform_admin') return;
+    
+    startReplyTransition(async () => {
+      const result = await addAdminReplyToInterest(selectedRequest.id, 'machinery_request', user as PlatformAdmin, replyMessage);
+      if (result.success && result.newMessage) {
+        toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+        setSelectedRequest(prev => prev ? { ...prev, conversation: [...prev.conversation, result.newMessage], status: 'contacted' } : null);
+        setReplyMessage('');
+        fetchRequests(); // Refresh the main list to update status
+      } else {
+        toast({ title: 'Error Sending Reply', description: result.message, variant: 'destructive' });
+      }
+    });
   };
 
   const handleUpdateStatus = async (requestId: string, newStatus: MachineryRequestStatus) => {
@@ -207,52 +239,38 @@ export default function MachineryRequestsManagementPage() {
         </CardContent>
       </Card>
 
-      {selectedRequest && (
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="font-headline text-xl flex items-center"><PackageSearch className="mr-2 h-6 w-6 text-primary" /> Machinery Request Details</DialogTitle>
-              <DialogDescription>
-                Submitted on: {format(new Date(selectedRequest.created_at), "PPP p")}
-              </DialogDescription>
-            </DialogHeader>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-xl flex items-center"><PackageSearch className="mr-2 h-6 w-6 text-primary" /> Machinery Request Details</DialogTitle>
+            <DialogDescription>Submitted on: {selectedRequest ? format(new Date(selectedRequest.created_at), "PPP p") : '...'}</DialogDescription>
+          </DialogHeader>
+          {isDialogLoading ? <div className="py-4"><Skeleton className="h-64 w-full" /></div> : selectedRequest && (
             <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-                <InfoRow icon={<User />} label="User Name" value={selectedRequest.user_name} />
-                <InfoRow icon={<User />} label="User Email" value={selectedRequest.user_email} />
-                <InfoRow icon={<User />} label="User ID" value={selectedRequest.user_id} />
-                
-                <Separator />
-                <h4 className="font-medium text-muted-foreground">Request Details</h4>
-                <InfoRow icon={<PackageSearch />} label="Requested Machinery Title" value={selectedRequest.machinery_title} />
-                <InfoRow icon={<Tag />} label="Requested Category" value={selectedRequest.machinery_category} />
-                
-                {selectedRequest.message && (
-                    <>
-                        <Separator />
-                        <div>
-                            <Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquare className="w-4 h-4 mr-1.5"/> User Message</Label>
-                            <p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedRequest.message}</p>
-                        </div>
-                    </>
-                )}
-                
-                <Separator />
-                <div className="space-y-1">
-                    <Label className="text-sm font-medium text-muted-foreground flex items-center">Current Status:</Label>
-                    <Badge variant={getStatusBadgeVariant(selectedRequest.status)} className="capitalize text-sm px-3 py-1">{selectedRequest.status}</Badge>
-                </div>
-                <div className="space-y-1">
-                    <Label htmlFor="status-update-dialog" className="text-sm font-medium">Update Status</Label>
-                    <Select defaultValue={selectedRequest.status} onValueChange={(newStatus) => handleUpdateStatus(selectedRequest.id, newStatus as MachineryRequestStatus)}>
-                        <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger>
-                        <SelectContent>{machineryRequestStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent>
-                    </Select>
-                </div>
+              <InfoRow icon={<User />} label="User Name" value={selectedRequest.user_name} />
+              <InfoRow icon={<User />} label="User Email" value={selectedRequest.user_email} />
+              <InfoRow icon={<User />} label="User ID" value={selectedRequest.user_id} />
+              <Separator />
+              <h4 className="font-medium text-muted-foreground">Request Details</h4>
+              <InfoRow icon={<PackageSearch />} label="Requested Machinery Title" value={selectedRequest.machinery_title} />
+              <InfoRow icon={<Tag />} label="Requested Category" value={selectedRequest.machinery_category} />
+              {selectedRequest.message && (
+                <> <Separator /> <div> <Label className="text-sm font-medium text-muted-foreground flex items-center mb-1"><MessageSquare className="w-4 h-4 mr-1.5"/> User Message</Label> <p className="text-sm p-3 bg-muted rounded-md whitespace-pre-line">{selectedRequest.message}</p> </div> </>
+              )}
+              <Separator />
+              <div className="space-y-1"> <Label className="text-sm font-medium text-muted-foreground flex items-center">Current Status:</Label> <Badge variant={getStatusBadgeVariant(selectedRequest.status)} className="capitalize text-sm px-3 py-1">{selectedRequest.status}</Badge> </div>
+              <div className="space-y-1"> <Label htmlFor="status-update-dialog" className="text-sm font-medium">Update Status</Label> <Select defaultValue={selectedRequest.status} onValueChange={(newStatus) => handleUpdateStatus(selectedRequest.id, newStatus as MachineryRequestStatus)}> <SelectTrigger id="status-update-dialog"><SelectValue placeholder="Change status" /></SelectTrigger> <SelectContent>{machineryRequestStatuses.map(status => (<SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>))}</SelectContent> </Select> </div>
+              <Separator />
+              <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-semibold text-lg">Conversation</h4>
+                  {(selectedRequest.conversation && selectedRequest.conversation.length > 0) ? (<div className="space-y-3 max-h-96 overflow-y-auto p-2 rounded-md bg-muted/50">{selectedRequest.conversation.map(msg => (<div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'platform_admin' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}><p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p><p className="whitespace-pre-line">{msg.content}</p><p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p></div>))}</div>) : (<p className="text-sm text-muted-foreground">No conversation history yet.</p>)}
+                  <div className="pt-4 space-y-2"><Label htmlFor="admin-reply" className="font-medium">Your Reply</Label><Textarea id="admin-reply" value={replyMessage} onChange={(e) => setReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} /><Button onClick={handleAdminReply} disabled={!replyMessage.trim() || isReplying}>{isReplying ? 'Sending...' : <><Send className="mr-2 h-4 w-4"/>Send Reply</>}</Button></div>
+              </div>
             </div>
-            <DialogFooter><DialogClose asChild><Button variant="outline">Close</Button></DialogClose></DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+          <DialogFooter><DialogClose asChild><Button variant="outline">Close</Button></DialogClose></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

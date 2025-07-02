@@ -609,6 +609,51 @@ export type Database = {
           },
         ]
       }
+      machinery_request_messages: {
+        Row: {
+          content: string
+          id: string
+          request_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp: string
+        }
+        Insert: {
+          content: string
+          id?: string
+          request_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_role: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
+        }
+        Update: {
+          content?: string
+          id?: string
+          request_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: Database["public"]["Enums"]["user_role"]
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_request_messages_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_request_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       machinery_requests: {
         Row: {
           created_at: string

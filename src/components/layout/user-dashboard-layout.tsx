@@ -1,4 +1,3 @@
-
 // src/components/layout/user-dashboard-layout.tsx
 "use client";
 
@@ -42,6 +41,7 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
         { table: 'machinery_inquiries', messageTable: 'machinery_inquiry_messages' },
         { table: 'community_project_interests', messageTable: 'community_project_interest_messages' },
         { table: 'development_project_interests', messageTable: 'development_project_interest_messages' },
+        { table: 'machinery_requests', messageTable: 'machinery_request_messages' },
     ];
 
     for (const type of inquiryTypes) {

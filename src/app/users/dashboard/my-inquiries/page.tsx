@@ -1,13 +1,13 @@
-
+// src/app/users/dashboard/my-inquiries/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import type { Inquiry, GeneralUser, InquiryMessage as DbInquiryMessage, UserRole, MachineryInquiry, CommunityProjectInterest, DevelopmentProjectInterest } from '@/lib/types';
+import type { Inquiry, GeneralUser, InquiryMessage as DbInquiryMessage, UserRole, MachineryInquiry, CommunityProjectInterest, DevelopmentProjectInterest, MachineryRequest } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ListChecks, MessageSquare, SearchX, CalendarDays, Eye, Send, Package, Users2, Zap } from 'lucide-react';
+import { ListChecks, MessageSquare, SearchX, CalendarDays, Eye, Send, Package, Users2, Zap, PackageSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
-type UnifiedInquiryType = 'Property' | 'Machinery' | 'Community Project' | 'Development Project';
+type UnifiedInquiryType = 'Property' | 'Machinery' | 'Community Project' | 'Development Project' | 'Machinery Request';
 
 interface UnifiedInquiry {
   id: string; // The original inquiry/interest ID
@@ -47,11 +47,12 @@ export default function MyInquiriesPage() {
   const fetchUserInquiries = useCallback(async (currentUserId: string) => {
     setPageLoading(true);
 
-    const [propertyResult, machineryResult, communityResult, developmentResult] = await Promise.all([
+    const [propertyResult, machineryResult, communityResult, developmentResult, machineryRequestResult] = await Promise.all([
         supabase.from('inquiries').select('*, conversation:inquiry_messages(*)').eq('user_id', currentUserId),
         supabase.from('machinery_inquiries').select('*, conversation:machinery_inquiry_messages(*)').eq('user_id', currentUserId),
         supabase.from('community_project_interests').select('*, conversation:community_project_interest_messages(*)').eq('user_id', currentUserId),
-        supabase.from('development_project_interests').select('*, conversation:development_project_interest_messages(*)').eq('user_id', currentUserId)
+        supabase.from('development_project_interests').select('*, conversation:development_project_interest_messages(*)').eq('user_id', currentUserId),
+        supabase.from('machinery_requests').select('*, conversation:machinery_request_messages(*)').eq('user_id', currentUserId)
     ]);
 
     let allUnifiedInquiries: UnifiedInquiry[] = [];
@@ -77,6 +78,12 @@ export default function MyInquiriesPage() {
     if (developmentResult.data) {
         allUnifiedInquiries.push(...developmentResult.data.map(i => ({
             id: i.id, type: 'Development Project', itemTitle: i.project_title || 'General Interest', itemId: i.project_id || '', itemLink: i.project_id ? `/development-projects/${i.project_id}` : '#',
+            dateSubmitted: i.created_at, status: i.status, initialMessage: i.message || '', conversation: i.conversation
+        })));
+    }
+    if (machineryRequestResult.data) {
+        allUnifiedInquiries.push(...machineryRequestResult.data.map(i => ({
+            id: i.id, type: 'Machinery Request', itemTitle: i.machinery_title, itemId: i.id, itemLink: '#',
             dateSubmitted: i.created_at, status: i.status, initialMessage: i.message || '', conversation: i.conversation
         })));
     }
@@ -113,6 +120,7 @@ export default function MyInquiriesPage() {
         case 'Machinery': return <Package className="h-4 w-4 text-muted-foreground"/>;
         case 'Community Project': return <Users2 className="h-4 w-4 text-muted-foreground"/>;
         case 'Development Project': return <Zap className="h-4 w-4 text-muted-foreground"/>;
+        case 'Machinery Request': return <PackageSearch className="h-4 w-4 text-muted-foreground"/>;
         default: return null;
     }
   }
@@ -130,23 +138,26 @@ export default function MyInquiriesPage() {
         const { type, id } = selectedInquiryForDialog;
         const currentUser = user as GeneralUser;
 
-        const messageTableMap = {
+        const messageTableMap: Record<UnifiedInquiryType, string> = {
             'Property': 'inquiry_messages',
             'Machinery': 'machinery_inquiry_messages',
             'Community Project': 'community_project_interest_messages',
             'Development Project': 'development_project_interest_messages',
+            'Machinery Request': 'machinery_request_messages',
         };
-        const interestTableMap = {
+        const interestTableMap: Record<UnifiedInquiryType, string> = {
             'Property': 'inquiries',
             'Machinery': 'machinery_inquiries',
             'Community Project': 'community_project_interests',
             'Development Project': 'development_project_interests',
+            'Machinery Request': 'machinery_requests',
         }
-        const foreignKeyMap = {
+        const foreignKeyMap: Record<UnifiedInquiryType, string> = {
             'Property': 'inquiry_id',
             'Machinery': 'inquiry_id',
             'Community Project': 'interest_id',
             'Development Project': 'interest_id',
+            'Machinery Request': 'request_id',
         }
         
         const messageTable = messageTableMap[type];
@@ -213,8 +224,14 @@ export default function MyInquiriesPage() {
                 <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {userInquiries.map((inquiry) => (
-                    <TableRow key={inquiry.id}>
-                      <TableCell><Link href={inquiry.itemLink} className="font-medium text-primary hover:underline">{inquiry.itemTitle}</Link></TableCell>
+                    <TableRow key={`${inquiry.type}-${inquiry.id}`}>
+                      <TableCell>
+                        {inquiry.itemLink === '#' ? (
+                           <span className="font-medium text-foreground">{inquiry.itemTitle}</span>
+                        ) : (
+                          <Link href={inquiry.itemLink} target={inquiry.itemLink !== '#' ? '_blank' : undefined} rel="noopener noreferrer" className="font-medium text-primary hover:underline">{inquiry.itemTitle}</Link>
+                        )}
+                        </TableCell>
                       <TableCell><div className="flex items-center gap-2">{getTypeIcon(inquiry.type)} {inquiry.type}</div></TableCell>
                       <TableCell><div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(inquiry.dateSubmitted), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(inquiry.dateSubmitted), "p")}</div></div></div></TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(inquiry.status)} className="capitalize text-xs px-2 py-0.5">{inquiry.status}</Badge></TableCell>
@@ -242,7 +259,7 @@ export default function MyInquiriesPage() {
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="p-3 rounded-md bg-muted/30 border">
                     <p className="text-sm font-semibold text-muted-foreground">Your initial message:</p>
-                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.initialMessage}</p>
+                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.initialMessage || 'No initial message provided.'}</p>
                 </div>
                 {(selectedInquiryForDialog.conversation && selectedInquiryForDialog.conversation.length > 0) ? (
                     <div className="space-y-3">

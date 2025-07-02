@@ -200,6 +200,16 @@ export interface MachineryInquiry {
 export type MachineryRequestStatus = 'new' | 'contacted' | 'resolved';
 export const machineryRequestStatuses: MachineryRequestStatus[] = ['new', 'contacted', 'resolved'];
 
+export interface MachineryRequestMessage {
+    id: string;
+    request_id: string;
+    sender_id: string | null;
+    sender_role: UserRole;
+    sender_name: string;
+    content: string;
+    timestamp: string;
+}
+
 export interface MachineryRequest {
   id: string;
   user_id: string | null;
@@ -212,6 +222,7 @@ export interface MachineryRequest {
   status: MachineryRequestStatus;
   created_at: string;
   updated_at: string;
+  conversation?: MachineryRequestMessage[];
 }
 
 
