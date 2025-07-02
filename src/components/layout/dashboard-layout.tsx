@@ -48,19 +48,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [isAuthenticated, user, loading, router, toast]);
 
-  if (loading || !isAuthenticated || (user && user.role !== 'agent')) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-lg text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
-  }
-  
   const currentAgent = user as Agent; 
   
   // Determine visible navigation items based on agent's selected sectors
   const visibleNavItems = React.useMemo(() => {
-    const agentSectors = currentAgent.agent_sectors;
+    const agentSectors = currentAgent?.agent_sectors;
     // If agent_sectors is null, undefined, or empty, show both sectors by default for backward compatibility
     if (!agentSectors || agentSectors.length === 0) {
       return allNavItems;
@@ -73,7 +65,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       // Show item if its sector is included in the agent's selected sectors
       return agentSectors.includes(item.sector);
     });
-  }, [currentAgent.agent_sectors]);
+  }, [currentAgent?.agent_sectors]);
+
+  if (loading || !isAuthenticated || (user && user.role !== 'agent')) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-lg text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
