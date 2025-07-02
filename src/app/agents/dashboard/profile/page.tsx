@@ -3,11 +3,11 @@
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
-import type { Agent } from '@/lib/types';
+import type { Agent, AgentSector } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCircle, Mail, Phone, Briefcase, Edit2, UploadCloud, FileCheck2, Save, Image as ImageIcon, X } from 'lucide-react';
+import { UserCircle, Mail, Phone, Briefcase, Edit2, UploadCloud, FileCheck2, Save, Image as ImageIcon, X, Building, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,11 +20,18 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { updateAgentProfile } from '@/actions/agent-actions';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+
+const agentSectorsList: { id: AgentSector; label: string; icon: React.ReactNode }[] = [
+  { id: 'real_estate', label: 'Real Estate', icon: <Building className="w-4 h-4 mr-2"/> },
+  { id: 'machinery', label: 'Machinery', icon: <Wrench className="w-4 h-4 mr-2"/> },
+];
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   phone: z.string().min(10, { message: "Phone number must be at least 10 digits." }),
   agency: z.string().optional(),
+  agent_sectors: z.array(z.string()).default([]),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -42,7 +49,7 @@ export default function AgentProfilePage() {
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues: { name: '', phone: '', agency: '' },
+    defaultValues: { name: '', phone: '', agency: '', agent_sectors: [] },
   });
 
   useEffect(() => {
@@ -51,6 +58,7 @@ export default function AgentProfilePage() {
         name: agent.name || '',
         phone: agent.phone || '',
         agency: agent.agency || '',
+        agent_sectors: agent.agent_sectors || [],
       });
     }
   }, [agent, form]);
@@ -102,6 +110,7 @@ export default function AgentProfilePage() {
       formData.append('name', values.name);
       formData.append('phone', values.phone);
       formData.append('agency', values.agency || '');
+      formData.append('agent_sectors', JSON.stringify(values.agent_sectors));
       if (selectedIdFile) {
         formData.append('government_id', selectedIdFile);
       }
@@ -183,6 +192,52 @@ export default function AgentProfilePage() {
             </CardContent>
           </Card>
           
+           <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="font-headline text-xl flex items-center">Business Sectors</CardTitle>
+              <CardDescription>Select the sectors you operate in. This will customize your dashboard view.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="agent_sectors"
+                render={() => (
+                  <FormItem className="space-y-3">
+                    {agentSectorsList.map((item) => (
+                      <FormField
+                        key={item.id}
+                        control={form.control}
+                        name="agent_sectors"
+                        render={({ field }) => {
+                          return (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item.id)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, item.id])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== item.id
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal flex items-center">{item.icon} {item.label}</FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+           </Card>
+
           <Card className="shadow-xl">
             <CardHeader>
               <CardTitle className="font-headline text-xl flex items-center"><FileCheck2 className="mr-2 h-5 w-5 text-muted-foreground" /> Government-Issued ID</CardTitle>

@@ -11,19 +11,20 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Home, PlusCircle, ListChecks, LogOut, LayoutDashboard, UserCircle, Wrench } from 'lucide-react';
 import Logo from '@/components/common/logo';
 import { useToast } from '@/hooks/use-toast';
-import type { Agent } from '@/lib/types';
+import type { Agent, AgentSector } from '@/lib/types';
+import React from 'react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const navItems = [
-  { href: '/agents/dashboard', label: 'Overview', icon: <LayoutDashboard className="h-5 w-5" /> },
-  { href: '/agents/dashboard/my-listings', label: 'My Listings', icon: <ListChecks className="h-5 w-5" /> },
-  { href: '/agents/dashboard/add-property', label: 'Add Property', icon: <PlusCircle className="h-5 w-5" /> },
-  { href: '/agents/dashboard/my-machinery', label: 'My Machinery', icon: <Wrench className="h-5 w-5" /> },
-  { href: '/agents/dashboard/add-machinery', label: 'Add Machinery', icon: <PlusCircle className="h-5 w-5" /> },
-  { href: '/agents/dashboard/profile', label: 'My Profile', icon: <UserCircle className="h-5 w-5" /> },
+const allNavItems = [
+  { href: '/agents/dashboard', label: 'Overview', icon: <LayoutDashboard className="h-5 w-5" />, sector: null },
+  { href: '/agents/dashboard/my-listings', label: 'My Listings', icon: <ListChecks className="h-5 w-5" />, sector: 'real_estate' as AgentSector },
+  { href: '/agents/dashboard/add-property', label: 'Add Property', icon: <PlusCircle className="h-5 w-5" />, sector: 'real_estate' as AgentSector },
+  { href: '/agents/dashboard/my-machinery', label: 'My Machinery', icon: <Wrench className="h-5 w-5" />, sector: 'machinery' as AgentSector },
+  { href: '/agents/dashboard/add-machinery', label: 'Add Machinery', icon: <PlusCircle className="h-5 w-5" />, sector: 'machinery' as AgentSector },
+  { href: '/agents/dashboard/profile', label: 'My Profile', icon: <UserCircle className="h-5 w-5" />, sector: null },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -56,6 +57,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
   
   const currentAgent = user as Agent; 
+  
+  // Determine visible navigation items based on agent's selected sectors
+  const visibleNavItems = React.useMemo(() => {
+    const agentSectors = currentAgent.agent_sectors;
+    // If agent_sectors is null, undefined, or empty, show both sectors by default for backward compatibility
+    if (!agentSectors || agentSectors.length === 0) {
+      return allNavItems;
+    }
+    return allNavItems.filter(item => {
+      // Always show non-sector-specific items
+      if (!item.sector) {
+        return true;
+      }
+      // Show item if its sector is included in the agent's selected sectors
+      return agentSectors.includes(item.sector);
+    });
+  }, [currentAgent.agent_sectors]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-var(--header-height,100px))]">
@@ -68,7 +86,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <p className="text-sm text-muted-foreground">{currentAgent?.email}</p>
         </div>
         <nav className="flex flex-col space-y-2">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Button
               key={item.href}
               variant={pathname.startsWith(item.href) && (item.href !== '/agents/dashboard' || pathname === item.href) ? 'default' : 'ghost'}

@@ -13,6 +13,8 @@ export async function updateAgentProfile(agentId: string, formData: FormData) {
     const name = formData.get('name') as string;
     const phone = formData.get('phone') as string;
     const agency = formData.get('agency') as string;
+    const agentSectorsJSON = formData.get('agent_sectors') as string | null;
+    const agent_sectors = agentSectorsJSON ? JSON.parse(agentSectorsJSON) : null;
     const idFile = formData.get('government_id') as File | null;
     const avatarFile = formData.get('avatar') as File | null;
 
@@ -46,6 +48,10 @@ export async function updateAgentProfile(agentId: string, formData: FormData) {
       agency: agency || null,
       updated_at: new Date().toISOString(),
     };
+    
+    if (agent_sectors) {
+        updateData.agent_sectors = agent_sectors;
+    }
 
     if (government_id_url) {
       updateData.government_id_url = government_id_url;

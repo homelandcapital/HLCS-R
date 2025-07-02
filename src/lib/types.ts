@@ -1,6 +1,8 @@
+
 import type { Database } from './database.types';
 
 export type UserRole = 'agent' | 'user' | 'platform_admin';
+export type AgentSector = 'real_estate' | 'machinery';
 
 export interface BaseUser {
   id: string;
@@ -16,6 +18,7 @@ export interface Agent extends BaseUser {
   phone: string;
   agency?: string | null;
   government_id_url?: string | null;
+  agent_sectors?: AgentSector[] | null;
 }
 
 export interface GeneralUser extends BaseUser {

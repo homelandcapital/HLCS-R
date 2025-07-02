@@ -131,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const savedPropertyIds = savedPropsData ? savedPropsData.map(sp => sp.property_id) : [];
       authenticatedUserToSet = { ...baseProfile, role: 'user', savedPropertyIds } as GeneralUser;
     } else if (baseProfile.role === 'agent') {
-      authenticatedUserToSet = { ...baseProfile, role: 'agent', phone: baseProfile.phone || '', government_id_url: baseProfile.government_id_url || null } as Agent;
+      authenticatedUserToSet = { ...baseProfile, role: 'agent', phone: baseProfile.phone || '', government_id_url: baseProfile.government_id_url || null, agent_sectors: baseProfile.agent_sectors || null } as Agent;
     } else if (baseProfile.role === 'platform_admin') {
       authenticatedUserToSet = { ...baseProfile, role: 'platform_admin' } as PlatformAdmin;
     } else {

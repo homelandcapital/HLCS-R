@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -913,6 +914,7 @@ export type Database = {
       users: {
         Row: {
           agency: string | null
+          agent_sectors: string[] | null
           avatar_url: string | null
           banned_until: string | null
           created_at: string
@@ -926,6 +928,7 @@ export type Database = {
         }
         Insert: {
           agency?: string | null
+          agent_sectors?: string[] | null
           avatar_url?: string | null
           banned_until?: string | null
           created_at?: string
@@ -939,6 +942,7 @@ export type Database = {
         }
         Update: {
           agency?: string | null
+          agent_sectors?: string[] | null
           avatar_url?: string | null
           banned_until?: string | null
           created_at?: string
