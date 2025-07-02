@@ -35,28 +35,39 @@ export default function UserDashboardLayout({ children }: UserDashboardLayoutPro
   const fetchUnreadCount = useCallback(async () => {
     if (!user || user.role !== 'user') return;
 
-    const { data: inquiries, error } = await supabase
-      .from('inquiries')
-      .select('id, conversation:inquiry_messages(sender_role, timestamp)')
-      .eq('user_id', user.id);
+    let totalUnread = 0;
 
-    if (error) {
-      console.error("Error fetching user's unread inquiries count:", error);
-      return;
-    }
+    const inquiryTypes = [
+        { table: 'inquiries', messageTable: 'inquiry_messages' },
+        { table: 'machinery_inquiries', messageTable: 'machinery_inquiry_messages' },
+        { table: 'community_project_interests', messageTable: 'community_project_interest_messages' },
+        { table: 'development_project_interests', messageTable: 'development_project_interest_messages' },
+    ];
 
-    let count = 0;
-    if (inquiries) {
-      inquiries.forEach(inq => {
-        if (inq.conversation && inq.conversation.length > 0) {
-          const sortedConversation = [...inq.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-          if (sortedConversation[0]?.sender_role === 'platform_admin') {
-            count++;
-          }
+    for (const type of inquiryTypes) {
+        const { data, error } = await supabase
+            .from(type.table)
+            .select(`id, conversation:${type.messageTable}(sender_role, timestamp)`)
+            .eq('user_id', user.id);
+
+        if (error) {
+            console.error(`Error fetching unread count for ${type.table}:`, error);
+            continue;
         }
-      });
+
+        if (data) {
+            data.forEach((item: any) => {
+                if (item.conversation && item.conversation.length > 0) {
+                    const sortedConversation = [...item.conversation].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                    if (sortedConversation[0]?.sender_role === 'platform_admin') {
+                        totalUnread++;
+                    }
+                }
+            });
+        }
     }
-    setUnreadUserMessagesCount(count);
+    
+    setUnreadUserMessagesCount(totalUnread);
   }, [user]);
 
 

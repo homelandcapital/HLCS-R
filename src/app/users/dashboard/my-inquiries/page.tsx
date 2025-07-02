@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useTransition } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import type { Inquiry, GeneralUser, InquiryMessage as DbInquiryMessage, UserRole } from '@/lib/types';
+import type { Inquiry, GeneralUser, InquiryMessage as DbInquiryMessage, UserRole, MachineryInquiry, CommunityProjectInterest, DevelopmentProjectInterest } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ListChecks, MessageSquare, SearchX, CalendarDays, Eye, Send } from 'lucide-react';
+import { ListChecks, MessageSquare, SearchX, CalendarDays, Eye, Send, Package, Users2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -19,47 +19,74 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabaseClient';
 
+type UnifiedInquiryType = 'Property' | 'Machinery' | 'Community Project' | 'Development Project';
+
+interface UnifiedInquiry {
+  id: string; // The original inquiry/interest ID
+  type: UnifiedInquiryType;
+  itemTitle: string;
+  itemId: string; // The ID of the property/machinery/project
+  itemLink: string;
+  dateSubmitted: string;
+  status: string;
+  initialMessage: string;
+  conversation?: any[];
+}
+
+
 export default function MyInquiriesPage() {
   const { user, loading: authLoading } = useAuth();
-  const [userInquiries, setUserInquiries] = useState<Inquiry[]>([]);
+  const [userInquiries, setUserInquiries] = useState<UnifiedInquiry[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
-  const [selectedInquiryForDialog, setSelectedInquiryForDialog] = useState<Inquiry | null>(null);
+  const [selectedInquiryForDialog, setSelectedInquiryForDialog] = useState<UnifiedInquiry | null>(null);
   const [isConversationModalOpen, setIsConversationModalOpen] = useState(false);
   const [userReplyMessage, setUserReplyMessage] = useState('');
+  const [isSubmitting, startReplyTransition] = useTransition();
   const { toast } = useToast();
 
   const fetchUserInquiries = useCallback(async (currentUserId: string) => {
     setPageLoading(true);
-    const { data, error } = await supabase
-      .from('inquiries')
-      .select(`
-        *,
-        conversation:inquiry_messages(*)
-      `)
-      .eq('user_id', currentUserId) // Fetch only inquiries made by the logged-in user
-      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching user inquiries:', error);
-      toast({ title: 'Error', description: 'Could not fetch your inquiries.', variant: 'destructive' });
-      setUserInquiries([]);
-    } else {
-       const formattedInquiries = data.map(inq => ({
-        ...inq,
-        id: inq.id, 
-        dateReceived: inq.created_at, 
-        conversation: inq.conversation.map(msg => ({
-            ...msg,
-            id: msg.id,
-            inquiry_id: msg.inquiry_id,
-            sender_id: msg.sender_id,
-            timestamp: msg.timestamp,
-        })) as DbInquiryMessage[],
-      })) as Inquiry[];
-      setUserInquiries(formattedInquiries);
+    const [propertyResult, machineryResult, communityResult, developmentResult] = await Promise.all([
+        supabase.from('inquiries').select('*, conversation:inquiry_messages(*)').eq('user_id', currentUserId),
+        supabase.from('machinery_inquiries').select('*, conversation:machinery_inquiry_messages(*)').eq('user_id', currentUserId),
+        supabase.from('community_project_interests').select('*, conversation:community_project_interest_messages(*)').eq('user_id', currentUserId),
+        supabase.from('development_project_interests').select('*, conversation:development_project_interest_messages(*)').eq('user_id', currentUserId)
+    ]);
+
+    let allUnifiedInquiries: UnifiedInquiry[] = [];
+
+    if (propertyResult.data) {
+        allUnifiedInquiries.push(...propertyResult.data.map(i => ({
+            id: i.id, type: 'Property', itemTitle: i.property_name, itemId: i.property_id, itemLink: `/properties/${i.property_id}`,
+            dateSubmitted: i.created_at, status: i.status, initialMessage: i.initial_message, conversation: i.conversation
+        })));
     }
+    if (machineryResult.data) {
+        allUnifiedInquiries.push(...machineryResult.data.map(i => ({
+            id: i.id, type: 'Machinery', itemTitle: i.machinery_title, itemId: i.machinery_id, itemLink: `/machinery/${i.machinery_id}`,
+            dateSubmitted: i.created_at, status: i.status, initialMessage: i.initial_message, conversation: i.conversation
+        })));
+    }
+    if (communityResult.data) {
+        allUnifiedInquiries.push(...communityResult.data.map(i => ({
+            id: i.id, type: 'Community Project', itemTitle: i.project_title || 'General Interest', itemId: i.project_id || '', itemLink: i.project_id ? `/community-projects/${i.project_id}` : '#',
+            dateSubmitted: i.created_at, status: i.status, initialMessage: i.message || '', conversation: i.conversation
+        })));
+    }
+    if (developmentResult.data) {
+        allUnifiedInquiries.push(...developmentResult.data.map(i => ({
+            id: i.id, type: 'Development Project', itemTitle: i.project_title || 'General Interest', itemId: i.project_id || '', itemLink: i.project_id ? `/development-projects/${i.project_id}` : '#',
+            dateSubmitted: i.created_at, status: i.status, initialMessage: i.message || '', conversation: i.conversation
+        })));
+    }
+
+    // Sort all inquiries by submission date
+    allUnifiedInquiries.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime());
+
+    setUserInquiries(allUnifiedInquiries);
     setPageLoading(false);
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'user') {
@@ -70,7 +97,7 @@ export default function MyInquiriesPage() {
   }, [user, authLoading, fetchUserInquiries]);
 
 
-  const getStatusBadgeVariant = (status: Inquiry['status']): "default" | "secondary" | "destructive" | "outline" | null | undefined => {
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | null | undefined => {
     switch (status) {
       case 'new': return 'default';
       case 'contacted': return 'secondary';
@@ -79,8 +106,18 @@ export default function MyInquiriesPage() {
       default: return 'outline';
     }
   };
+  
+  const getTypeIcon = (type: UnifiedInquiryType) => {
+    switch(type) {
+        case 'Property': return <ListChecks className="h-4 w-4 text-muted-foreground"/>;
+        case 'Machinery': return <Package className="h-4 w-4 text-muted-foreground"/>;
+        case 'Community Project': return <Users2 className="h-4 w-4 text-muted-foreground"/>;
+        case 'Development Project': return <Zap className="h-4 w-4 text-muted-foreground"/>;
+        default: return null;
+    }
+  }
 
-  const handleViewConversation = (inquiry: Inquiry) => {
+  const handleViewConversation = (inquiry: UnifiedInquiry) => {
     setSelectedInquiryForDialog(inquiry);
     setIsConversationModalOpen(true);
     setUserReplyMessage('');
@@ -88,54 +125,62 @@ export default function MyInquiriesPage() {
 
   const handleUserReply = async () => {
     if (!selectedInquiryForDialog || !userReplyMessage.trim() || !user || user.role !== 'user') return;
-
-    const currentUser = user as GeneralUser;
-    const newMessageData = {
-      inquiry_id: selectedInquiryForDialog.id,
-      sender_id: currentUser.id,
-      sender_role: 'user' as UserRole,
-      sender_name: currentUser.name,
-      content: userReplyMessage.trim(),
-      // timestamp is defaulted by DB
-    };
-
-    const { data: savedMessage, error: messageError } = await supabase
-      .from('inquiry_messages')
-      .insert(newMessageData)
-      .select()
-      .single();
-
-    if (messageError) {
-      toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
-      return;
-    }
-
-    const formattedSavedMessage: DbInquiryMessage = {
-        ...savedMessage,
-        id: savedMessage.id,
-        inquiry_id: savedMessage.inquiry_id,
-        sender_id: savedMessage.sender_id,
-        timestamp: savedMessage.timestamp,
-    };
     
-    const updatedConversation = [...(selectedInquiryForDialog.conversation || []), formattedSavedMessage];
-    const updatedInquiry = { ...selectedInquiryForDialog, conversation: updatedConversation, updated_at: new Date().toISOString() };
-    
-    // Also update status to 'contacted' if it was 'new' from user's side
-    // This might be an admin action primarily, but user reply indicates continued interest
-    if (selectedInquiryForDialog.status === 'new') {
-        const { error: statusUpdateError } = await supabase
-            .from('inquiries')
-            .update({ status: 'contacted', updated_at: new Date().toISOString() })
-            .eq('id', selectedInquiryForDialog.id);
-        if (statusUpdateError) console.error("Error updating status on user reply:", statusUpdateError.message);
-        else updatedInquiry.status = 'contacted';
-    }
+    startReplyTransition(async () => {
+        const { type, id } = selectedInquiryForDialog;
+        const currentUser = user as GeneralUser;
 
-    setUserInquiries(prev => prev.map(inq => inq.id === selectedInquiryForDialog.id ? updatedInquiry : inq));
-    setSelectedInquiryForDialog(updatedInquiry);
-    setUserReplyMessage('');
-    toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+        const messageTableMap = {
+            'Property': 'inquiry_messages',
+            'Machinery': 'machinery_inquiry_messages',
+            'Community Project': 'community_project_interest_messages',
+            'Development Project': 'development_project_interest_messages',
+        };
+        const interestTableMap = {
+            'Property': 'inquiries',
+            'Machinery': 'machinery_inquiries',
+            'Community Project': 'community_project_interests',
+            'Development Project': 'development_project_interests',
+        }
+        const foreignKeyMap = {
+            'Property': 'inquiry_id',
+            'Machinery': 'inquiry_id',
+            'Community Project': 'interest_id',
+            'Development Project': 'interest_id',
+        }
+        
+        const messageTable = messageTableMap[type];
+        const interestTable = interestTableMap[type];
+        const foreignKey = foreignKeyMap[type];
+
+        const newMessageData = {
+            [foreignKey]: id,
+            sender_id: currentUser.id,
+            sender_role: 'user' as UserRole,
+            sender_name: currentUser.name,
+            content: userReplyMessage.trim(),
+        };
+
+        const { data: savedMessage, error: messageError } = await supabase.from(messageTable).insert(newMessageData as any).select().single();
+
+        if (messageError) {
+            toast({ title: 'Error Sending Reply', description: messageError.message, variant: 'destructive' });
+            return;
+        }
+
+        const newStatus = selectedInquiryForDialog.status === 'new' ? 'contacted' : selectedInquiryForDialog.status;
+        if (selectedInquiryForDialog.status === 'new') {
+            await supabase.from(interestTable).update({ status: 'contacted', updated_at: new Date().toISOString() }).eq('id', id);
+        }
+
+        const updatedConversation = [...(selectedInquiryForDialog.conversation || []), savedMessage];
+        const updatedInquiry = { ...selectedInquiryForDialog, conversation: updatedConversation, status: newStatus };
+
+        setUserInquiries(prev => prev.map(inq => inq.id === selectedInquiryForDialog.id ? updatedInquiry : inq));
+        setSelectedInquiryForDialog(updatedInquiry);
+        setUserReplyMessage('');
+        toast({ title: 'Reply Sent', description: 'Your reply has been added to the conversation.' });
+    });
   };
 
 
@@ -156,23 +201,23 @@ export default function MyInquiriesPage() {
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-3xl font-headline flex items-center"><ListChecks className="mr-3 h-8 w-8 text-primary" /> My Inquiries</h1><p className="text-muted-foreground">Track the status of inquiries you&apos;ve submitted and manage conversations.</p></div>
+      <div><h1 className="text-3xl font-headline flex items-center"><ListChecks className="mr-3 h-8 w-8 text-primary" /> My Inquiries</h1><p className="text-muted-foreground">Track the status of all your inquiries and manage conversations.</p></div>
       <Card className="shadow-xl">
-        <CardHeader><CardTitle className="font-headline text-2xl">Submitted Inquiries</CardTitle><CardDescription>A list of all property inquiries you have made.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="font-headline text-2xl">Submitted Inquiries</CardTitle><CardDescription>A list of all your inquiries across the platform.</CardDescription></CardHeader>
         <CardContent>
           {userInquiries.length === 0 ? (
-            <div className="text-center py-10"><SearchX className="mx-auto h-16 w-16 text-muted-foreground mb-4" /><p className="text-lg font-medium">No Inquiries Yet</p><p className="text-muted-foreground mb-4">You haven&apos;t submitted any inquiries. Explore properties and reach out!</p><Button asChild><Link href="/properties">Explore Properties</Link></Button></div>
+            <div className="text-center py-10"><SearchX className="mx-auto h-16 w-16 text-muted-foreground mb-4" /><p className="text-lg font-medium">No Inquiries Yet</p><p className="text-muted-foreground mb-4">You haven't submitted any inquiries. Explore our platform and reach out!</p><Button asChild><Link href="/properties">Explore Properties</Link></Button></div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Property</TableHead><TableHead>Date Submitted</TableHead><TableHead>Status</TableHead><TableHead>Initial Message</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Item</TableHead><TableHead>Type</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {userInquiries.map((inquiry) => (
                     <TableRow key={inquiry.id}>
-                      <TableCell><Link href={`/properties/${inquiry.property_id}`} className="font-medium text-primary hover:underline">{inquiry.property_name}</Link></TableCell>
-                      <TableCell><div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(inquiry.dateReceived), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(inquiry.dateReceived), "p")}</div></div></div></TableCell>
+                      <TableCell><Link href={inquiry.itemLink} className="font-medium text-primary hover:underline">{inquiry.itemTitle}</Link></TableCell>
+                      <TableCell><div className="flex items-center gap-2">{getTypeIcon(inquiry.type)} {inquiry.type}</div></TableCell>
+                      <TableCell><div className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" /><div><div>{format(new Date(inquiry.dateSubmitted), "MMM d, yyyy")}</div><div className="text-xs text-muted-foreground">{format(new Date(inquiry.dateSubmitted), "p")}</div></div></div></TableCell>
                       <TableCell><Badge variant={getStatusBadgeVariant(inquiry.status)} className="capitalize text-xs px-2 py-0.5">{inquiry.status}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground truncate max-w-xs"><MessageSquare className="inline h-4 w-4 mr-1 align-middle" />{inquiry.initial_message}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => handleViewConversation(inquiry)}>
                           <Eye className="mr-1.5 h-4 w-4" /> View/Reply
@@ -191,19 +236,19 @@ export default function MyInquiriesPage() {
         <Dialog open={isConversationModalOpen} onOpenChange={setIsConversationModalOpen}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="font-headline text-xl">Conversation: {selectedInquiryForDialog.property_name}</DialogTitle>
-              <DialogDescription>Inquiry submitted on {format(new Date(selectedInquiryForDialog.dateReceived), "PPP")}.</DialogDescription>
+              <DialogTitle className="font-headline text-xl">Conversation: {selectedInquiryForDialog.itemTitle}</DialogTitle>
+              <DialogDescription>Inquiry submitted on {format(new Date(selectedInquiryForDialog.dateSubmitted), "PPP")}.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="p-3 rounded-md bg-muted/30 border">
                     <p className="text-sm font-semibold text-muted-foreground">Your initial message:</p>
-                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.initial_message}</p>
+                    <p className="text-sm whitespace-pre-line">{selectedInquiryForDialog.initialMessage}</p>
                 </div>
                 {(selectedInquiryForDialog.conversation && selectedInquiryForDialog.conversation.length > 0) ? (
                     <div className="space-y-3">
                         {selectedInquiryForDialog.conversation.map(msg => (
                             <div key={msg.id} className={cn("p-3 rounded-lg shadow-sm text-sm", msg.sender_role === 'user' ? 'bg-primary/10 text-foreground ml-auto w-4/5 text-right' : 'bg-secondary/20 text-foreground mr-auto w-4/5 text-left')}>
-                                <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace('_', ' ')})</span></p>
+                                <p className="font-semibold">{msg.sender_name} <span className="text-xs text-muted-foreground/80">({msg.sender_role.replace(/_/g, ' ')})</span></p>
                                 <p className="whitespace-pre-line">{msg.content}</p>
                                 <p className="text-xs text-muted-foreground/70 mt-1">{format(new Date(msg.timestamp), "MMM d, yyyy 'at' p")}</p>
                             </div>
@@ -215,8 +260,8 @@ export default function MyInquiriesPage() {
                     <div className="pt-4 space-y-2 border-t mt-4">
                         <Label htmlFor="user-reply" className="font-medium">Your Reply</Label>
                         <Textarea id="user-reply" value={userReplyMessage} onChange={(e) => setUserReplyMessage(e.target.value)} placeholder="Type your reply here..." rows={3} />
-                        <Button onClick={handleUserReply} disabled={!userReplyMessage.trim()}>
-                            <Send className="mr-2 h-4 w-4" /> Send Reply
+                        <Button onClick={handleUserReply} disabled={!userReplyMessage.trim() || isSubmitting}>
+                            {isSubmitting ? "Sending..." : <><Send className="mr-2 h-4 w-4" /> Send Reply</>}
                         </Button>
                     </div>
                 )}
