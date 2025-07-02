@@ -4,25 +4,61 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Bookmark, ListChecks, LayoutDashboard, Search } from 'lucide-react'; // Changed UserCircle to Search
+import { Bookmark, ListChecks, LayoutDashboard, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import type { GeneralUser } from '@/lib/types';
-import { mockInquiries } from '@/lib/mock-data';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UserDashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const [inquiriesCount, setInquiriesCount] = useState(0);
+  const { toast } = useToast();
+
+  const fetchInquiriesCount = useCallback(async (userId: string) => {
+    try {
+      const inquiryTables = [
+        'inquiries',
+        'machinery_inquiries',
+        'community_project_interests',
+        'development_project_interests',
+      ];
+
+      const counts = await Promise.all(
+        inquiryTables.map(table =>
+          supabase
+            .from(table)
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+        )
+      );
+
+      let totalCount = 0;
+      counts.forEach(result => {
+        if (result.error) {
+          console.error(`Error fetching count from a table:`, result.error.message);
+        } else {
+          totalCount += result.count || 0;
+        }
+      });
+
+      setInquiriesCount(totalCount);
+    } catch (error: any) {
+      console.error("Error fetching total inquiries count:", error);
+      toast({
+        title: "Error",
+        description: "Could not fetch your total inquiries count.",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!authLoading && user && user.role === 'user') {
-      const currentUser = user as GeneralUser;
-      const userSpecificInquiries = mockInquiries.filter(
-        inq => inq.inquirerEmail.toLowerCase() === currentUser.email.toLowerCase()
-      );
-      setInquiriesCount(userSpecificInquiries.length);
+      fetchInquiriesCount(user.id);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, fetchInquiriesCount]);
 
   if (authLoading) {
     return <div className="text-center py-10">Loading dashboard...</div>;
